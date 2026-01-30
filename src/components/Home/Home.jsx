@@ -140,7 +140,7 @@ export default function Home() {
                             <BrandItem text="Java Pro" />
                             <BrandItem icon={<FiShield className="text-green-600"/>} text="ISO 9001" />
                             <BrandItem text="Gen-AI" />
-                            <BrandItem text="Oracle SQL" />
+                            <BrandItem text="SQL" />
                         </div>
                     ))}
                 </motion.div>
