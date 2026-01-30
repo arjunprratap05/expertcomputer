@@ -14,12 +14,14 @@ export default function Header() {
     const location = useLocation();
 
     useEffect(() => {
-        const handleScroll = () => setIsScrolled(window.scrollY > 20);
+        const handleScroll = () => {
+            // Increased threshold slightly for smoother activation
+            setIsScrolled(window.scrollY > 50);
+        };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Close mobile menu on route change
     useEffect(() => {
         setIsMobileMenuOpen(false);
     }, [location]);
@@ -60,20 +62,27 @@ export default function Header() {
     };
 
     return (
-        <header className={`shadow-lg sticky z-50 top-0 transition-all duration-300 ${isScrolled ? 'bg-white/95 py-1' : 'bg-white py-3'} backdrop-blur-md`}>
+        // FIXED: Added a consistent height to the header and removed padding jumps
+        <header className={`sticky top-0 z-50 w-full shadow-lg transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md' : 'bg-white'}`}>
             <div className="h-1.5 w-full bg-gradient-to-r from-[#1A5F7A] via-[#F37021] to-[#1A5F7A]"></div>
             
-            <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10">
-                <div className="flex justify-between items-center">
+            {/* FIXED: py-2 stays consistent, height is managed by the items inside */}
+            <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10 py-2 transition-all duration-500">
+                <div className="flex justify-between items-center h-16 lg:h-20"> {/* Fixed inner height to stop wobble */}
                     
                     {/* LOGO */}
                     <div className="flex items-center gap-4 lg:gap-6">
-                        <Link to="/" onClick={handleHomeClick} className="flex items-center transform transition hover:scale-[1.02]">
-                            <img 
-                                src={expertcomputerlogo} 
-                                className={`transition-all duration-300 object-contain ${isScrolled ? 'h-10 lg:h-16' : 'h-14 lg:h-24'}`} 
-                                alt="Expert Computer Academy"
-                            />
+                        <Link to="/" onClick={handleHomeClick} className="flex items-center">
+                            <div className="relative flex items-center justify-center overflow-visible">
+                                <img 
+                                    src={expertcomputerlogo} 
+                                    // FIXED: Using scale and fixed container to prevent layout shift
+                                    className={`transition-all duration-500 object-contain w-auto ${
+                                        isScrolled ? 'h-12 lg:h-14' : 'h-14 lg:h-20'
+                                    }`} 
+                                    alt="Expert Computer Academy"
+                                />
+                            </div>
                         </Link>
                     </div>
 
@@ -89,10 +98,10 @@ export default function Header() {
                                 </li>
                             ))}
                             <li className="relative group" onMouseEnter={() => setIsDropdownOpen(true)} onMouseLeave={() => setIsDropdownOpen(false)}>
-                                <button className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#1A5F7A] group-hover:text-[#F37021]">
+                                <button className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#1A5F7A] group-hover:text-[#F37021] py-4">
                                     Courses <FiChevronDown />
                                 </button>
-                                <div className={`absolute left-0 w-72 bg-white rounded-2xl shadow-2xl py-3 transition-all duration-300 ${isDropdownOpen ? 'opacity-100 visible translate-y-2' : 'opacity-0 invisible translate-y-0'}`}>
+                                <div className={`absolute left-0 top-full w-72 bg-white rounded-2xl shadow-2xl py-3 transition-all duration-300 ${isDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
                                     {techCoursesData.map((course) => (
                                         <button key={course.id} onClick={() => handleCourseSelection(course)} className="w-full text-left flex items-center gap-3 px-5 py-3 text-sm font-bold text-[#1A5F7A] hover:bg-orange-50 hover:text-[#F37021]">
                                             <FiBook className="text-[#F37021]" /> {course.title}
@@ -103,7 +112,7 @@ export default function Header() {
                         </ul>
                         <div className="flex items-center gap-4 border-l pl-8">
                             <Link to="/admin/login" className="flex items-center gap-2 text-[#1A5F7A] hover:text-[#F37021] font-bold text-sm"><FiShield /> Admin</Link>
-                            <Link to="/contact" className="text-white bg-[#F37021] hover:bg-[#1A5F7A] font-bold rounded-xl text-sm px-6 py-3.5 shadow-md">Join Now</Link>
+                            <Link to="/contact" className="text-white bg-[#F37021] hover:bg-[#1A5F7A] font-bold rounded-xl text-sm px-6 py-3 transition-all shadow-md">Join Now</Link>
                         </div>
                     </div>
 
@@ -117,7 +126,7 @@ export default function Header() {
                 </div>
             </nav>
 
-            {/* MOBILE MENU DRAWER */}
+            {/* MOBILE MENU DRAWER (Keep unchanged but ensure high z-index) */}
             <div className={`lg:hidden fixed inset-0 z-[60] bg-black/50 transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 <div 
                     className={`absolute right-0 top-0 h-screen w-[80%] max-w-sm bg-white shadow-2xl transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
@@ -128,7 +137,6 @@ export default function Header() {
                             <img src={expertcomputerlogo} className="h-12 w-auto" alt="Logo" />
                             <button onClick={() => setIsMobileMenuOpen(false)} className="text-2xl text-slate-500"><FiX /></button>
                         </div>
-
                         <div className="flex-1 overflow-y-auto">
                             <ul className="space-y-4">
                                 <li>
@@ -139,8 +147,6 @@ export default function Header() {
                                         <NavLink to={link.path} className="block text-lg font-bold text-[#1A5F7A]">{link.name}</NavLink>
                                     </li>
                                 ))}
-                                
-                                {/* Mobile Courses Dropdown */}
                                 <li>
                                     <button 
                                         className="w-full flex justify-between items-center text-lg font-bold text-[#1A5F7A]"
@@ -158,7 +164,6 @@ export default function Header() {
                                 </li>
                             </ul>
                         </div>
-
                         <div className="mt-auto space-y-4 pt-6 border-t border-slate-100">
                             <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold">
                                 <FiShield /> Admin Portal

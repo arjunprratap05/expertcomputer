@@ -9,7 +9,6 @@ export default function Footer() {
     const navigate = useNavigate();
     const mapUrl = "https://maps.google.com/?q=Expert+Computer+Academy+Patna";
 
-    // --- 1. SCROLL MANAGEMENT ---
     const handleFooterLinkClick = (path) => {
         window.scrollTo({ top: 0, behavior: 'instant' });
         navigate(path);
@@ -36,21 +35,21 @@ export default function Footer() {
             <div className="h-1.5 w-full bg-gradient-to-r from-[#F37021] via-orange-400 to-[#1A5F7A]" />
 
             <div className="mx-auto w-full max-w-7xl px-6 py-12 lg:py-16">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+                {/* Changed grid-cols to handle varied content widths */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8">
                     
-                    {/* 1. BRAND & LOGO (Fixed Visibility) */}
-                    <div className="space-y-6">
+                    {/* 1. BRAND (Spans 4 columns) */}
+                    <div className="lg:col-span-4 space-y-6">
                         <button onClick={() => handleFooterLinkClick('/')} className="inline-block transition-transform hover:scale-105">
                             <img
                                 src={expertcomputerlogo}
-                                // Removed brightness-0 invert to ensure visibility
                                 className="h-16 w-auto object-contain" 
                                 alt="Expert Computer Academy"
                             />
                         </button>
                         <p className="text-sm text-slate-300 leading-relaxed max-w-xs">
                             Empowering students in Patna with IT excellence since 1987. 
-                            Our 38+ year legacy is built on 100% practical learning and industry-ready skills.
+                            Our 38+ year legacy is built on 100% practical learning.
                         </p>
                         <div className="flex gap-4">
                             {[
@@ -66,14 +65,14 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* 2. PROGRAMS COLUMN */}
-                    <div>
-                        <h4 className="text-[#F37021] font-bold uppercase tracking-widest text-xs mb-8 border-l-4 border-[#F37021] pl-3">Popular Programs</h4>
+                    {/* 2. PROGRAMS (Spans 2 columns) */}
+                    <div className="lg:col-span-2">
+                        <h4 className="text-[#F37021] font-bold uppercase tracking-widest text-xs mb-8 border-l-4 border-[#F37021] pl-3">Programs</h4>
                         <ul className="space-y-4">
                             {footerLinks.programs.map((item, i) => (
                                 <li key={i}>
-                                    <button onClick={() => handleFooterLinkClick(item.link)} className="text-slate-300 hover:text-white hover:translate-x-2 transition-all flex items-center gap-2 group">
-                                        <FaArrowRight className="text-[10px] text-[#F37021] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <button onClick={() => handleFooterLinkClick(item.link)} className="text-slate-300 hover:text-white hover:translate-x-2 transition-all flex items-center gap-2 group text-left">
+                                        <FaArrowRight className="text-[10px] text-[#F37021] shrink-0" />
                                         <span className="text-sm font-medium">{item.name}</span>
                                     </button>
                                 </li>
@@ -81,14 +80,14 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* 3. ACADEMY COLUMN */}
-                    <div>
+                    {/* 3. ACADEMY (Spans 2 columns) */}
+                    <div className="lg:col-span-2">
                         <h4 className="text-[#F37021] font-bold uppercase tracking-widest text-xs mb-8 border-l-4 border-[#F37021] pl-3">Academy</h4>
                         <ul className="space-y-4">
                             {footerLinks.academy.map((item, i) => (
                                 <li key={i}>
-                                    <button onClick={() => handleFooterLinkClick(item.link)} className="text-slate-300 hover:text-white hover:translate-x-2 transition-all flex items-center gap-2 group">
-                                        <FaArrowRight className="text-[10px] text-[#F37021] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <button onClick={() => handleFooterLinkClick(item.link)} className="text-slate-300 hover:text-white hover:translate-x-2 transition-all flex items-center gap-2 group text-left">
+                                        <FaArrowRight className="text-[10px] text-[#F37021] shrink-0" />
                                         <span className="text-sm font-medium">{item.name}</span>
                                     </button>
                                 </li>
@@ -96,37 +95,44 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* 4. CONTACT & LOCATION */}
-                    <div className="space-y-6">
+                    {/* 4. CONTACT & LOCATION (Spans 4 columns for extra width) */}
+                    <div className="lg:col-span-4 space-y-6">
                         <h4 className="text-[#F37021] font-bold uppercase tracking-widest text-xs mb-8 border-l-4 border-[#F37021] pl-3">Visit Us</h4>
                         <div className="space-y-5">
                             <a href="tel:+917282983335" className="flex items-start gap-3 group">
-                                <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-[#F37021]/20 transition-colors border border-white/5">
+                                <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-[#F37021]/20 transition-colors shrink-0">
                                     <HiOutlinePhone className="text-xl text-[#F37021]" />
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Admissions</p>
-                                    <p className="text-sm font-medium hover:text-[#F37021] transition-colors">+91 7282983335</p>
+                                    <p className="text-sm font-medium group-hover:text-[#F37021] transition-colors">+91 7282983335</p>
                                 </div>
                             </a>
 
-                            <a href="mailto:expertcomputeracademypatna@gmail.com" className="flex items-start gap-3 group">
-                                <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-[#F37021]/20 transition-colors border border-white/5">
+                            {/* EMAIL SECTION - Fixed with Tooltip & Truncation */}
+                            <a 
+                                href="mailto:expertcomputeracademypatna@gmail.com" 
+                                className="flex items-start gap-3 group max-w-full"
+                                title="expertcomputeracademypatna@gmail.com" // Browser Tooltip
+                            >
+                                <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-[#F37021]/20 transition-colors shrink-0">
                                     <HiOutlineMail className="text-xl text-[#F37021]" />
                                 </div>
-                                <div>
+                                <div className="min-w-0"> {/* min-w-0 allows child to truncate */}
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Support Email</p>
-                                    <p className="text-sm font-medium italic truncate max-w-[150px]">expertcomputeracademypatna@gmail.com</p>
+                                    <p className="text-sm font-medium italic truncate block group-hover:text-white transition-colors">
+                                        expertcomputeracademypatna@gmail.com
+                                    </p>
                                 </div>
                             </a>
 
                             <a href={mapUrl} target="_blank" rel="noreferrer" className="flex items-start gap-3 group">
-                                <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-[#F37021]/20 transition-colors border border-white/5">
+                                <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-[#F37021]/20 transition-colors shrink-0">
                                     <HiOutlineLocationMarker className="text-xl text-[#F37021]" />
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Boring Road Campus</p>
-                                    <p className="text-sm font-medium leading-tight">Kumar Tower, Patna</p>
+                                    <p className="text-sm font-medium leading-tight">Kumar Tower, Boring Road, Patna</p>
                                 </div>
                             </a>
                         </div>
@@ -139,7 +145,7 @@ export default function Footer() {
                     </div>
                     
                     <div className="flex items-center gap-2 text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">
-                        Handcrafted for the future of Bihar
+                        Handcrafted for Bihar
                         <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} className="text-red-500">❤️</motion.span>
                     </div>
                 </div>
