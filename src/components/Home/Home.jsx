@@ -19,7 +19,7 @@ import graduatesImg from '../../assets/ecosystem/graduatescourses.jpg';
 import workingImg from '../../assets/ecosystem/workingprofessional.jpeg';
 import homemakerImg from '../../assets/ecosystem/homemaker.jpeg';
 import retiredImg from '../../assets/ecosystem/retiredpersoncourse.jpg';
-import expertcomuteroffice from "../../assets/expertcomuteroffice.jpeg";
+import expertcomuteroffice from "../../assets/expertcomuteroffice.png";
 import suruchiImg from "../../assets/student-suruchi.jpeg";
 import harshImg from "../../assets/student-harsh.jpeg";
 import gauravImg from "../../assets/student-gaurav.jpeg";
@@ -77,7 +77,7 @@ export default function Home() {
                             <div className="absolute -inset-2 bg-gradient-to-r from-[#F37021] to-[#1A5F7A] rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
                             <img src={expertcomuteroffice} alt="Office" className="rounded-[2.5rem] shadow-2xl w-full border border-white/50 object-cover aspect-video" />
                             <div className="absolute -top-6 -right-4 bg-white/95 backdrop-blur-md p-4 rounded-3xl shadow-xl z-20 border border-white flex flex-col items-center">
-                                <span className="text-[#1A5F7A] font-black text-3xl">38</span>
+                                <span className="text-[#1A5F7A] font-black text-3xl">38+</span>
                                 <span className="text-[10px] uppercase font-bold text-slate-500 text-center tracking-tighter leading-none">Years of<br/>Legacy</span>
                             </div>
                         </div>

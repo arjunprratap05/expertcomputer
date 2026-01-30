@@ -30,14 +30,14 @@ export default function About() {
     }, []);
 
     const advantages = [
-        "38 Years of Experience", "2 Lac Alumni", "1,00,000+ Placements",
+        "38+ Years of Experience", "2 Lac Alumni", "1,00,000+ Placements",
         "100% Placement Assistance", "100% Practical Classes", "28 Years Expert Faculty",
         "Uninterrupted Power", "AC Classrooms", "Personality Grooming",
         "Flexible Batches", "Recognized Certificates", "TEPL Partner"
     ];
 
     const stats = [
-        { label: "Years Experience", value: 38, suffix: "+", icon: <FiCalendar /> },
+        { label: "Years Experience", value: 38 , suffix: "+", icon: <FiCalendar /> },
         { label: "Total Alumni", value: 2, suffix: " Lac", icon: <FiUsers /> },
         { label: "Placements", value: 1, suffix: " Lac+", icon: <FiBriefcase /> },
     ];
@@ -100,7 +100,7 @@ export default function About() {
                                 transition={{ delay: 0.2 }}
                                 className="text-gray-600 text-xl leading-relaxed font-light"
                             >
-                                For over <span className="font-bold text-gray-800">38 years</span>, we've bridged the gap between raw potential and professional mastery. As a premier partner with NIIT Ltd, we've shaped the tech skyline of Patna.
+                                For over <span className="font-bold text-gray-800">38+ years</span>, we've bridged the gap between raw potential and professional mastery. As a premier partner with NIIT Ltd, we've shaped the tech skyline of Patna.
                             </motion.p>
 
                             {/* <motion.div 
