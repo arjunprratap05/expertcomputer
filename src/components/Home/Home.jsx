@@ -19,7 +19,7 @@ import graduatesImg from '../../assets/ecosystem/graduatescourses.jpg';
 import workingImg from '../../assets/ecosystem/workingprofessional.jpeg';
 import homemakerImg from '../../assets/ecosystem/homemaker.jpeg';
 import retiredImg from '../../assets/ecosystem/retiredpersoncourse.jpg';
-import expertcomuteroffice from "../../assets/expertcomuteroffice.png";
+import expertcomuteroffice from "../../assets/expertcomputerfrontoffice.jpeg";
 import suruchiImg from "../../assets/student-suruchi.jpeg";
 import harshImg from "../../assets/student-harsh.jpeg";
 import gauravImg from "../../assets/student-gaurav.jpeg";
