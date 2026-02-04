@@ -120,7 +120,7 @@ export default function Contact() {
                                     <ContactItem icon={<FiMapPin />} title="Campus" detail="Kumar Tower, 2nd Floor, Boring Rd, Patna" />
                                     <ContactItem icon={<FiPhone />} title="Support" detail="+91 7282983335" isLink="tel:+917282983335" />
                                     <ContactItem icon={<FiMail />} title="Email" detail="expertcomputeracademy@gmail.com" isLink="mailto:expertcomputeracademy@gmail.com" />
-                                    <ContactItem icon={<FiClock />} title="Hours" detail="Mon - Sat: 10:00 AM - 8:00 PM" />
+                                    <ContactItem icon={<FiClock />} title="Hours" detail="Mon - Sat: 8:00 AM - 8:00 PM" />
                                 </div>
                             </div>
                             <div className="mt-16 pt-8 border-t border-white/10 opacity-60">
