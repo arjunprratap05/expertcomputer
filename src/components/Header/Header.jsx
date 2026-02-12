@@ -15,15 +15,27 @@ export default function Header() {
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20); // Lower threshold for faster feedback
+            setIsScrolled(window.scrollY > 20);
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Effect to handle navigation when state is passed from another page
+    useEffect(() => {
+        if (location.state?.targetId) {
+            // Short timeout to ensure the DOM has rendered if navigating from another page
+            setTimeout(() => {
+                scrollToTarget(location.state.targetId);
+                // Clear state after scrolling to prevent re-scroll on refresh
+                window.history.replaceState({}, document.title);
+            }, 100);
+        }
+    }, [location]);
+
     useEffect(() => {
         setIsMobileMenuOpen(false);
-    }, [location]);
+    }, [location.pathname]);
 
     const navLinks = [
         { name: 'About', path: '/about' },
@@ -43,41 +55,42 @@ export default function Header() {
     const handleCourseSelection = (course) => {
         setIsDropdownOpen(false);
         setIsMobileMenuOpen(false);
-        if (location.pathname !== '/') {
-            navigate('/', { state: { targetId: course.sectionId, courseId: course.id } });
+        
+        // If we are already on home, scroll. If not, navigate to home with state.
+        if (location.pathname === '/') {
+            scrollToTarget(course.sectionId);
         } else {
-            scrollToTarget(course.sectionId, course.id);
+            navigate('/', { state: { targetId: course.sectionId } });
         }
     };
 
-    const scrollToTarget = (sectionId, courseId) => {
-        const element = document.getElementById(sectionId);
+    const scrollToTarget = (targetId) => {
+        const element = document.getElementById(targetId);
         if (element) {
-            const headerOffset = 80; // Reduced offset for mobile
+            const headerHeight = document.querySelector('header').offsetHeight;
             const elementPosition = element.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-            window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+            const offsetPosition = elementPosition + window.pageYOffset - (headerHeight + 20);
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: "smooth"
+            });
         }
     };
 
     return (
         <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-md' : 'bg-white'}`}>
-            {/* Thinner top gradient bar */}
             <div className="h-1 w-full bg-gradient-to-r from-[#1A5F7A] via-[#F37021] to-[#1A5F7A]"></div>
             
-            {/* Reduced vertical padding on mobile (py-1 vs py-2) */}
             <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10 py-1 lg:py-2 transition-all duration-300">
-                <div className="flex justify-between items-center h-14 lg:h-20"> {/* Fixed lower height on mobile */}
+                <div className="flex justify-between items-center h-14 lg:h-20">
                     
                     {/* LOGO */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center">
                         <Link to="/" onClick={handleHomeClick} className="flex items-center">
                             <img 
                                 src={expertcomputerlogo} 
-                                // Significantly smaller logo on mobile to save vertical space
-                                className={`transition-all duration-300 object-contain w-auto ${
-                                    isScrolled ? 'h-9 lg:h-14' : 'h-11 lg:h-20'
-                                }`} 
+                                className={`transition-all duration-300 object-contain w-auto ${isScrolled ? 'h-9 lg:h-14' : 'h-11 lg:h-20'}`} 
                                 alt="Expert Computer Academy"
                             />
                         </Link>
@@ -95,7 +108,7 @@ export default function Header() {
                                 </li>
                             ))}
                             <li className="relative group" onMouseEnter={() => setIsDropdownOpen(true)} onMouseLeave={() => setIsDropdownOpen(false)}>
-                                <button className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#1A5F7A] group-hover:text-[#F37021] py-4">
+                                <button className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#1A5F7A] group-hover:text-[#F37021] py-4 uppercase">
                                     Courses <FiChevronDown />
                                 </button>
                                 <div className={`absolute left-0 top-full w-72 bg-white rounded-2xl shadow-2xl py-3 transition-all duration-300 ${isDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
@@ -109,15 +122,12 @@ export default function Header() {
                         </ul>
                         <div className="flex items-center gap-4 border-l pl-8">
                             <Link to="/admin/login" className="flex items-center gap-2 text-[#1A5F7A] hover:text-[#F37021] font-bold text-sm"><FiShield /> Admin</Link>
-                            <Link to="/contact" className="text-white bg-[#F37021] hover:bg-[#1A5F7A] font-bold rounded-xl text-sm px-6 py-3 transition-all shadow-md">Join Now</Link>
+                            <Link to="/contact" className="text-white bg-[#F37021] hover:bg-[#1A5F7A] font-bold rounded-xl text-sm px-6 py-3 transition-all shadow-md uppercase">Join Now</Link>
                         </div>
                     </div>
 
-                    {/* MOBILE HAMBURGER TOGGLE */}
-                    <button 
-                        className="lg:hidden p-2 text-[#1A5F7A] text-2xl focus:outline-none"
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    >
+                    {/* MOBILE HAMBURGER */}
+                    <button className="lg:hidden p-2 text-[#1A5F7A] text-2xl" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                         {isMobileMenuOpen ? <FiX /> : <FiMenu />}
                     </button>
                 </div>
@@ -130,45 +140,50 @@ export default function Header() {
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="p-5 flex flex-col h-full">
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex justify-between items-center mb-6 border-b pb-4">
                             <img src={expertcomputerlogo} className="h-9 w-auto" alt="Logo" />
                             <button onClick={() => setIsMobileMenuOpen(false)} className="text-2xl text-slate-400"><FiX /></button>
                         </div>
+                        
                         <div className="flex-1 overflow-y-auto">
-                            <ul className="space-y-3"> {/* Tighter list spacing */}
+                            <ul className="space-y-1">
                                 <li>
-                                    <NavLink to="/" onClick={handleHomeClick} className="block py-2 text-base font-bold text-[#1A5F7A]">Home</NavLink>
+                                    <NavLink to="/" onClick={handleHomeClick} className="block py-3 text-base font-bold text-[#1A5F7A] border-b border-slate-50">Home</NavLink>
                                 </li>
                                 {navLinks.map((link) => (
                                     <li key={link.name}>
-                                        <NavLink to={link.path} className="block py-2 text-base font-bold text-[#1A5F7A]">{link.name}</NavLink>
+                                        <NavLink to={link.path} className="block py-3 text-base font-bold text-[#1A5F7A] border-b border-slate-50">{link.name}</NavLink>
                                     </li>
                                 ))}
+                                
+                                {/* ADMIN & JOIN NOW BUTTONS MOVED HERE FOR VISIBILITY */}
                                 <li>
+                                    <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 text-base font-bold text-[#1A5F7A] border-b border-slate-50">
+                                        <FiShield className="text-[#F37021]" /> Admin Portal
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 text-base font-bold text-[#F37021] border-b border-slate-50 uppercase italic">
+                                        <FiPhoneCall /> Join Now
+                                    </Link>
+                                </li>
+
+                                <li className="pt-2">
                                     <button 
-                                        className="w-full flex justify-between items-center py-2 text-base font-bold text-[#1A5F7A]"
+                                        className="w-full flex justify-between items-center py-3 text-base font-bold text-[#1A5F7A]"
                                         onClick={() => setActiveMobileDropdown(!activeMobileDropdown)}
                                     >
-                                        Courses <FiChevronDown className={`transition-transform duration-200 ${activeMobileDropdown ? 'rotate-180 text-[#F37021]' : ''}`} />
+                                        COURSES <FiChevronDown className={`transition-transform duration-200 ${activeMobileDropdown ? 'rotate-180 text-[#F37021]' : ''}`} />
                                     </button>
-                                    <div className={`mt-1 space-y-1 pl-4 border-l-2 border-orange-50 overflow-hidden transition-all duration-300 ${activeMobileDropdown ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                    <div className={`space-y-1 pl-4 border-l-2 border-orange-50 overflow-hidden transition-all duration-300 ${activeMobileDropdown ? 'max-h-[600px] opacity-100 py-2' : 'max-h-0 opacity-0'}`}>
                                         {techCoursesData.map((course) => (
-                                            <button key={course.id} onClick={() => handleCourseSelection(course)} className="w-full text-left py-2 text-sm font-semibold text-slate-500 flex items-center gap-2">
+                                            <button key={course.id} onClick={() => handleCourseSelection(course)} className="w-full text-left py-2.5 text-sm font-semibold text-slate-500 flex items-center gap-2">
                                                 <FiBook className="text-[#F37021] text-xs" /> {course.title}
                                             </button>
                                         ))}
                                     </div>
                                 </li>
                             </ul>
-                        </div>
-                        {/* Compact bottom actions */}
-                        <div className="mt-auto space-y-3 pt-4 border-t border-slate-50">
-                            <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-slate-50 text-[#1A5F7A] font-bold text-sm">
-                                <FiShield /> Admin Portal
-                            </Link>
-                            <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#F37021] text-white font-bold text-sm shadow-md">
-                                <FiPhoneCall /> Join Now
-                            </Link>
                         </div>
                     </div>
                 </div>
