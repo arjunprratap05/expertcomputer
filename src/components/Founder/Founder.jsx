@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiLinkedin, FiMail, FiAward, FiShield, FiStar } from 'react-icons/fi';
+import { FiArrowLeft, FiLinkedin, FiMail, FiAward, FiShield, FiStar, FiExternalLink } from 'react-icons/fi';
 
 // Assets
 import founder1Img from '../../assets/founder1.png'; 
@@ -13,8 +13,10 @@ import amit from '../../assets/amit.jpeg';
 import sanchita from '../../assets/sanchita.jpeg';
 import pawan from '../../assets/pawan.jpeg';
 
+// Certificate Import
+import sudiptcertificate from '../../assets/certificates/Sudipt-Sengupta TCT Certificate.pdf';
+
 export default function Founder() {
-    // FIX: Page visible from top on call
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }, []);
@@ -38,7 +40,15 @@ export default function Founder() {
 
     const faculty = [
         { name: "Madhu Chanda Ghosh", role: "Java Expert", exp: "34 Years", specialty: "Center Head/Java Expert", image: madhu },
-        { name: "Sudipt Sengupta", role: "Faculty", exp: "34 Years", specialty: "Tally, Python", image: sudip },
+        { 
+            name: "Sudipt Sengupta", 
+            role: "Faculty", 
+            exp: "34 Years", 
+            specialty: "Tally, Python", 
+            image: sudip,
+            certificate: sudiptcertificate,
+            certName: "Tally Certified Trainer"
+        },
         { name: "Pawan Kumar Jha", role: "Networking", exp: "26 Years", specialty: "Networking Specialist", image: pawan },
         { name: "Dhananjay Kumar", role: "Faculty", exp: "20 Years", specialty: "C/C++ Specialist", image: dananjay },
         { name: "Sanchita Ghosh", role: "Faculty", exp: "20 Years", specialty: "Counselor", image: sanchita },
@@ -91,14 +101,31 @@ export default function Founder() {
                 {/* FACULTY GRID */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {faculty.map((member, index) => (
-                        <motion.div key={index} className="group flex items-center gap-6 p-6 bg-white rounded-[2.5rem] border border-slate-100 hover:border-[#F37021]/30 transition-all">
-                            <div className="w-20 h-20 flex-shrink-0">
+                        <motion.div key={index} className="group flex items-center gap-6 p-6 bg-white rounded-[2.5rem] border border-slate-100 hover:border-[#F37021]/30 transition-all shadow-sm">
+                            <div className="w-20 h-20 flex-shrink-0 relative">
                                 <img src={member.image} alt={member.name} className="w-full h-full object-cover rounded-2xl shadow-md border-2 border-white" />
+                                {member.certificate && (
+                                    <div className="absolute -top-2 -right-2 bg-yellow-400 text-white p-1.5 rounded-full shadow-lg">
+                                        <FiAward size={14} />
+                                    </div>
+                                )}
                             </div>
                             <div className="flex-1">
-                                <h3 className="font-black text-lg text-[#1A5F7A] uppercase tracking-tighter">{member.name}</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{member.specialty}</p>
-                                <p className="text-[#F37021] text-[10px] font-black uppercase tracking-widest">{member.exp} Experience</p>
+                                <h3 className="font-black text-lg text-[#1A5F7A] uppercase tracking-tighter leading-tight">{member.name}</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{member.specialty}</p>
+                                <p className="text-[#F37021] text-[10px] font-black uppercase tracking-widest mb-2">{member.exp} Experience</p>
+                                
+                                {/* Dynamic Certificate Link for Sudip Sengupta */}
+                                {member.certificate && (
+                                    <a 
+                                        href={member.certificate} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-[9px] font-black text-[#1A5F7A] uppercase tracking-tighter hover:text-[#F37021] transition-colors border-b border-[#1A5F7A]/20 pb-0.5"
+                                    >
+                                        <FiExternalLink /> View {member.certName}
+                                    </a>
+                                )}
                             </div>
                         </motion.div>
                     ))}
@@ -108,7 +135,6 @@ export default function Founder() {
     );
 }
 
-// --- FIX: ADD THIS EXPORT AT THE BOTTOM ---
 export const founderInfoLoader = async () => {
     return {}; 
 };
