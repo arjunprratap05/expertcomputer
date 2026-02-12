@@ -44,17 +44,15 @@ export default function Home() {
     const [selectedSyllabus, setSelectedSyllabus] = useState(null);
     const targetRef = useRef(null);
 
-    // --- NEW: SYNC SCROLL LOGIC ---
+    // --- SYNC SCROLL LOGIC ---
     useEffect(() => {
-        // If there is no targetId in state, scroll to top (default behavior)
         if (!location.state?.targetId) {
             window.scrollTo({ top: 0, left: 0, behavior: "instant" });
         } else {
-            // If targetId exists (clicked from header), scroll to that section
             const timer = setTimeout(() => {
                 const element = document.getElementById(location.state.targetId);
                 if (element) {
-                    const headerOffset = 100; // Account for sticky header height
+                    const headerOffset = 100;
                     const elementPosition = element.getBoundingClientRect().top;
                     const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -63,7 +61,6 @@ export default function Home() {
                         behavior: "smooth"
                     });
                 }
-                // Optional: Clear state so it doesn't re-scroll on refresh
                 window.history.replaceState({}, document.title);
             }, 300);
             return () => clearTimeout(timer);
@@ -148,7 +145,7 @@ export default function Home() {
                 </motion.div>
             </section>
 
-            {/* 4. UNIVERSITY TRACKS - ADDED ID: "university-programs" */}
+            {/* 4. UNIVERSITY TRACKS */}
             <section id="university-programs" className="py-10 bg-slate-50/50 mx-0 md:-mx-4 px-4 md:px-12 rounded-[2rem] md:rounded-[3rem] overflow-hidden scroll-mt-20">
                 <h2 className="text-2xl md:text-3xl font-black text-[#1A5F7A] mb-8 uppercase tracking-tighter italic">University Degrees</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -165,7 +162,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* 5. SIGNATURE TRACKS - ADDED ID: "signature-courses" */}
+            {/* 5. SIGNATURE TRACKS */}
             <section id="signature-courses" className="py-10 overflow-hidden scroll-mt-20">
                 <h2 className="text-2xl md:text-3xl font-black text-[#1A5F7A] mb-8 uppercase tracking-tighter italic">Signature Courses</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -205,7 +202,47 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* ... Remaining Sections (Alumni, Modal) */}
+            {/* --- NEW: 7. ALUMNI VOICES SECTION --- */}
+            <section className="py-12 md:py-20">
+                <h2 className="text-2xl md:text-4xl font-black text-[#1A5F7A] mb-12 uppercase tracking-tighter italic text-center">
+                    Alumni <span className="text-[#F37021]">Voices</span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-2">
+                    {alumniSuccess.map((student, i) => (
+                        <motion.div 
+                            key={i} 
+                            whileHover={{ y: -5 }}
+                            className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex flex-col justify-between shadow-sm hover:shadow-md transition-all"
+                        >
+                            <div>
+                                <div className="flex gap-1 text-orange-400 text-sm mb-4">
+                                    <FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" />
+                                </div>
+                                <p className="text-slate-600 text-base italic mb-8 leading-relaxed">
+                                    "{student.text}"
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-4 border-t border-slate-200 pt-6">
+                                <img 
+                                    src={student.image} 
+                                    className="w-12 h-12 rounded-full object-cover shadow-sm border-2 border-white" 
+                                    alt={student.name} 
+                                />
+                                <div>
+                                    <span className="block font-black text-[#1A5F7A] uppercase text-xs tracking-widest">
+                                        {student.name}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                        Verified ECA Alumnus
+                                    </span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </section>
+
+            {/* MODAL */}
             {selectedSyllabus && (
                 <SyllabusModal course={selectedSyllabus} onClose={() => setSelectedSyllabus(null)} />
             )}
