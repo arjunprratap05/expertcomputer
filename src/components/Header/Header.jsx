@@ -20,12 +20,25 @@ export default function Header() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // --- NEW: LOGO CLICK HANDLER (SCROLL TO TOP) ---
+    const handleLogoClick = (e) => {
+        if (location.pathname === '/') {
+            // Prevent standard navigation if already home and just scroll up
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        // If not on home page, the <Link to="/"> will naturally take them home to the top
+        setIsMobileMenuOpen(false);
+    };
+
     // 2. SMART SCROLL LOGIC
     const scrollToSection = (id) => {
-        // We look for the ID. If your Home page sections have id="signature-courses", use that.
         const element = document.getElementById(id);
         if (element) {
-            const offset = 100; // Space for the sticky header
+            const offset = 100; 
             const bodyRect = document.body.getBoundingClientRect().top;
             const elementRect = element.getBoundingClientRect().top;
             const elementPosition = elementRect - bodyRect;
@@ -36,7 +49,6 @@ export default function Header() {
                 behavior: 'smooth'
             });
         } else {
-            // Fallback: If specific ID not found, scroll to top of Signature section
             const fallback = document.querySelector('section'); 
             fallback?.scrollIntoView({ behavior: 'smooth' });
         }
@@ -46,10 +58,8 @@ export default function Header() {
     useEffect(() => {
         if (location.pathname === '/' && location.state?.targetId) {
             const target = location.state.targetId;
-            // Delay ensures the Home page content is fully rendered before measuring position
             const timer = setTimeout(() => {
                 scrollToSection(target);
-                // Clean up state so it doesn't scroll again on refresh
                 window.history.replaceState({}, document.title);
             }, 500); 
             return () => clearTimeout(timer);
@@ -68,10 +78,8 @@ export default function Header() {
         setIsDropdownOpen(false);
 
         if (location.pathname === '/') {
-            // Use the sectionId from your courses.js data
             scrollToSection(course.sectionId || 'signature-courses');
         } else {
-            // Navigate home first, then scroll via useEffect above
             navigate('/', { state: { targetId: course.sectionId || 'signature-courses' } });
         }
     };
@@ -83,12 +91,16 @@ export default function Header() {
             <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10 py-2">
                 <div className="flex justify-between items-center h-14 lg:h-20">
                     
-                    {/* LOGO */}
-                    <Link to="/" className="flex items-center">
-                        <img src={expertcomputerlogo} className={`transition-all duration-300 h-10 lg:h-16 ${isScrolled ? 'scale-95' : 'scale-100'}`} alt="Logo" />
+                    {/* LOGO - UPDATED WITH handleLogoClick */}
+                    <Link to="/" onClick={handleLogoClick} className="flex items-center">
+                        <img 
+                            src={expertcomputerlogo} 
+                            className={`transition-all duration-300 h-10 lg:h-16 ${isScrolled ? 'scale-95' : 'scale-100'}`} 
+                            alt="Logo" 
+                        />
                     </Link>
 
-                    {/* DESKTOP NAV (Restored Admin Portal) */}
+                    {/* DESKTOP NAV */}
                     <div className="hidden lg:flex items-center gap-6">
                         <ul className="flex items-center space-x-6">
                             {navLinks.map((link) => (
@@ -111,7 +123,6 @@ export default function Header() {
                         </ul>
 
                         <div className="flex items-center gap-4 border-l pl-6">
-                            {/* RESTORED ADMIN PORTAL ON DESKTOP */}
                             <Link to="/admin/login" className="flex items-center gap-2 text-[#1A5F7A] hover:text-[#F37021] font-bold text-sm">
                                 <FiShield /> Admin
                             </Link>
@@ -132,7 +143,10 @@ export default function Header() {
             <div className={`lg:hidden fixed inset-0 z-[100] bg-black/40 transition-opacity ${isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 <div className="absolute right-0 top-0 h-screen w-[80%] bg-white p-6 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-center mb-8 border-b pb-4">
-                        <img src={expertcomputerlogo} className="h-9" alt="Logo" />
+                        {/* Mobile Logo also gets the handleLogoClick */}
+                        <Link to="/" onClick={handleLogoClick}>
+                            <img src={expertcomputerlogo} className="h-9" alt="Logo" />
+                        </Link>
                         <button onClick={() => setIsMobileMenuOpen(false)}><FiX className="text-2xl text-slate-400" /></button>
                     </div>
 
@@ -142,7 +156,6 @@ export default function Header() {
                                 <NavLink key={link.name} to={link.path} className="py-3 border-b border-slate-50 font-bold text-[#1A5F7A]">{link.name}</NavLink>
                             ))}
 
-                            {/* COURSES DROPDOWN */}
                             <li className="py-3 border-b border-slate-50">
                                 <button 
                                     className="w-full flex justify-between items-center font-bold text-[#1A5F7A] uppercase"
@@ -161,7 +174,6 @@ export default function Header() {
                                 </div>
                             </li>
 
-                            {/* DYNAMIC SHIFTING BUTTONS IN MOBILE */}
                             <div className="mt-6 flex flex-col gap-3">
                                 <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold border border-slate-100 text-sm">
                                     <FiShield /> Admin Portal
