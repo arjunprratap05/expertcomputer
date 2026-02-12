@@ -83,10 +83,10 @@ export default function Founder() {
                 </motion.div>
 
                 {/* HEADER */}
-                <div className="mb-12 md:mb-20">
+                <div className="mb-12 md:mb-20 text-center md:text-left">
                     <div className="inline-flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full mb-6">
                         <FiShield className="text-[#1A5F7A]" />
-                        <span className="text-[#1A5F7A] text-[9px] md:text-[10px] font-black uppercase tracking-widest text-center">The Pillars of ECA Patna</span>
+                        <span className="text-[#1A5F7A] text-[9px] md:text-[10px] font-black uppercase tracking-widest">The Pillars of ECA Patna</span>
                     </div>
                     <h1 className="text-4xl md:text-7xl font-black text-[#1A5F7A] leading-[1.1] md:leading-[0.9] tracking-tighter mb-6">
                         Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F37021] to-[#ff9f67]">Leadership</span> & Faculty.
@@ -101,8 +101,13 @@ export default function Founder() {
                             whileHover={{ y: -10 }}
                             className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 shadow-xl border border-slate-100 flex flex-col md:flex-row items-center gap-6 md:gap-10 relative overflow-hidden"
                         >
-                            <div className="w-40 h-48 md:w-48 md:h-56 flex-shrink-0 relative z-10">
-                                <img src={founder.image} alt={founder.name} className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-4 border-white" />
+                            <div className="w-40 h-48 md:w-48 md:h-56 flex-shrink-0 relative z-10 bg-slate-100 rounded-[1.5rem] md:rounded-[2.5rem]">
+                                <img 
+                                    src={founder.image} 
+                                    alt={founder.name} 
+                                    className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-4 border-white"
+                                    fetchpriority="high" // Prioritize main founders
+                                />
                             </div>
                             <div className="relative z-10 space-y-3 md:space-y-4 text-center md:text-left">
                                 <h2 className="text-2xl md:text-3xl font-black text-[#1A5F7A] uppercase tracking-tighter">{founder.name}</h2>
@@ -117,8 +122,13 @@ export default function Founder() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                     {faculty.map((member, index) => (
                         <motion.div key={index} className="group flex items-center gap-5 md:gap-6 p-5 md:p-6 bg-white rounded-[2rem] border border-slate-100 hover:border-[#F37021]/30 transition-all shadow-sm">
-                            <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 relative">
-                                <img src={member.image} alt={member.name} className="w-full h-full object-cover rounded-xl md:rounded-2xl shadow-md border-2 border-white" />
+                            <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 relative bg-slate-50 rounded-xl md:rounded-2xl">
+                                <img 
+                                    src={member.image} 
+                                    alt={member.name} 
+                                    className="w-full h-full object-cover rounded-xl md:rounded-2xl shadow-md border-2 border-white"
+                                    loading="lazy" // Optimized for faster page load
+                                />
                                 {member.certificates && (
                                     <div className="absolute -top-1 -right-1 bg-yellow-400 text-white p-1 rounded-full shadow-lg">
                                         <FiAward size={12} />
@@ -147,7 +157,7 @@ export default function Founder() {
                 </div>
             </div>
 
-            {/* CERTIFICATE POP-UP MODAL (PHONE OPTIMIZED) */}
+            {/* CERTIFICATE POP-UP MODAL */}
             <AnimatePresence>
                 {activeCert && (
                     <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-10">
@@ -157,19 +167,19 @@ export default function Founder() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setActiveCert(null)}
-                            className="absolute inset-0 bg-[#0A192F]/95 backdrop-blur-md"
+                            className="absolute inset-0 bg-[#0A192F]/90 backdrop-blur-md"
                         />
                         
                         {/* Modal Content */}
                         <motion.div 
-                            initial={window.innerWidth < 768 ? { y: "100%" } : { scale: 0.9, opacity: 0 }}
+                            initial={window.innerWidth < 768 ? { y: "100%" } : { scale: 0.95, opacity: 0 }}
                             animate={window.innerWidth < 768 ? { y: 0 } : { scale: 1, opacity: 1 }}
-                            exit={window.innerWidth < 768 ? { y: "100%" } : { scale: 0.9, opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="relative w-full md:max-w-5xl h-[90vh] md:h-[85vh] bg-white rounded-t-[2rem] md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+                            exit={window.innerWidth < 768 ? { y: "100%" } : { scale: 0.95, opacity: 0 }}
+                            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                            className="relative w-full md:max-w-4xl h-[92vh] md:h-[80vh] bg-white rounded-t-[2rem] md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
                         >
                             {/* Modal Header */}
-                            <div className="flex items-center justify-between px-6 md:px-8 py-4 border-b">
+                            <div className="flex items-center justify-between px-6 md:px-8 py-4 border-b bg-white">
                                 <div className="flex items-center gap-2 md:gap-3">
                                     <FiAward className="text-[#F37021] text-lg md:text-xl" />
                                     <h3 className="font-black text-[#1A5F7A] uppercase tracking-widest text-[10px] md:text-sm truncate max-w-[200px] md:max-w-full">
@@ -177,7 +187,6 @@ export default function Founder() {
                                     </h3>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {/* Mobile Direct Access */}
                                     <a href={activeCert.link} download className="p-2 text-slate-400 hover:text-[#F37021] md:hidden">
                                         <FiDownload size={20} />
                                     </a>
@@ -191,14 +200,13 @@ export default function Founder() {
                             </div>
 
                             {/* PDF Viewer Body */}
-                            <div className="flex-1 bg-slate-50 relative">
+                            <div className="flex-1 bg-slate-50 relative overflow-hidden">
                                 <iframe 
                                     src={`${activeCert.link}#view=FitH&toolbar=0`} 
                                     className="w-full h-full border-none"
                                     title="Certificate Preview"
                                 />
                                 
-                                {/* UI Hint for Mobile */}
                                 <div className="absolute top-2 left-1/2 -translate-x-1/2 md:hidden pointer-events-none">
                                     <div className="bg-black/60 text-white px-3 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest">
                                         Pinch to zoom
