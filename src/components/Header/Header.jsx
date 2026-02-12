@@ -15,8 +15,7 @@ export default function Header() {
 
     useEffect(() => {
         const handleScroll = () => {
-            // Increased threshold slightly for smoother activation
-            setIsScrolled(window.scrollY > 50);
+            setIsScrolled(window.scrollY > 20); // Lower threshold for faster feedback
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
@@ -54,7 +53,7 @@ export default function Header() {
     const scrollToTarget = (sectionId, courseId) => {
         const element = document.getElementById(sectionId);
         if (element) {
-            const headerOffset = 110;
+            const headerOffset = 80; // Reduced offset for mobile
             const elementPosition = element.getBoundingClientRect().top;
             const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
             window.scrollTo({ top: offsetPosition, behavior: "smooth" });
@@ -62,27 +61,25 @@ export default function Header() {
     };
 
     return (
-        // FIXED: Added a consistent height to the header and removed padding jumps
-        <header className={`sticky top-0 z-50 w-full shadow-lg transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md' : 'bg-white'}`}>
-            <div className="h-1.5 w-full bg-gradient-to-r from-[#1A5F7A] via-[#F37021] to-[#1A5F7A]"></div>
+        <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-md' : 'bg-white'}`}>
+            {/* Thinner top gradient bar */}
+            <div className="h-1 w-full bg-gradient-to-r from-[#1A5F7A] via-[#F37021] to-[#1A5F7A]"></div>
             
-            {/* FIXED: py-2 stays consistent, height is managed by the items inside */}
-            <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10 py-2 transition-all duration-500">
-                <div className="flex justify-between items-center h-16 lg:h-20"> {/* Fixed inner height to stop wobble */}
+            {/* Reduced vertical padding on mobile (py-1 vs py-2) */}
+            <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10 py-1 lg:py-2 transition-all duration-300">
+                <div className="flex justify-between items-center h-14 lg:h-20"> {/* Fixed lower height on mobile */}
                     
                     {/* LOGO */}
-                    <div className="flex items-center gap-4 lg:gap-6">
+                    <div className="flex items-center gap-2">
                         <Link to="/" onClick={handleHomeClick} className="flex items-center">
-                            <div className="relative flex items-center justify-center overflow-visible">
-                                <img 
-                                    src={expertcomputerlogo} 
-                                    // FIXED: Using scale and fixed container to prevent layout shift
-                                    className={`transition-all duration-500 object-contain w-auto ${
-                                        isScrolled ? 'h-12 lg:h-14' : 'h-14 lg:h-20'
-                                    }`} 
-                                    alt="Expert Computer Academy"
-                                />
-                            </div>
+                            <img 
+                                src={expertcomputerlogo} 
+                                // Significantly smaller logo on mobile to save vertical space
+                                className={`transition-all duration-300 object-contain w-auto ${
+                                    isScrolled ? 'h-9 lg:h-14' : 'h-11 lg:h-20'
+                                }`} 
+                                alt="Expert Computer Academy"
+                            />
                         </Link>
                     </div>
 
@@ -126,37 +123,37 @@ export default function Header() {
                 </div>
             </nav>
 
-            {/* MOBILE MENU DRAWER (Keep unchanged but ensure high z-index) */}
-            <div className={`lg:hidden fixed inset-0 z-[60] bg-black/50 transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setIsMobileMenuOpen(false)}>
+            {/* MOBILE MENU DRAWER */}
+            <div className={`lg:hidden fixed inset-0 z-[60] bg-black/40 transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 <div 
-                    className={`absolute right-0 top-0 h-screen w-[80%] max-w-sm bg-white shadow-2xl transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                    className={`absolute right-0 top-0 h-screen w-[75%] max-w-sm bg-white shadow-2xl transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="p-6 flex flex-col h-full">
-                        <div className="flex justify-between items-center mb-8">
-                            <img src={expertcomputerlogo} className="h-12 w-auto" alt="Logo" />
-                            <button onClick={() => setIsMobileMenuOpen(false)} className="text-2xl text-slate-500"><FiX /></button>
+                    <div className="p-5 flex flex-col h-full">
+                        <div className="flex justify-between items-center mb-6">
+                            <img src={expertcomputerlogo} className="h-9 w-auto" alt="Logo" />
+                            <button onClick={() => setIsMobileMenuOpen(false)} className="text-2xl text-slate-400"><FiX /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
-                            <ul className="space-y-4">
+                            <ul className="space-y-3"> {/* Tighter list spacing */}
                                 <li>
-                                    <NavLink to="/" onClick={handleHomeClick} className="block text-lg font-bold text-[#1A5F7A]">Home</NavLink>
+                                    <NavLink to="/" onClick={handleHomeClick} className="block py-2 text-base font-bold text-[#1A5F7A]">Home</NavLink>
                                 </li>
                                 {navLinks.map((link) => (
                                     <li key={link.name}>
-                                        <NavLink to={link.path} className="block text-lg font-bold text-[#1A5F7A]">{link.name}</NavLink>
+                                        <NavLink to={link.path} className="block py-2 text-base font-bold text-[#1A5F7A]">{link.name}</NavLink>
                                     </li>
                                 ))}
                                 <li>
                                     <button 
-                                        className="w-full flex justify-between items-center text-lg font-bold text-[#1A5F7A]"
+                                        className="w-full flex justify-between items-center py-2 text-base font-bold text-[#1A5F7A]"
                                         onClick={() => setActiveMobileDropdown(!activeMobileDropdown)}
                                     >
-                                        Courses <FiChevronDown className={`transition-transform ${activeMobileDropdown ? 'rotate-180' : ''}`} />
+                                        Courses <FiChevronDown className={`transition-transform duration-200 ${activeMobileDropdown ? 'rotate-180 text-[#F37021]' : ''}`} />
                                     </button>
-                                    <div className={`mt-2 space-y-2 pl-4 border-l-2 border-orange-100 overflow-hidden transition-all ${activeMobileDropdown ? 'max-h-[500px] py-2' : 'max-h-0'}`}>
+                                    <div className={`mt-1 space-y-1 pl-4 border-l-2 border-orange-50 overflow-hidden transition-all duration-300 ${activeMobileDropdown ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                         {techCoursesData.map((course) => (
-                                            <button key={course.id} onClick={() => handleCourseSelection(course)} className="w-full text-left py-2 text-sm font-semibold text-slate-600 flex items-center gap-2">
+                                            <button key={course.id} onClick={() => handleCourseSelection(course)} className="w-full text-left py-2 text-sm font-semibold text-slate-500 flex items-center gap-2">
                                                 <FiBook className="text-[#F37021] text-xs" /> {course.title}
                                             </button>
                                         ))}
@@ -164,11 +161,12 @@ export default function Header() {
                                 </li>
                             </ul>
                         </div>
-                        <div className="mt-auto space-y-4 pt-6 border-t border-slate-100">
-                            <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold">
+                        {/* Compact bottom actions */}
+                        <div className="mt-auto space-y-3 pt-4 border-t border-slate-50">
+                            <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-slate-50 text-[#1A5F7A] font-bold text-sm">
                                 <FiShield /> Admin Portal
                             </Link>
-                            <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-[#F37021] text-white font-bold shadow-lg">
+                            <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-[#F37021] text-white font-bold text-sm shadow-md">
                                 <FiPhoneCall /> Join Now
                             </Link>
                         </div>
