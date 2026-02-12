@@ -20,18 +20,16 @@ export default function Header() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // --- NEW: LOGO CLICK HANDLER (SCROLL TO TOP) ---
+    // --- LOGO CLICK HANDLER (SCROLL TO TOP & CLOSE MENU) ---
     const handleLogoClick = (e) => {
+        setIsMobileMenuOpen(false); // CLOSE MENU ON LOGO CLICK
         if (location.pathname === '/') {
-            // Prevent standard navigation if already home and just scroll up
             e.preventDefault();
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'
             });
         }
-        // If not on home page, the <Link to="/"> will naturally take them home to the top
-        setIsMobileMenuOpen(false);
     };
 
     // 2. SMART SCROLL LOGIC
@@ -74,7 +72,7 @@ export default function Header() {
     ];
 
     const handleCourseClick = (course) => {
-        setIsMobileMenuOpen(false);
+        setIsMobileMenuOpen(false); // CLOSE MENU ON COURSE CLICK
         setIsDropdownOpen(false);
 
         if (location.pathname === '/') {
@@ -91,7 +89,7 @@ export default function Header() {
             <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10 py-2">
                 <div className="flex justify-between items-center h-14 lg:h-20">
                     
-                    {/* LOGO - UPDATED WITH handleLogoClick */}
+                    {/* LOGO */}
                     <Link to="/" onClick={handleLogoClick} className="flex items-center">
                         <img 
                             src={expertcomputerlogo} 
@@ -143,7 +141,6 @@ export default function Header() {
             <div className={`lg:hidden fixed inset-0 z-[100] bg-black/40 transition-opacity ${isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 <div className="absolute right-0 top-0 h-screen w-[80%] bg-white p-6 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-center mb-8 border-b pb-4">
-                        {/* Mobile Logo also gets the handleLogoClick */}
                         <Link to="/" onClick={handleLogoClick}>
                             <img src={expertcomputerlogo} className="h-9" alt="Logo" />
                         </Link>
@@ -152,10 +149,19 @@ export default function Header() {
 
                     <div className="flex-1 overflow-y-auto no-scrollbar">
                         <ul className="flex flex-col">
+                            {/* ADDED setIsMobileMenuOpen(false) to all NavLinks */}
                             {navLinks.map((link) => (
-                                <NavLink key={link.name} to={link.path} className="py-3 border-b border-slate-50 font-bold text-[#1A5F7A]">{link.name}</NavLink>
+                                <NavLink 
+                                    key={link.name} 
+                                    to={link.path} 
+                                    onClick={() => setIsMobileMenuOpen(false)} 
+                                    className="py-3 border-b border-slate-50 font-bold text-[#1A5F7A]"
+                                >
+                                    {link.name}
+                                </NavLink>
                             ))}
 
+                            {/* COURSES DROPDOWN */}
                             <li className="py-3 border-b border-slate-50">
                                 <button 
                                     className="w-full flex justify-between items-center font-bold text-[#1A5F7A] uppercase"
@@ -175,6 +181,7 @@ export default function Header() {
                             </li>
 
                             <div className="mt-6 flex flex-col gap-3">
+                                {/* ADDED setIsMobileMenuOpen(false) to Admin & Join Now */}
                                 <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold border border-slate-100 text-sm">
                                     <FiShield /> Admin Portal
                                 </Link>
