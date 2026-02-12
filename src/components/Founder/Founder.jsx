@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiArrowLeft, FiLinkedin, FiMail, FiAward, FiShield, FiStar, FiExternalLink } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiArrowLeft, FiLinkedin, FiMail, FiAward, FiShield, FiStar, FiMaximize2, FiX } from 'react-icons/fi';
 
 // Assets
 import founder1Img from '../../assets/founder1.png'; 
@@ -13,10 +13,15 @@ import amit from '../../assets/amit.jpeg';
 import sanchita from '../../assets/sanchita.jpeg';
 import pawan from '../../assets/pawan.jpeg';
 
-// Certificate Import
+// Certificate Imports
 import sudiptcertificate from '../../assets/certificates/Sudipt-Sengupta TCT Certificate.pdf';
+import pawanMSCertificate from '../../assets/certificates/MS Certificate .NET Windows App.pdf';
+import pawanMSCertificateSQL from '../../assets/certificates/MS Certificate SQL.pdf';
 
 export default function Founder() {
+    // State to handle the modal
+    const [activeCert, setActiveCert] = useState(null);
+
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }, []);
@@ -46,17 +51,28 @@ export default function Founder() {
             exp: "34 Years", 
             specialty: "Tally, Python", 
             image: sudip,
-            certificate: sudiptcertificate,
-            certName: "Tally Certified Trainer"
+            certificates: [
+                { name: "Tally Certified Trainer", link: sudiptcertificate }
+            ]
         },
-        { name: "Pawan Kumar Jha", role: "Networking", exp: "26 Years", specialty: "Networking Specialist", image: pawan },
+        { 
+            name: "Pawan Kumar Jha", 
+            role: "Networking", 
+            exp: "26 Years", 
+            specialty: "Networking Specialist", 
+            image: pawan,
+            certificates: [
+                { name: "MS Certified: .NET", link: pawanMSCertificate },
+                { name: "MS Certified: SQL", link: pawanMSCertificateSQL }
+            ]
+        },
         { name: "Dhananjay Kumar", role: "Faculty", exp: "20 Years", specialty: "C/C++ Specialist", image: dananjay },
         { name: "Sanchita Ghosh", role: "Faculty", exp: "20 Years", specialty: "Counselor", image: sanchita },
         { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Counselor", image: amit }
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 py-20 px-6 font-sans overflow-x-hidden">
+        <div className="min-h-screen bg-slate-50 py-20 px-6 font-sans overflow-x-hidden relative">
             <div className="max-w-7xl mx-auto">
                 
                 {/* NAVIGATION */}
@@ -104,7 +120,7 @@ export default function Founder() {
                         <motion.div key={index} className="group flex items-center gap-6 p-6 bg-white rounded-[2.5rem] border border-slate-100 hover:border-[#F37021]/30 transition-all shadow-sm">
                             <div className="w-20 h-20 flex-shrink-0 relative">
                                 <img src={member.image} alt={member.name} className="w-full h-full object-cover rounded-2xl shadow-md border-2 border-white" />
-                                {member.certificate && (
+                                {member.certificates && (
                                     <div className="absolute -top-2 -right-2 bg-yellow-400 text-white p-1.5 rounded-full shadow-lg">
                                         <FiAward size={14} />
                                     </div>
@@ -115,22 +131,76 @@ export default function Founder() {
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{member.specialty}</p>
                                 <p className="text-[#F37021] text-[10px] font-black uppercase tracking-widest mb-2">{member.exp} Experience</p>
                                 
-                                {/* Dynamic Certificate Link for Sudip Sengupta */}
-                                {member.certificate && (
-                                    <a 
-                                        href={member.certificate} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1.5 text-[9px] font-black text-[#1A5F7A] uppercase tracking-tighter hover:text-[#F37021] transition-colors border-b border-[#1A5F7A]/20 pb-0.5"
-                                    >
-                                        <FiExternalLink /> View {member.certName}
-                                    </a>
-                                )}
+                                {/* Dynamic Certificate Links List - Now triggers modal */}
+                                <div className="flex flex-col gap-1.5 mt-2">
+                                    {member.certificates?.map((cert, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => setActiveCert(cert)}
+                                            className="inline-flex items-center gap-1.5 text-[9px] font-black text-[#1A5F7A] uppercase tracking-tighter hover:text-[#F37021] transition-colors border-b border-[#1A5F7A]/10 w-fit pb-0.5 text-left"
+                                        >
+                                            <FiMaximize2 size={10} /> {cert.name}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </motion.div>
                     ))}
                 </div>
             </div>
+
+            {/* CERTIFICATE POP-UP MODAL */}
+            <AnimatePresence>
+                {activeCert && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+                        {/* Overlay */}
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setActiveCert(null)}
+                            className="absolute inset-0 bg-[#0A192F]/90 backdrop-blur-md"
+                        />
+                        
+                        {/* Modal Content */}
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-5xl h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+                        >
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between px-8 py-4 border-b">
+                                <div className="flex items-center gap-3">
+                                    <FiAward className="text-[#F37021] text-xl" />
+                                    <h3 className="font-black text-[#1A5F7A] uppercase tracking-widest text-sm">{activeCert.name}</h3>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveCert(null)}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-red-500"
+                                >
+                                    <FiX size={24} />
+                                </button>
+                            </div>
+
+                            {/* PDF Viewer Body */}
+                            <div className="flex-1 bg-slate-100 relative">
+                                <iframe 
+                                    src={`${activeCert.link}#toolbar=0`} 
+                                    className="w-full h-full border-none"
+                                    title="Certificate Preview"
+                                />
+                                {/* Mobile Download Hint */}
+                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 md:hidden">
+                                    <p className="bg-black/50 text-white px-4 py-2 rounded-full text-[10px] font-bold">
+                                        Tap to view/zoom on mobile
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
