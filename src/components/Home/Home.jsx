@@ -116,7 +116,7 @@ export default function Home() {
                     </div>
                     <motion.div style={{ opacity: heroOpacity }} className="w-full lg:w-1/2 order-1 lg:order-2">
                         <div className="relative p-2">
-                            <img src={expertcomuteroffice} alt="Office" className="rounded-[1.5rem] md:rounded-[2rem] shadow-xl w-full object-cover aspect-video" />
+                            <img src={expertcomuteroffice} alt="Office" className="rounded-[1.5rem] md:rounded-[2rem] shadow-xl w-full object-cover aspect-video" loading="eager" />
                             <div className="absolute -bottom-3 -right-1 md:-bottom-4 md:-right-2 bg-[#1A5F7A] text-white p-3 md:p-4 rounded-xl md:rounded-2xl shadow-2xl flex flex-col items-center">
                                 <span className="font-black text-xl md:text-2xl leading-none">38+</span>
                                 <span className="text-[8px] md:text-[9px] uppercase font-bold tracking-tighter text-center mt-1">Years Legacy</span>
@@ -170,7 +170,7 @@ export default function Home() {
                         const courseObj = techCoursesData.find(c => c.id === poster.id);
                         return (
                             <div key={index} onClick={() => setSelectedSyllabus(courseObj)} className="group relative rounded-xl md:rounded-[1.5rem] overflow-hidden cursor-pointer shadow-md aspect-[3/4] md:aspect-[4/5] bg-slate-50">
-                                <img src={poster.image} alt={poster.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                <img src={poster.image} alt={poster.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                                 <div className="absolute bottom-0 left-0 p-3 md:p-4">
                                     <h3 className="text-white text-[10px] md:text-sm font-black uppercase tracking-tight leading-tight">{poster.title}</h3>
@@ -192,7 +192,7 @@ export default function Home() {
                     {categories.map((cat, index) => (
                         <div key={index} className="bg-white/5 backdrop-blur-sm rounded-[2rem] overflow-hidden border border-white/10 p-6 flex flex-col justify-between hover:bg-white/10 transition-all group">
                             <div className="flex items-center gap-4 mb-3">
-                                <img src={cat.image} className="w-12 h-12 rounded-full object-cover grayscale group-hover:grayscale-0" alt={cat.title} />
+                                <img src={cat.image} className="w-12 h-12 rounded-full object-cover grayscale group-hover:grayscale-0" alt={cat.title} loading="lazy" />
                                 <h3 className="text-base font-black uppercase tracking-tighter">{cat.title}</h3>
                             </div>
                             <p className="text-blue-100/60 text-xs leading-relaxed mb-6 italic">{cat.desc}</p>
@@ -202,38 +202,42 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* --- NEW: 7. ALUMNI VOICES SECTION --- */}
-            <section className="py-12 md:py-20">
-                <h2 className="text-2xl md:text-4xl font-black text-[#1A5F7A] mb-12 uppercase tracking-tighter italic text-center">
-                    Alumni <span className="text-[#F37021]">Voices</span>
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-2">
+            {/* 7. ALUMNI VOICES */}
+            <section id="alumni-voices" className="py-16 md:py-24 scroll-mt-20 bg-white">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl md:text-5xl font-black text-[#1A5F7A] uppercase tracking-tighter italic">
+                        Alumni <span className="text-[#F37021]">Voices</span>
+                    </h2>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Success stories from 38 years of excellence</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
                     {alumniSuccess.map((student, i) => (
                         <motion.div 
                             key={i} 
-                            whileHover={{ y: -5 }}
-                            className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex flex-col justify-between shadow-sm hover:shadow-md transition-all"
+                            whileHover={{ y: -8 }}
+                            className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300"
                         >
                             <div>
-                                <div className="flex gap-1 text-orange-400 text-sm mb-4">
+                                <div className="flex gap-1 text-orange-400 text-xs mb-5">
                                     <FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" />
                                 </div>
-                                <p className="text-slate-600 text-base italic mb-8 leading-relaxed">
+                                <p className="text-slate-600 text-[15px] md:text-base italic mb-8 leading-relaxed font-medium">
                                     "{student.text}"
                                 </p>
                             </div>
                             <div className="flex items-center gap-4 border-t border-slate-200 pt-6">
                                 <img 
                                     src={student.image} 
-                                    className="w-12 h-12 rounded-full object-cover shadow-sm border-2 border-white" 
-                                    alt={student.name} 
+                                    className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white" 
+                                    alt={student.name}
+                                    loading="lazy"
                                 />
                                 <div>
-                                    <span className="block font-black text-[#1A5F7A] uppercase text-xs tracking-widest">
+                                    <span className="block font-black text-[#1A5F7A] uppercase text-sm tracking-tight">
                                         {student.name}
                                     </span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                        Verified ECA Alumnus
+                                    <span className="text-[9px] font-bold text-[#F37021] uppercase tracking-widest">
+                                        Verified Alumnus
                                     </span>
                                 </div>
                             </div>
