@@ -26,6 +26,7 @@ import suruchiImg from "../../assets/student-suruchi.jpeg";
 import harshImg from "../../assets/student-harsh.jpeg";
 import gauravImg from "../../assets/student-gaurav.jpeg";
 import ankitImg from "../../assets/student-ankit.jpeg";
+import tallyPoster from "../../assets/posters/Tally.jpeg";
 
 const BrandItem = ({ icon, text }) => (
     <div className="flex items-center gap-3 md:gap-4 group cursor-default">
@@ -71,7 +72,8 @@ export default function Home() {
         { title: "Java Programming", image: javaPoster, id: "java-pro" },
         { title: "HTML5 Web", image: htmlPoster, id: "html5-web" },
         { title: "ADCA Diploma", image: adcaPoster, id: "adca-diploma" },
-        { title: "Python & DS", image: pythonPoster, id: "python-ds" }
+        { title: "Python & DS", image: pythonPoster, id: "python-ds" },
+        { title: "Tally Essential", image: tallyPoster, id: "tally-essential" }
     ];
 
     const alumniSuccess = [
