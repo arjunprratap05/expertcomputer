@@ -46,7 +46,7 @@ export default function Home() {
     const [selectedSyllabus, setSelectedSyllabus] = useState(null);
     const targetRef = useRef(null);
 
-    // --- 1. SYNC SCROLL LOGIC ---
+    // --- SYNC SCROLL LOGIC ---
     useEffect(() => {
         if (!location.state?.targetId) {
             window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -69,7 +69,7 @@ export default function Home() {
         }
     }, [location.pathname, location.state]);
 
-    // --- 2. DATA SELECTORS ---
+    // Data Selectors
     const genAiData = techCoursesData.find(c => c.id === 'gen-ai-master');
     
     const featuredPosters = [
@@ -132,21 +132,16 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* 2. GEN-AI LAUNCH SECTION (WITH PRICING) */}
+            {/* 2. GEN-AI LAUNCH SECTION (Heading Updated & Price Hidden) */}
             <section id="gen-ai-course" className="py-10 scroll-mt-24">
                 <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden relative border border-white/10 group shadow-2xl">
                     <div className="flex flex-col lg:flex-row items-center">
                         <div className="w-full lg:w-1/2 p-8 md:p-16 space-y-6">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="inline-flex items-center gap-2 bg-[#F37021] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                                    <FiZap className="animate-pulse" /> New Launch 2026
-                                </div>
-                                <div className="inline-flex items-center gap-2 bg-white/10 text-orange-300 border border-white/10 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                                   ₹{genAiData?.fee || "42,500"}/-
-                                </div>
+                            <div className="inline-flex items-center gap-2 bg-[#F37021] text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                                <FiZap className="animate-pulse" /> New Launch 2026
                             </div>
                             <h2 className="text-3xl md:text-5xl font-black text-white leading-tight uppercase italic tracking-tighter">
-                                Master <span className="text-[#F37021]">Generative AI</span> From Scratch.
+                                <span className="text-[#F37021]">Advanced Diploma</span> Program in Generative AI.
                             </h2>
                             <p className="text-blue-100/60 text-sm md:text-base font-medium max-w-md leading-relaxed">
                                 Unlock the future. Create, Innovate, and Earn with our industry-leading Gen-AI Master Curriculum.
@@ -169,7 +164,7 @@ export default function Home() {
                         <div className="w-full lg:w-1/2 h-[300px] lg:h-[500px] relative overflow-hidden">
                             <img 
                                 src={genAIPoster} 
-                                alt="Generative AI" 
+                                alt="Advanced Diploma in Generative AI" 
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                                 loading="eager"
                             />

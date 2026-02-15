@@ -18,7 +18,7 @@ export const techCoursesData = [
     { id: "data-analytics", title: "Professional Program in Data Analytics", fee: "22500", modules: ["SQL", "Tableau", "Power BI", "Python"] },
     { 
         id: "gen-ai-master", 
-        title: "Generative AI Master Curriculum", 
+        title: "Advanced Diploma in Generative AI", 
         fee: "42500", 
         sectionId: "gen-ai-course", // Link for header sync
         modules: [
