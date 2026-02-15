@@ -27,6 +27,7 @@ import harshImg from "../../assets/student-harsh.jpeg";
 import ankitImg from "../../assets/student-ankit.jpeg";
 import tallyPoster from "../../assets/posters/Tally.jpeg";
 import genAIPoster from "../../assets/posters/GenerativeAI.jpeg"; 
+import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
 
 // --- HELPER COMPONENT: SKELETON IMAGE LOADER ---
 const OptimizedImage = ({ src, alt, className }) => {
@@ -65,16 +66,29 @@ export default function Home() {
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     
-    // --- STATE MANAGEMENT ---
-    const [pageLoading, setPageLoading] = useState(true);
+    // --- UPDATED STATE MANAGEMENT ---
+    // We check sessionStorage immediately. If 'hasSeenHomeLoader' exists, 
+    // pageLoading starts as 'false', skipping the animation entirely.
+    const [pageLoading, setPageLoading] = useState(() => {
+        return !sessionStorage.getItem("hasSeenHomeLoader");
+    });
+
     const [selectedSyllabus, setSelectedSyllabus] = useState(null);
     const [showBackToTop, setShowBackToTop] = useState(false);
     const targetRef = useRef(null);
 
-    // --- 1. INITIAL PAGE LOAD SPINNER ---
+    // --- 1. UPDATED INITIAL PAGE LOAD LOGIC ---
     useEffect(() => {
-        const timer = setTimeout(() => setPageLoading(false), 800);
-        return () => clearTimeout(timer);
+        const hasSeen = sessionStorage.getItem("hasSeenHomeLoader");
+        
+        if (!hasSeen) {
+            // Only run the timer if the user hasn't seen the loader in this session
+            const timer = setTimeout(() => {
+                setPageLoading(false);
+                sessionStorage.setItem("hasSeenHomeLoader", "true");
+            }, 1500); 
+            return () => clearTimeout(timer);
+        }
     }, []);
 
     // --- 2. MODAL PERSISTENCE (URL SEARCH PARAMS) ---
@@ -144,18 +158,34 @@ export default function Home() {
     const { scrollYProgress } = useScroll({ target: targetRef, offset: ["start start", "end start"] });
     const heroOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
 
-    // --- FULL PAGE LOADER ---
+    // --- FULL PAGE LOADER (Only visible on first visit of session) ---
     if (pageLoading) {
         return (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
-                <motion.div 
-                    animate={{ rotate: 360 }} 
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                    className="w-12 h-12 border-4 border-orange-100 border-t-[#F37021] rounded-full"
-                />
-                <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 animate-pulse">
-                    Expert Academy 2026
-                </p>
+            <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
+                <div className="relative mb-8">
+                    <motion.div 
+                        animate={{ rotate: 360 }} 
+                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                        className="w-32 h-32 md:w-40 md:h-40 border-[2px] border-slate-100 border-t-[#F37021] border-r-[#1A5F7A] rounded-full"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center p-6">
+                        <motion.img 
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            src={expertcomputerlogo} 
+                            alt="Expert Academy" 
+                            className="w-full h-auto object-contain"
+                        />
+                    </div>
+                </div>
+                <div className="text-center">
+                    <h2 className="text-[#1A5F7A] font-black tracking-[0.4em] uppercase text-[10px] md:text-xs">
+                        Expert Computer Academy
+                    </h2>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                        ESTD 1987
+                    </p>
+                </div>
             </div>
         );
     }
