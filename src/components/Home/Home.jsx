@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import {
-    FiArrowRight, FiShield, FiBookOpen, FiAward, FiCheckCircle, FiStar, 
-    FiCode, FiCpu, FiLayers, FiZap
+    FiArrowRight, FiShield, FiBookOpen, FiAward, FiStar, 
+    FiCode, FiCpu, FiLayers, FiZap, FiChevronUp, FiLoader
 } from "react-icons/fi";
 
 // --- DATA & MODAL IMPORTS ---
@@ -24,10 +24,30 @@ import retiredImg from '../../assets/ecosystem/retiredpersoncourse.jpg';
 import expertcomuteroffice from "../../assets/expertcomputerfrontoffice.jpeg";
 import suruchiImg from "../../assets/student-suruchi.jpeg";
 import harshImg from "../../assets/student-harsh.jpeg";
-import gauravImg from "../../assets/student-gaurav.jpeg";
 import ankitImg from "../../assets/student-ankit.jpeg";
 import tallyPoster from "../../assets/posters/Tally.jpeg";
 import genAIPoster from "../../assets/posters/GenerativeAI.jpeg"; 
+
+// --- HELPER COMPONENT: SKELETON IMAGE LOADER ---
+const OptimizedImage = ({ src, alt, className }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    return (
+        <div className={`relative overflow-hidden bg-slate-100 ${className}`}>
+            {!isLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-200 animate-pulse">
+                    <FiLoader className="text-slate-400 animate-spin" />
+                </div>
+            )}
+            <img
+                src={src}
+                alt={alt}
+                onLoad={() => setIsLoaded(true)}
+                className={`transition-opacity duration-700 ${className} ${isLoaded ? "opacity-100" : "opacity-0"}`}
+                loading="lazy"
+            />
+        </div>
+    );
+};
 
 const BrandItem = ({ icon, text }) => (
     <div className="flex items-center gap-3 md:gap-4 group cursor-default">
@@ -43,35 +63,63 @@ const BrandItem = ({ icon, text }) => (
 export default function Home() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
+    
+    // --- STATE MANAGEMENT ---
+    const [pageLoading, setPageLoading] = useState(true);
     const [selectedSyllabus, setSelectedSyllabus] = useState(null);
+    const [showBackToTop, setShowBackToTop] = useState(false);
     const targetRef = useRef(null);
 
-    // --- SYNC SCROLL LOGIC ---
+    // --- 1. INITIAL PAGE LOAD SPINNER ---
     useEffect(() => {
-        if (!location.state?.targetId) {
-            window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        const timer = setTimeout(() => setPageLoading(false), 800);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // --- 2. MODAL PERSISTENCE (URL SEARCH PARAMS) ---
+    const courseIdFromUrl = searchParams.get("course");
+    useEffect(() => {
+        if (courseIdFromUrl) {
+            const course = techCoursesData.find(c => c.id === courseIdFromUrl);
+            if (course) setSelectedSyllabus(course);
         } else {
+            setSelectedSyllabus(null);
+        }
+    }, [courseIdFromUrl]);
+
+    const handleOpenModal = (course) => setSearchParams({ course: course.id });
+    const handleCloseModal = () => setSearchParams({});
+
+    // --- 3. ROBUST SCROLL & REFRESH LOGIC ---
+    useEffect(() => {
+        const targetId = location.state?.targetId || sessionStorage.getItem("lastTargetId");
+        if (targetId) {
+            sessionStorage.setItem("lastTargetId", targetId);
             const timer = setTimeout(() => {
-                const element = document.getElementById(location.state.targetId);
+                const element = document.getElementById(targetId);
                 if (element) {
                     const headerOffset = 100;
                     const elementPosition = element.getBoundingClientRect().top;
                     const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-                    window.scrollTo({
-                        top: offsetPosition,
-                        behavior: "smooth"
-                    });
+                    window.scrollTo({ top: offsetPosition, behavior: "smooth" });
                 }
+                sessionStorage.removeItem("lastTargetId");
                 window.history.replaceState({}, document.title);
             }, 400);
             return () => clearTimeout(timer);
         }
     }, [location.pathname, location.state]);
 
-    // Data Selectors
+    // --- 4. BACK TO TOP VISIBILITY ---
+    useEffect(() => {
+        const handleScroll = () => setShowBackToTop(window.scrollY > 600);
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    // --- DATA SELECTORS ---
     const genAiData = techCoursesData.find(c => c.id === 'gen-ai-master');
-    
     const featuredPosters = [
         { title: "Java Programming", image: javaPoster, id: "java-pro" },
         { title: "HTML5 Web", image: htmlPoster, id: "html5-web" },
@@ -79,13 +127,11 @@ export default function Home() {
         { title: "Python & DS", image: pythonPoster, id: "python-ds" },
         { title: "Tally Essential", image: tallyPoster, id: "tally-essential" }
     ];
-
     const alumniSuccess = [
         { name: "Suruchi Rai", text: "Mastered HTML5 at Expert Academy. Now a Web Dev.", image: suruchiImg },
         { name: "Harsh Raj", text: "ADCA changed my career path completely.", image: harshImg },
         { name: "Ankit Shubham", text: "Gen-AI ready curriculum is world-class.", image: ankitImg }
     ];
-
     const categories = [
         { title: "School Students", desc: "Foundation coding.", image: schoolImg },
         { title: "College Students", desc: "Advanced tech skills.", image: collegeImg },
@@ -98,11 +144,42 @@ export default function Home() {
     const { scrollYProgress } = useScroll({ target: targetRef, offset: ["start start", "end start"] });
     const heroOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
 
+    // --- FULL PAGE LOADER ---
+    if (pageLoading) {
+        return (
+            <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
+                <motion.div 
+                    animate={{ rotate: 360 }} 
+                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    className="w-12 h-12 border-4 border-orange-100 border-t-[#F37021] rounded-full"
+                />
+                <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 animate-pulse">
+                    Expert Academy 2026
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div ref={targetRef} className="mx-auto w-full max-w-7xl px-4 md:px-6 font-sans text-slate-900 bg-white overflow-x-hidden relative">
+            
+            {/* BACK TO TOP BUTTON */}
+            <AnimatePresence>
+                {showBackToTop && (
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        className="fixed bottom-8 right-8 z-50 bg-[#F37021] text-white p-4 rounded-full shadow-2xl hover:bg-[#1A5F7A] transition-all"
+                    >
+                        <FiChevronUp size={24} />
+                    </motion.button>
+                )}
+            </AnimatePresence>
 
             {/* 1. HERO SECTION */}
-            <section className="py-6 md:py-10 overflow-hidden">
+            <section className="py-6 md:py-10">
                 <div className="flex flex-col lg:flex-row items-center gap-8">
                     <div className="w-full lg:w-1/2 space-y-5 text-center lg:text-left order-2 lg:order-1">
                         <div className="inline-flex items-center gap-2 bg-orange-50 text-[#F37021] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -122,7 +199,7 @@ export default function Home() {
                     </div>
                     <motion.div style={{ opacity: heroOpacity }} className="w-full lg:w-1/2 order-1 lg:order-2">
                         <div className="relative p-2">
-                            <img src={expertcomuteroffice} alt="Office" className="rounded-[1.5rem] md:rounded-[2rem] shadow-xl w-full object-cover aspect-video bg-slate-100" loading="eager" />
+                            <OptimizedImage src={expertcomuteroffice} alt="Office" className="rounded-[1.5rem] md:rounded-[2rem] shadow-xl w-full aspect-video" />
                             <div className="absolute -bottom-3 -right-1 md:-bottom-4 md:-right-2 bg-[#1A5F7A] text-white p-3 md:p-4 rounded-xl md:rounded-2xl shadow-2xl flex flex-col items-center">
                                 <span className="font-black text-xl md:text-2xl leading-none">38+</span>
                                 <span className="text-[8px] md:text-[9px] uppercase font-bold tracking-tighter text-center mt-1">Years Legacy</span>
@@ -132,7 +209,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* 2. GEN-AI LAUNCH SECTION (Heading Updated & Price Hidden) */}
+            {/* 2. GEN-AI LAUNCH SECTION */}
             <section id="gen-ai-course" className="py-10 scroll-mt-24">
                 <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden relative border border-white/10 group shadow-2xl">
                     <div className="flex flex-col lg:flex-row items-center">
@@ -148,7 +225,7 @@ export default function Home() {
                             </p>
                             <div className="flex flex-wrap gap-4 pt-4">
                                 <button 
-                                    onClick={() => setSelectedSyllabus(genAiData)}
+                                    onClick={() => handleOpenModal(genAiData)}
                                     className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-[#F37021] hover:text-white transition-all shadow-xl"
                                 >
                                     <FiBookOpen /> View Syllabus
@@ -162,12 +239,7 @@ export default function Home() {
                             </div>
                         </div>
                         <div className="w-full lg:w-1/2 h-[300px] lg:h-[500px] relative overflow-hidden">
-                            <img 
-                                src={genAIPoster} 
-                                alt="Advanced Diploma in Generative AI" 
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                                loading="eager"
-                            />
+                            <OptimizedImage src={genAIPoster} alt="Gen AI" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-transparent to-transparent lg:block hidden"></div>
                         </div>
                     </div>
@@ -217,8 +289,8 @@ export default function Home() {
                     {featuredPosters.map((poster, index) => {
                         const courseObj = techCoursesData.find(c => c.id === poster.id);
                         return (
-                            <div key={index} onClick={() => setSelectedSyllabus(courseObj)} className="group relative rounded-xl md:rounded-[1.5rem] overflow-hidden cursor-pointer shadow-md aspect-[3/4] md:aspect-[4/5] bg-slate-50">
-                                <img src={poster.image} alt={poster.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
+                            <div key={index} onClick={() => handleOpenModal(courseObj)} className="group relative rounded-xl md:rounded-[1.5rem] overflow-hidden cursor-pointer shadow-md aspect-[3/4] md:aspect-[4/5] bg-slate-50">
+                                <OptimizedImage src={poster.image} alt={poster.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                                 <div className="absolute bottom-0 left-0 p-3 md:p-4 text-left">
                                     <h3 className="text-white text-[10px] md:text-sm font-black uppercase tracking-tight leading-tight">{poster.title}</h3>
@@ -240,7 +312,7 @@ export default function Home() {
                     {categories.map((cat, index) => (
                         <div key={index} className="bg-white/5 backdrop-blur-sm rounded-[2rem] overflow-hidden border border-white/10 p-6 flex flex-col justify-between hover:bg-white/10 transition-all group">
                             <div className="flex items-center gap-4 mb-3">
-                                <img src={cat.image} className="w-12 h-12 rounded-full object-cover grayscale group-hover:grayscale-0 bg-slate-800" alt={cat.title} loading="lazy" />
+                                <OptimizedImage src={cat.image} className="w-12 h-12 rounded-full object-cover grayscale group-hover:grayscale-0" alt={cat.title} />
                                 <h3 className="text-base font-black uppercase tracking-tighter">{cat.title}</h3>
                             </div>
                             <p className="text-blue-100/60 text-xs leading-relaxed mb-6 italic">{cat.desc}</p>
@@ -251,42 +323,21 @@ export default function Home() {
             </section>
 
             {/* 7. ALUMNI VOICES */}
-            <section id="alumni-voices" className="py-16 md:py-24 scroll-mt-20 bg-white">
+            <section id="alumni-voices" className="py-16 md:py-24 bg-white">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl md:text-5xl font-black text-[#1A5F7A] uppercase tracking-tighter italic">
                         Alumni <span className="text-[#F37021]">Voices</span>
                     </h2>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Success stories from 38 years of excellence</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
                     {alumniSuccess.map((student, i) => (
-                        <motion.div 
-                            key={i} 
-                            whileHover={{ y: -8 }}
-                            className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300"
-                        >
-                            <div className="text-left">
-                                <div className="flex gap-1 text-orange-400 text-xs mb-5">
-                                    <FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" /><FiStar fill="currentColor" />
-                                </div>
-                                <p className="text-slate-600 text-[15px] md:text-base italic mb-8 leading-relaxed font-medium">
-                                    "{student.text}"
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-4 border-t border-slate-200 pt-6">
-                                <img 
-                                    src={student.image} 
-                                    className="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white bg-slate-200" 
-                                    alt={student.name}
-                                    loading="lazy"
-                                />
+                        <motion.div key={i} whileHover={{ y: -8 }} className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all">
+                            <p className="text-slate-600 text-[15px] italic mb-8">"{student.text}"</p>
+                            <div className="flex items-center gap-4 border-t pt-6">
+                                <OptimizedImage src={student.image} className="w-14 h-14 rounded-full shadow-md" alt={student.name} />
                                 <div className="text-left">
-                                    <span className="block font-black text-[#1A5F7A] uppercase text-sm tracking-tight leading-none mb-1">
-                                        {student.name}
-                                    </span>
-                                    <span className="text-[9px] font-bold text-[#F37021] uppercase tracking-widest">
-                                        Verified Alumnus
-                                    </span>
+                                    <span className="block font-black text-[#1A5F7A] uppercase text-sm">{student.name}</span>
+                                    <span className="text-[9px] font-bold text-[#F37021] uppercase tracking-widest">Verified Alumnus</span>
                                 </div>
                             </div>
                         </motion.div>
@@ -294,9 +345,9 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* MODAL */}
+            {/* MODAL SYSTEM */}
             {selectedSyllabus && (
-                <SyllabusModal course={selectedSyllabus} onClose={() => setSelectedSyllabus(null)} />
+                <SyllabusModal course={selectedSyllabus} onClose={handleCloseModal} />
             )}
         </div>
     );
