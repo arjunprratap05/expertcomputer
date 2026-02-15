@@ -66,6 +66,7 @@ export default function Header() {
                         <img src={expertcomputerlogo} className={`transition-all duration-300 h-10 lg:h-16 ${isScrolled ? 'scale-95' : 'scale-100'}`} alt="Expert Academy Logo" />
                     </Link>
 
+                    {/* DESKTOP NAV */}
                     <div className="hidden lg:flex items-center gap-6">
                         <ul className="flex items-center space-x-6">
                             {navLinks.map((link) => (
@@ -103,11 +104,13 @@ export default function Header() {
                         <img src={expertcomputerlogo} className="h-10" alt="Logo" />
                         <button onClick={() => setIsMobileMenuOpen(false)}><FiX className="text-2xl text-slate-400" /></button>
                     </div>
+
                     <div className="flex-1 overflow-y-auto no-scrollbar">
                         <ul className="flex flex-col gap-1">
                             {navLinks.map((link) => (
                                 <NavLink key={link.name} to={link.path} onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `py-4 border-b border-slate-50 font-bold uppercase text-sm ${isActive ? 'text-[#F37021]' : 'text-[#1A5F7A]'}`}>{link.name}</NavLink>
                             ))}
+                            
                             <li className="py-4 border-b border-slate-50">
                                 <button className={`w-full flex justify-between items-center font-bold uppercase text-sm ${activeMobileDropdown ? 'text-[#F37021]' : 'text-[#1A5F7A]'}`} onClick={() => setActiveMobileDropdown(!activeMobileDropdown)}>
                                     Courses <FiChevronDown className={`transition-transform duration-300 ${activeMobileDropdown ? 'rotate-180' : ''}`} />
@@ -120,11 +123,17 @@ export default function Header() {
                                     </div>
                                 </div>
                             </li>
+
+                            {/* MOVED BUTTONS INSIDE THE LIST FLOW */}
+                            <div className="mt-6 flex flex-col gap-3 pb-10">
+                                <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold border border-slate-100 text-xs uppercase tracking-widest">
+                                    <FiShield /> Admin Portal
+                                </Link>
+                                <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-[#F37021] text-white font-bold shadow-lg uppercase text-[11px] tracking-[0.15em] italic">
+                                    <FiPhoneCall /> Join Now
+                                </Link>
+                            </div>
                         </ul>
-                    </div>
-                    <div className="mt-auto pt-6 flex flex-col gap-3">
-                        <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold border border-slate-100 text-xs uppercase tracking-widest"><FiShield /> Admin Portal</Link>
-                        <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-[#F37021] text-white font-bold shadow-lg uppercase text-[11px] tracking-[0.15em] italic"><FiPhoneCall /> Join Now</Link>
                     </div>
                 </div>
             </div>
