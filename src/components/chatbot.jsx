@@ -84,7 +84,7 @@ export default function ChatBot() {
                                 </div>
                                 <div>
                                     <p className="font-black uppercase tracking-widest text-[10px]">Expert Computer Academy</p>
-                                    <h3 className="text-sm font-bold">AI Counselor</h3>
+                                    <h3 className="text-sm font-bold">AI Assitant Counselor</h3>
                                 </div>
                             </div>
                             <button onClick={() => setIsOpen(false)} className="hover:bg-white/10 p-2 rounded-full transition-colors">
