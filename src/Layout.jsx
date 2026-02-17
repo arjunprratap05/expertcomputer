@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiCpu } from 'react-icons/fi';
 import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
 import ChatBot from './components/chatbot'; 
@@ -12,21 +11,25 @@ export default function Layout() {
     const location = useLocation();
 
     useEffect(() => {
-        // Logic to show loader ONLY on first Home visit of the session
         const hasSeenLoader = sessionStorage.getItem("hasSeenLoader");
 
+        // If landing on Home from Google or refreshing the session
         if (location.pathname === '/' && !hasSeenLoader) {
             document.body.style.overflow = 'hidden';
+            window.scrollTo(0, 0); // Ensure they start at the top after redirect
+
             const timer = setTimeout(() => {
                 setIsLoading(false);
                 document.body.style.overflow = 'unset';
                 sessionStorage.setItem("hasSeenLoader", "true");
-            }, 1800); // 1.8s allows the logo and branding to be fully appreciated
+            }, 1800);
+
             return () => {
                 clearTimeout(timer);
                 document.body.style.overflow = 'unset';
             };
         } else {
+            // No animation if they come from another page or already saw it
             setIsLoading(false);
         }
     }, [location.pathname]);
@@ -38,9 +41,10 @@ export default function Layout() {
                     <motion.div 
                         key="global-loader"
                         initial={{ opacity: 1 }}
-                        exit={{ opacity: 0, transition: { duration: 0.8, ease: "easeInOut" } }}
+                        exit={{ opacity: 0, transition: { duration: 0.6 } }}
                         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white"
                     >
+                        {/* Background Blurs */}
                         <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
                             <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#1A5F7A] rounded-full blur-[120px]"></div>
                             <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#F37021] rounded-full blur-[120px]"></div>
@@ -66,24 +70,21 @@ export default function Layout() {
                         <motion.div 
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.4 }}
                             className="text-center"
                         >
                             <h2 className="text-[#1A5F7A] font-black tracking-[0.4em] uppercase text-[10px] md:text-xs">
                                 Expert Computer Academy
                             </h2>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-                                Innovating Excellence Since 1987
-                            </p>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
+            {/* Content reveals smoothly after loader exits */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: isLoading ? 0 : 1 }}
-                transition={{ duration: 1 }}
+                transition={{ duration: 0.8 }}
                 className="flex flex-col min-h-screen"
             >
                 <Header />
@@ -91,7 +92,6 @@ export default function Layout() {
                     <Outlet /> 
                 </main>
                 <Footer />
-                {/* ChatBot reveal only after loading is done */}
                 {!isLoading && <ChatBot />}
             </motion.div>
         </>
