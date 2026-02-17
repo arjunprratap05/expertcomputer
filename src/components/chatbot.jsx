@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMessageSquare, FiX, FiSend, FiCpu } from "react-icons/fi";
+import { FiMessageSquare, FiX, FiSend } from "react-icons/fi"; // Removed FiCpu as we are using the logo
 import { FaWhatsapp } from "react-icons/fa";
+
+// IMPORT LOGO (Referencing layout.jsx path)
+import expertcomputerlogo from '../assets/expertcomputerlogo.png'; 
 
 export default function ChatBot() {
     const [isOpen, setIsOpen] = useState(false);
@@ -13,7 +16,6 @@ export default function ChatBot() {
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef(null);
 
-    // Auto-scroll to bottom whenever messages change
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -65,7 +67,6 @@ export default function ChatBot() {
                         onClick={() => setIsOpen(true)} 
                         className="bg-[#1A5F7A] text-white p-5 rounded-full shadow-2xl relative group overflow-hidden"
                     >
-                        {/* Shimmer Effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
                         <FiMessageSquare size={28} />
                     </motion.button>
@@ -76,15 +77,20 @@ export default function ChatBot() {
                         exit={{ opacity: 0, y: 50, scale: 0.9 }}
                         className="bg-white w-[350px] md:w-[380px] h-[550px] rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden border border-slate-100"
                     >
-                        {/* Header */}
+                        {/* Header Updated with Logo */}
                         <div className="bg-[#1A5F7A] p-6 text-white flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="bg-white/20 p-2 rounded-xl">
-                                    <FiCpu className="animate-pulse" />
+                                <div className="bg-white p-1.5 rounded-xl">
+                                    {/* LOGO ADDED HERE */}
+                                    <img 
+                                        src={expertcomputerlogo} 
+                                        alt="ECA Logo" 
+                                        className="w-8 h-8 object-contain" 
+                                    />
                                 </div>
                                 <div>
                                     <p className="font-black uppercase tracking-widest text-[10px]">Expert Computer Academy</p>
-                                    <h3 className="text-sm font-bold">AI Assitant Counselor</h3>
+                                    <h3 className="text-sm font-bold">AI Assistant Counselor</h3>
                                 </div>
                             </div>
                             <button onClick={() => setIsOpen(false)} className="hover:bg-white/10 p-2 rounded-full transition-colors">
