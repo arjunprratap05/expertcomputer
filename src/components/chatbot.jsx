@@ -7,7 +7,7 @@ import { FaWhatsapp } from "react-icons/fa";
 export default function ChatBot() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
-        { sender: "bot", text: "Hi! I'm Expert AI. I can help you with ADCA, Tally, or our new Gen-AI courses. What would you like to learn today?" }
+        { sender: "bot", text: "Hi! I'm Expert Computer Academy AI. What would you like to learn today?" }
     ]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
@@ -83,7 +83,7 @@ export default function ChatBot() {
                                     <FiCpu className="animate-pulse" />
                                 </div>
                                 <div>
-                                    <p className="font-black uppercase tracking-widest text-[10px]">Expert Academy</p>
+                                    <p className="font-black uppercase tracking-widest text-[10px]">Expert Computer Academy</p>
                                     <h3 className="text-sm font-bold">AI Counselor</h3>
                                 </div>
                             </div>
