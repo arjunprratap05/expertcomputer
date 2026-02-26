@@ -17,6 +17,19 @@ import AdminLogin from './components/Admin/AdminLogin.jsx';
 import AdminDashboard from './components/Admin/AdminDashboard.jsx';
 import ProtectedRoute from './components/Admin/ProtectedRoute.jsx';
 import AlumniSuccessGallery from "./components/AlumniSuccessGallery";
+import StudentLogin from './components/StudentPortal/StudentLogin.jsx';
+import ForgotPassword from './components/StudentPortal/ForgotPassword.jsx';
+//import StudentDashboard from './components/StudentPortal/StudentDashboard.jsx';
+import StudentLayout from './components/StudentPortal/StudentLayout.jsx';
+import LiveLectures from './components/StudentPortal/LiveLectures.jsx';
+//import ERPSidebar from './components/StudentPortal/ERPSidebar.jsx';
+import ERPLayout from './components/StudentPortal/ERPLayout';
+import StudentProfile from './components/StudentPortal/StudentProfile';
+import FeeLedger from './components/StudentPortal/FeeLedger';
+import StudyMaterial from './components/StudentPortal/StudyMaterial.jsx'
+import { FaCertificate } from 'react-icons/fa'
+import AddLecture from './components/Admin/AddLecture.jsx'
+import Certificates from './components/StudentPortal/Certificates.jsx';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -25,33 +38,35 @@ const router = createBrowserRouter(
       element={<Layout />} 
       errorElement={<UnderDevelopment />}
     >
+      {/* Public Routes */}
       <Route path='' element={<Home />} />
       <Route path='about' element={<About />} />
+      <Route path='founder' element={<Founder />} />
+      <Route path='halloffame' element={<AlumniSuccessGallery />} />
       <Route path='contact' element={<Contact />} />
       <Route path='courses' element={<CourseSection />} />
-      <Route path='courses/:categoryId' element={<CourseSection />} />
-      <Route path='founder' element={<Founder />} loader={founderInfoLoader} />
-      <Route path='niit-university' element={<AffiliationSection />} />
+      <Route path='student-login' element={<StudentLogin />} />
+      <Route path='forgot-password' element={<ForgotPassword />} />
       
-      {/* UPDATED ROUTES: 
-          1. 'registration' matches the navigate('/registration') from AdminDashboard.
-          2. 'register/:courseId' preserves your existing course-specific links.
-      */}
+
+      <Route path="erp" element={<ERPLayout />}>
+        {/* These paths are relative to /erp/ */}
+        <Route path="profile" element={<StudentProfile />} />
+        <Route path="study-material" element={<StudyMaterial />} />
+        <Route path="certificates" element={<Certificates />} />
+        <Route path="live-lectures" element={<LiveLectures />} />
+        <Route path="fee-ledger" element={<FeeLedger />} />
+      </Route>
+
+      {/* Admin and Other Routes */}
       <Route path='registration' element={<RegistrationForm />} />
-      <Route path='register/:courseId' element={<RegistrationForm />} />
-      
-      <Route path='university-degrees' element={<UniversityDegrees />} />
-      <Route path='chatbot' element={<chatBot />} />
       <Route path='admin/login' element={<AdminLogin />} />
-      <Route path="/achievements" element={<AlumniSuccessGallery />} />
       <Route 
         path='admin/dashboard' 
-        element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } 
+        element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} 
+        
       />
+      <Route path="add-lecture" element={<AddLecture />} />
     </Route>
   )
 )

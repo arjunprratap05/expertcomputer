@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiPhoneCall, FiChevronDown, FiBook, FiShield, FiX, FiMenu } from 'react-icons/fi';
+import { FiChevronDown, FiBook, FiShield, FiX, FiMenu, FiUser, FiLogIn } from 'react-icons/fi';
 import { techCoursesData } from '../../data/courses';
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
 
@@ -19,59 +19,37 @@ export default function Header() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const scrollToSection = (id) => {
-        const element = document.getElementById(id);
-        if (element) {
-            const offset = 100;
-            const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-            window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
-        }
-    };
-
-    useEffect(() => {
-        const target = location.state?.targetId;
-        if (location.pathname === '/' && target) {
-            const timer = setTimeout(() => {
-                scrollToSection(target);
-                window.history.replaceState({}, document.title);
-            }, 500); 
-            return () => clearTimeout(timer);
-        }
-    }, [location.pathname, location.state]);
-
     const handleCourseClick = (course) => {
         const targetId = course.sectionId || 'signature-courses';
         setIsMobileMenuOpen(false);
         setIsDropdownOpen(false);
         if (location.pathname === '/') {
-            scrollToSection(targetId);
+            const element = document.getElementById(targetId);
+            if (element) {
+                const headerOffset = 100;
+                const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+                window.scrollTo({ top: elementPosition - headerOffset, behavior: 'smooth' });
+            }
         } else {
             navigate('/', { state: { targetId } });
         }
     };
-
-    const navLinks = [
-        { name: 'About', path: '/about' },
-        { name: 'Founder', path: '/founder' },
-        { name: 'Hall of Fame', path: '/achievements' },
-        { name: 'Contact', path: '/contact' },
-    ];
 
     return (
         <header className={`sticky top-0 z-[60] w-full transition-all duration-300 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-md' : 'bg-white'}`}>
             <div className="h-1 w-full bg-gradient-to-r from-[#1A5F7A] via-[#F37021] to-[#1A5F7A]"></div>
             <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10 py-2">
                 <div className="flex justify-between items-center h-14 lg:h-20">
-                    <Link to="/" onClick={() => { setIsMobileMenuOpen(false); if(location.pathname === '/') window.scrollTo({top:0, behavior:'smooth'}) }} className="flex items-center">
-                        <img src={expertcomputerlogo} className={`transition-all duration-300 h-10 lg:h-16 ${isScrolled ? 'scale-95' : 'scale-100'}`} alt="Expert Academy Logo" />
+                    <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center">
+                        <img src={expertcomputerlogo} className="h-10 lg:h-16" alt="Logo" />
                     </Link>
 
                     {/* DESKTOP NAV */}
                     <div className="hidden lg:flex items-center gap-6">
                         <ul className="flex items-center space-x-6">
-                            {navLinks.map((link) => (
-                                <li key={link.name}>
-                                    <NavLink to={link.path} className={({ isActive }) => `text-[13px] font-bold uppercase tracking-tight ${isActive ? "text-[#F37021]" : "text-[#1A5F7A] hover:text-[#F37021]"}`}>{link.name}</NavLink>
+                            {['About', 'Founder', 'Hall of Fame', 'Contact'].map((name) => (
+                                <li key={name}>
+                                    <NavLink to={`/${name.toLowerCase().replace(/ /g, '')}`} className={({ isActive }) => `text-[13px] font-bold uppercase tracking-tight ${isActive ? "text-[#F37021]" : "text-[#1A5F7A] hover:text-[#F37021]"}`}>{name}</NavLink>
                                 </li>
                             ))}
                             <li className="relative group" onMouseEnter={() => setIsDropdownOpen(true)} onMouseLeave={() => setIsDropdownOpen(false)}>
@@ -87,9 +65,18 @@ export default function Header() {
                                 </div>
                             </li>
                         </ul>
-                        <div className="flex items-center gap-4 border-l pl-6">
-                            <Link to="/admin/login" className="flex items-center gap-2 text-[#1A5F7A] hover:text-[#F37021] font-bold text-sm"><FiShield /> Admin</Link>
-                            <Link to="/contact" className="bg-[#F37021] text-white px-5 py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#1A5F7A] transition-all">Join Now</Link>
+
+                        {/* PORTAL ACCESS BUTTONS */}
+                        <div className="flex items-center gap-3 border-l pl-6">
+                            <Link to="/admin/login" className="flex items-center gap-2 text-slate-500 border-2 border-slate-100 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-tight hover:bg-slate-50 hover:text-[#1A5F7A] transition-all">
+                                <FiShield /> Admin
+                            </Link>
+                            <Link to="/student-login" className="flex items-center gap-2 text-[#1A5F7A] border-2 border-[#1A5F7A]/10 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-tight hover:bg-slate-50 transition-all">
+                                <FiUser /> Student ERP
+                            </Link>
+                            <Link to="/contact" className="bg-[#F37021] text-white px-5 py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#1A5F7A] transition-all">
+                                Join Now
+                            </Link>
                         </div>
                     </div>
 
@@ -102,35 +89,38 @@ export default function Header() {
                 <div className={`absolute right-0 top-0 h-screen w-[85%] max-w-sm bg-white p-6 shadow-2xl flex flex-col transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`} onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-center mb-8 border-b pb-4">
                         <img src={expertcomputerlogo} className="h-10" alt="Logo" />
-                        <button onClick={() => setIsMobileMenuOpen(false)}><FiX className="text-2xl text-slate-400" /></button>
+                        <button onClick={() => setIsMobileMenuOpen(false)}><FiX size={24} className="text-slate-400" /></button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto no-scrollbar">
                         <ul className="flex flex-col gap-1">
-                            {navLinks.map((link) => (
-                                <NavLink key={link.name} to={link.path} onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `py-4 border-b border-slate-50 font-bold uppercase text-sm ${isActive ? 'text-[#F37021]' : 'text-[#1A5F7A]'}`}>{link.name}</NavLink>
+                            {['About', 'Founder', 'Hall of Fame', 'Contact'].map((name) => (
+                                <NavLink key={name} to={`/${name.toLowerCase().replace(/ /g, '')}`} onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `py-4 border-b border-slate-50 font-bold uppercase text-sm ${isActive ? 'text-[#F37021]' : 'text-[#1A5F7A]'}`}>{name}</NavLink>
                             ))}
                             
                             <li className="py-4 border-b border-slate-50">
                                 <button className={`w-full flex justify-between items-center font-bold uppercase text-sm ${activeMobileDropdown ? 'text-[#F37021]' : 'text-[#1A5F7A]'}`} onClick={() => setActiveMobileDropdown(!activeMobileDropdown)}>
                                     Courses <FiChevronDown className={`transition-transform duration-300 ${activeMobileDropdown ? 'rotate-180' : ''}`} />
                                 </button>
-                                <div className={`overflow-hidden transition-all duration-300 ${activeMobileDropdown ? 'max-h-[800px] mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <div className="grid grid-cols-1 gap-1 pl-4 border-l-2 border-orange-100">
+                                {activeMobileDropdown && (
+                                    <div className="mt-4 flex flex-col gap-1 pl-4 border-l-2 border-orange-100">
                                         {techCoursesData.map(c => (
                                             <button key={c.id} onClick={() => handleCourseClick(c)} className="text-left py-3 text-xs font-bold text-slate-500 flex items-center gap-2"><FiBook className="text-[#F37021] text-xs" /> {c.title}</button>
                                         ))}
                                     </div>
-                                </div>
+                                )}
                             </li>
 
-                            {/* MOVED BUTTONS INSIDE THE LIST FLOW */}
+                            {/* MOBILE BUTTONS - BOTH VISIBLE IN LIST */}
                             <div className="mt-6 flex flex-col gap-3 pb-10">
-                                <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold border border-slate-100 text-xs uppercase tracking-widest">
+                                <Link to="/student-login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-slate-50 text-[#1A5F7A] font-bold border border-slate-200 text-xs uppercase tracking-widest shadow-sm">
+                                    <FiUser /> Student Portal
+                                </Link>
+                                <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-slate-50 text-slate-600 font-bold border border-slate-200 text-xs uppercase tracking-widest shadow-sm">
                                     <FiShield /> Admin Portal
                                 </Link>
-                                <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-[#F37021] text-white font-bold shadow-lg uppercase text-[11px] tracking-[0.15em] italic">
-                                    <FiPhoneCall /> Join Now
+                                <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-[#F37021] text-white font-bold shadow-lg uppercase text-xs italic">
+                                    Join Now
                                 </Link>
                             </div>
                         </ul>
