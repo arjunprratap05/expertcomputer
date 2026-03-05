@@ -82,7 +82,6 @@ export default function AdminDashboard() {
         window.location.reload(); 
     };
 
-    // --- PIPELINE HANDLERS ---
     const convertToRegistration = (enquiry) => {
         navigate('/registration', { 
             state: { 
@@ -108,7 +107,6 @@ export default function AdminDashboard() {
         } catch (err) { alert("Action Failed"); }
     };
 
-    // --- SYNC & PAYMENT HANDLERS ---
     const getSyncedCourseNames = (student) => {
         if (!student.activeBatches || batches.length === 0) return [];
         return batches.filter(b => student.activeBatches.includes(b._id)).map(b => b.courseId);
@@ -192,7 +190,10 @@ export default function AdminDashboard() {
 
             {/* SIDEBAR */}
             <aside className={`fixed lg:relative z-[200] h-full w-72 bg-[#1A5F7A] text-white p-6 flex flex-col shadow-2xl transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-                <div className="mb-10 font-black text-[#F37021] italic text-xl uppercase tracking-tighter">Expert Academy</div>
+                <div className="mb-10 flex justify-between items-center">
+                    <div className="font-black text-[#F37021] italic text-xl uppercase tracking-tighter">Expert Academy</div>
+                    <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-white/50 hover:text-white"><FiX size={20}/></button>
+                </div>
                 <nav className="flex flex-col gap-2 flex-1 no-scrollbar overflow-y-auto">
                     {hasAccess('overview') && <button onClick={() => handleTabChange('overview')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'overview' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiGrid /> Overview</button>}
                     {hasAccess('registrations') && <button onClick={() => handleTabChange('registrations')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'registrations' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiUsers /> Registrations</button>}
@@ -209,14 +210,26 @@ export default function AdminDashboard() {
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 <header className="bg-white h-20 px-6 lg:px-10 flex items-center justify-between border-b sticky top-0 z-[100]">
                     <button className="lg:hidden text-[#1A5F7A] p-2 bg-slate-50 rounded-xl" onClick={() => setIsSidebarOpen(true)}><FiMenu size={24} /></button>
-                    <div className="text-right flex flex-col items-end">
-                        <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest uppercase">Admin Node: {userRole}</span>
-                        <div className="flex items-center gap-2 mt-0.5"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div><span className="text-[#F37021] text-[10px] font-black italic uppercase leading-none">Security Active</span></div>
+                    
+                    <div className="text-right flex items-center gap-4">
+                        <div className="hidden sm:flex flex-col items-end">
+                            <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest">Admin Node: {userRole}</span>
+                            <div className="flex items-center gap-2 mt-0.5"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div><span className="text-[#F37021] text-[10px] font-black italic uppercase leading-none">Security Active</span></div>
+                        </div>
+
+                        {/* MOBILE LOGOUT BUTTON (Visible only on mobile/tablet) */}
+                        <button 
+                            onClick={() => setLogoutModal(true)} 
+                            className="lg:hidden p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                        >
+                            <FiLogOut size={18} />
+                            <span className="text-[10px] font-black uppercase">Exit</span>
+                        </button>
                     </div>
                 </header>
 
                 <main className="p-4 md:p-10 overflow-y-auto flex-1 bg-slate-50/50 no-scrollbar">
-                    
+                    {/* Rest of the UI modules remain exactly as they were */}
                     {activeTab === 'overview' && userRole === 'founder' && (
                         <div className="space-y-10 animate-in fade-in duration-700">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -247,11 +260,14 @@ export default function AdminDashboard() {
                                     <tbody className="divide-y divide-slate-50">
                                         {filteredData.map(en => (
                                             <tr key={en._id} className="hover:bg-slate-50/80 transition-colors">
-                                                <td className="p-6 font-black text-xs uppercase italic text-[#1A5F7A]">{en.name}<br/><span className="text-slate-400 font-bold not-italic text-[9px]">{en.phone}</span></td>
-                                                <td className="text-[10px] font-black uppercase text-slate-500 italic">{en.course || en.selectedCourse}</td>
+                                                <td className="p-6">
+                                                    <div className="font-black text-[#1A5F7A] text-xs uppercase italic">{en.name}</div>
+                                                    <div className="text-[9px] font-bold text-slate-400 mt-0.5">{en.phone}</div>
+                                                </td>
+                                                <td className="text-[10px] font-black uppercase italic text-slate-500">{en.course || en.selectedCourse}</td>
                                                 <td className="p-6">
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => convertToRegistration(en)} className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-black text-[9px] uppercase shadow-lg hover:scale-105 transition-all flex items-center gap-2">
+                                                        <button onClick={() => convertToRegistration(en)} className="bg-green-600 text-white px-4 py-2.5 rounded-xl font-black text-[9px] uppercase shadow-lg hover:bg-green-700 transition-all flex items-center gap-2">
                                                             <FiTrendingUp /> Convert
                                                         </button>
                                                         <button onClick={() => setRejectModal({ show: true, enquiry: en, reason: "" })} className="bg-red-50 text-red-500 px-5 py-2.5 rounded-xl font-black text-[9px] uppercase hover:bg-red-500 hover:text-white transition-all flex items-center gap-2">
@@ -279,7 +295,6 @@ export default function AdminDashboard() {
                                         {filteredData.map(item => {
                                             const ledger = calculateAggregateLedger(item);
                                             const unsynced = getUnsyncedCourses(item);
-                                            const syncedCourses = getSyncedCourseNames(item);
                                             return (
                                                 <tr key={item._id} className="hover:bg-slate-50/80 transition-colors">
                                                     <td className="p-6">
@@ -289,7 +304,7 @@ export default function AdminDashboard() {
                                                     <td className="p-6">
                                                         <div className="flex flex-col gap-2 cursor-pointer" onClick={() => { setApprovalModal({ show: true, student: item }); setSelectedBatches(item.activeBatches || []); }}>
                                                             <div className="flex flex-wrap gap-1">
-                                                                {syncedCourses.map((c, i) => <span key={i} className="bg-green-50 text-green-600 px-2 py-1 rounded text-[8px] font-black border border-green-100 uppercase italic">✓ {c}</span>)}
+                                                                {getSyncedCourseNames(item).map((c, i) => <span key={i} className="bg-green-50 text-green-600 px-2 py-1 rounded text-[8px] font-black border border-green-100 uppercase italic">✓ {c}</span>)}
                                                             </div>
                                                             {unsynced.length > 0 && <div className="flex flex-wrap gap-1">{unsynced.map((u, i) => <span key={i} className="text-red-500 text-[7px] font-black uppercase animate-pulse flex items-center gap-1"><FiAlertTriangle size={8}/> Missing: {u.course}</span>)}</div>}
                                                         </div>
@@ -297,7 +312,7 @@ export default function AdminDashboard() {
                                                     <td className="p-6">
                                                         <div className="space-y-1 min-w-[200px]">
                                                             <div className="flex justify-between text-[11px] font-black text-[#1A5F7A]"><span>₹{ledger.paid.toLocaleString()} Paid</span><span className="text-slate-300">Total ₹{ledger.totalContractValue.toLocaleString()}</span></div>
-                                                            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${(ledger.paid / ledger.totalContractValue) * 100}%` }} /></div>
+                                                            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${Math.min((ledger.paid / ledger.totalContractValue) * 100, 100)}%` }} /></div>
                                                             <div className={`text-[9px] font-black uppercase italic ${ledger.due > 0 ? 'text-red-500 animate-pulse' : 'text-green-600'}`}>{ledger.due > 0 ? `Remaining: ₹${ledger.due.toLocaleString()}` : "Fully Cleared"}</div>
                                                         </div>
                                                     </td>
@@ -315,24 +330,22 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
-
+                    
                     {activeTab === 'batches' && <BatchScheduler />}
                     {activeTab === 'lectures' && <AddLecture />}
                     {activeTab === 'materials' && <AddMaterial />}
-
                 </main>
             </div>
 
-            {/* --- MODALS --- */}
-            
+            {/* MODALS REMAIN UNCHANGED */}
             <AnimatePresence>{rejectModal.show && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[700] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[800] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm">
                     <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative border-t-[12px] border-red-500">
                         <button onClick={() => setRejectModal({ show: false, enquiry: null, reason: "" })} className="absolute top-8 right-8 text-slate-300 hover:text-red-500"><FiX size={24} /></button>
                         <h3 className="text-xl font-black text-[#1A5F7A] uppercase text-center italic">Archive Lead</h3>
                         <p className="text-[10px] font-bold text-slate-400 uppercase text-center mb-8">{rejectModal.enquiry?.name}</p>
-                        <textarea className="w-full p-5 bg-slate-50 rounded-3xl font-bold text-sm text-[#1A5F7A] outline-none h-32 resize-none border-2 border-transparent focus:border-red-100" placeholder="State reason for lead archive (e.g. Budget issues, No response)..." value={rejectModal.reason} onChange={(e) => setRejectModal({...rejectModal, reason: e.target.value})} />
-                        <button onClick={handleRejectLead} className="w-full py-5 bg-red-500 text-white rounded-2xl font-black uppercase text-xs mt-6 shadow-xl shadow-red-100">Confirm Rejection</button>
+                        <textarea className="w-full p-5 bg-slate-50 rounded-3xl font-bold text-sm text-[#1A5F7A] outline-none h-32 resize-none border-2 border-transparent focus:border-red-100" placeholder="State reason for archive..." value={rejectModal.reason} onChange={(e) => setRejectModal({...rejectModal, reason: e.target.value})} />
+                        <button onClick={handleRejectLead} className="w-full py-5 bg-red-500 text-white rounded-2xl font-black uppercase text-xs mt-6 shadow-xl">Confirm Rejection</button>
                     </motion.div>
                 </motion.div>
             )}</AnimatePresence>
@@ -348,7 +361,7 @@ export default function AdminDashboard() {
                         </div>
                         <form onSubmit={handlePaymentPush} className="space-y-6">
                             <input autoFocus type="number" placeholder="Enter Installment (₹)" className="w-full p-5 bg-slate-50 rounded-2xl font-black text-3xl text-[#1A5F7A] outline-none text-center border-2 border-transparent focus:border-green-100 transition-all shadow-inner" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} />
-                            <button type="submit" className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl hover:bg-green-700 transition-all tracking-widest">Push Payment to Sync</button>
+                            <button type="submit" className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl hover:bg-green-700 transition-all">Push Payment to Sync</button>
                         </form>
                     </motion.div>
                 </motion.div>
@@ -390,6 +403,7 @@ export default function AdminDashboard() {
     );
 }
 
+// SHARED AUDIT TABLE COMPONENT
 function AuditTable({ logs, title }) {
     return (
         <div className="space-y-6">
@@ -397,7 +411,7 @@ function AuditTable({ logs, title }) {
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden overflow-x-auto shadow-sm">
                 <table className="w-full text-left">
                     <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
-                        <tr><th className="p-6">Staff Member</th><th>Action Performed</th><th>Target Entity</th><th>Time</th></tr>
+                        <tr><th className="p-6">Staff Member</th><th>Action</th><th>Target Entity</th><th>Time</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                         {logs.length > 0 ? logs.map(log => (
