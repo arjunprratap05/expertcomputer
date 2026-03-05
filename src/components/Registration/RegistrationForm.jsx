@@ -32,7 +32,6 @@ export default function RegistrationForm() {
     const [isVerified, setIsVerified] = useState(false);
     const [otpSent, setOtpSent] = useState(false);
     const [otp, setOtp] = useState('');
-    const [timer, setTimer] = useState(0);
     const [isVerifying, setIsVerifying] = useState(false);
     const [isValidatingImage, setIsValidatingImage] = useState(false);
     const [errors, setErrors] = useState({});
@@ -51,19 +50,16 @@ export default function RegistrationForm() {
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // --- IMPROVED DATA CAPTURE ---
         const courseTitle = location.state?.selectedCourse || location.state?.prefillCourse;
         const coursePrice = location.state?.price || location.state?.fee;
 
         if (courseTitle) {
             const allCourses = [...(techCoursesData || []), ...(universityPrograms || [])];
             const match = allCourses.find(c => c.title === courseTitle || c.id === courseTitle);
-            
             setFormData(prev => ({ ...prev, course: match ? match.title : courseTitle }));
             setSelectedPrice(match ? (match.price || match.fee) : (coursePrice || 0));
         }
-    }, [location.state, isVerified]);
+    }, [location.state]);
 
     useEffect(() => {
         const loadModels = async () => {
@@ -76,7 +72,7 @@ export default function RegistrationForm() {
 
     const triggerToast = (msg, type = "error") => {
         setToast({ show: true, msg, type });
-        setTimeout(() => setToast({ show: false, msg: "", type: "error" }), 4000);
+        setTimeout(() => setToast({ show: false, msg: "", type: "error" }), 5000);
     };
 
     const handleDobChange = (val) => {
@@ -101,7 +97,7 @@ export default function RegistrationForm() {
         setIsVerifying(true);
         try {
             const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/send-otp`, { email: formData.email });
-            if (res.data.success) { setOtpSent(true); setTimer(60); triggerToast("OTP Sent!", "success"); }
+            if (res.data.success) { setOtpSent(true); triggerToast("OTP Sent Successfully", "success"); }
         } catch (err) { triggerToast(err.response?.data?.message || "Error sending OTP"); }
         finally { setIsVerifying(false); }
     };
@@ -110,7 +106,7 @@ export default function RegistrationForm() {
         try {
             const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/verify-otp`, { email: formData.email, otp });
             if (res.data.success) { setIsVerified(true); }
-        } catch (err) { triggerToast("Invalid OTP."); }
+        } catch (err) { triggerToast("Invalid Verification Code."); }
     };
 
     const handleFileSelect = async (e) => {
@@ -121,21 +117,21 @@ export default function RegistrationForm() {
             const img = await faceapi.bufferToImage(file);
             const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions());
             if (detections.length !== 1) {
-                triggerToast("Upload clear photo with exactly ONE face.");
+                triggerToast("Upload a clear photo with exactly one face.");
                 e.target.value = "";
             } else {
                 setFormData({ ...formData, studentImage: file });
                 setPreviewImage(URL.createObjectURL(file));
             }
-        } catch (e) { triggerToast("Biometric verification failed."); }
+        } catch (e) { triggerToast("Biometric analysis failed."); }
         setIsValidatingImage(false);
     };
 
     const validateForm = () => {
         let tmp = {};
         if (!formData.name || formData.name.length < 3) tmp.name = "Enter valid name";
-        if (!/^[6-9]\d{9}$/.test(formData.phone)) tmp.phone = "Invalid 10-digit number";
-        if (!validateAadhaar(formData.aadhaarNo)) tmp.aadhaarNo = "Invalid Aadhaar No.";
+        if (!/^[6-9]\d{9}$/.test(formData.phone)) tmp.phone = "Enter 10-digit mobile";
+        if (!validateAadhaar(formData.aadhaarNo)) tmp.aadhaarNo = "Invalid 12-digit Aadhaar";
         if (!formData.studentImage) tmp.image = "Photo Required";
         setErrors(tmp);
         return Object.keys(tmp).length === 0;
@@ -150,47 +146,61 @@ export default function RegistrationForm() {
         if (formData.studentImage) data.append('studentImage', formData.studentImage);
 
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/registration/submit`, data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            if(res.data.success) {
-                setRegSuccessData({ regId: res.data.registrationId, pass: res.data.rawPassword });
+            const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/registration/submit`, data);
+            
+            if (res.data.success) {
+                setRegSuccessData({ 
+                    regId: res.data.registrationId, 
+                    pass: res.data.rawPassword,
+                    isReturning: res.data.isReturning // Capture multi-enrollment flag
+                });
                 setShowReview(false);
             }
-        } catch (err) { triggerToast(err.response?.data?.message || "Submission Failed"); } 
-        finally { setIsSubmitting(false); }
+        } catch (err) { 
+            const serverMsg = err.response?.data?.message || "Internal Server Error";
+            triggerToast(serverMsg); 
+        } finally { 
+            setIsSubmitting(false); 
+        }
     };
 
     return (
         <div className="min-h-screen py-6 bg-slate-50 relative overflow-x-hidden font-sans">
-            {/* TOAST SYSTEM */}
             <AnimatePresence>
                 {toast.show && (
                     <motion.div initial={{ y: -100, x: '-50%' }} animate={{ y: 20, x: '-50%' }} exit={{ y: -100, x: '-50%' }}
-                        className={`fixed top-0 left-1/2 z-[3000] w-[92%] md:w-auto px-6 py-4 rounded-2xl shadow-2xl font-bold text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#1A5F7A]' : 'bg-red-600'}`}>
+                        className={`fixed top-0 left-1/2 z-[3000] px-6 py-4 rounded-2xl shadow-2xl font-bold text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#1A5F7A]' : 'bg-red-600'}`}>
                         {toast.type === 'success' ? <FiCheckCircle /> : <FiAlertTriangle />} {toast.msg}
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* SUCCESS SCREEN */}
             <AnimatePresence>
                 {regSuccessData && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[2000] bg-slate-900/95 flex items-center justify-center p-4 backdrop-blur-md">
-                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center border-t-[12px] border-[#1A5F7A]">
-                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><FiCheck size={30} /></div>
-                            <h2 className="text-2xl font-black text-slate-800 uppercase italic">Welcome!</h2>
-                            <div className="mt-6 space-y-3">
-                                <div className="bg-slate-50 p-4 rounded-xl border">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase">Registration ID</p>
-                                    <p className="text-xl font-mono font-bold text-[#1A5F7A]">{regSuccessData.regId}</p>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[2000] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[3rem] p-10 max-w-md w-full text-center border-t-[12px] border-[#1A5F7A]">
+                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6"><FiCheck size={40} /></div>
+                            <h2 className="text-3xl font-black text-slate-800 uppercase italic">
+                                {regSuccessData.isReturning ? "Course Added!" : "Welcome!"}
+                            </h2>
+                            <p className="text-slate-500 font-bold mt-2 leading-relaxed">
+                                {regSuccessData.isReturning 
+                                    ? "Your profile has been updated with the new program. Access all your courses with one login." 
+                                    : "Your enrollment is recorded. Credentials have been mailed to your official address."}
+                            </p>
+                            <div className="mt-8 space-y-4">
+                                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-inner">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Registration ID</p>
+                                    <p className="text-2xl font-mono font-bold text-[#1A5F7A]">{regSuccessData.regId}</p>
                                 </div>
-                                <div className="bg-slate-50 p-4 rounded-xl border">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase">Portal Password</p>
-                                    <p className="text-xl font-mono font-bold text-orange-600">{regSuccessData.pass}</p>
+                                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-inner">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Portal Access Key</p>
+                                    <p className="text-2xl font-mono font-bold text-orange-600">
+                                        {regSuccessData.isReturning ? "Use Existing Password" : regSuccessData.pass}
+                                    </p>
                                 </div>
                             </div>
-                            <button onClick={() => navigate('/student-login')} className="w-full mt-6 py-4 bg-[#1A5F7A] text-white rounded-xl font-black uppercase">Login to Portal</button>
+                            <button onClick={() => navigate('/student-login')} className="w-full mt-8 py-5 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 active:scale-95 transition-transform">Enter Learning Portal</button>
                         </motion.div>
                     </motion.div>
                 )}
@@ -199,94 +209,86 @@ export default function RegistrationForm() {
             <div className="max-w-4xl mx-auto px-4">
                 <AnimatePresence mode="wait">
                     {!isVerified ? (
-                        <motion.div key="gate" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                            className="max-w-md mx-auto mt-12 bg-white rounded-[2.5rem] shadow-2xl p-8 border-2 border-orange-100">
-                            <div className="w-14 h-14 bg-[#1A5F7A] text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"><FiShield size={28} /></div>
-                            <h2 className="text-xl font-black text-[#1A5F7A] uppercase text-center">Identity Check</h2>
-                            <div className="space-y-5 mt-8">
-                                <InputField label="Official Email" icon={<FiMail />} value={formData.email} onChange={(v) => setFormData({...formData, email: v})} placeholder="name@example.com" />
-                                {otpSent && <InputField label="OTP Code" icon={<FiLock />} value={otp} onChange={setOtp} placeholder="6-digit code" />}
+                        <motion.div key="gate" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md mx-auto mt-12 bg-white rounded-[2.5rem] shadow-2xl p-10 border border-orange-100">
+                            <div className="w-16 h-16 bg-[#1A5F7A] text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg shadow-blue-900/20"><FiShield size={32} /></div>
+                            <h2 className="text-2xl font-black text-[#1A5F7A] uppercase text-center italic">Identity Verification</h2>
+                            <div className="space-y-6 mt-10">
+                                <InputField label="Official Email" icon={<FiMail />} value={formData.email} onChange={(v) => setFormData({...formData, email: v})} placeholder="Enter email to begin" />
+                                {otpSent && <InputField label="Verification OTP" icon={<FiLock />} value={otp} onChange={setOtp} placeholder="6-digit code" />}
                                 {!otpSent ? (
-                                    <button onClick={handleSendOtp} disabled={isVerifying} className="w-full py-5 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-colors hover:bg-slate-800">
-                                        {isVerifying ? "Sending..." : "Get Access Code"} <FiArrowRight />
+                                    <button onClick={handleSendOtp} disabled={isVerifying} className="w-full py-5 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-blue-900/20">
+                                        {isVerifying ? <FiRefreshCw className="animate-spin" /> : "Request Access Code"} <FiArrowRight />
                                     </button>
                                 ) : (
-                                    <button onClick={handleVerifyOtp} className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest">Verify & Unlock</button>
+                                    <button onClick={handleVerifyOtp} className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-green-900/20">Verify & Proceed</button>
                                 )}
                             </div>
                         </motion.div>
                     ) : (
-                        <motion.div key="form" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[2rem] md:rounded-[4rem] shadow-4xl overflow-hidden mb-10">
-                            <div className="bg-[#1A5F7A] p-8 md:p-12 text-white">
-                                <span className="bg-orange-500 text-[9px] font-black px-4 py-1 rounded-full uppercase tracking-widest mb-3 inline-block">Session 2026-27</span>
-                                <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter leading-none">Student Enrollment</h2>
+                        <motion.div key="form" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[3rem] shadow-4xl overflow-hidden mb-10 border border-slate-100">
+                            <div className="bg-[#1A5F7A] p-10 md:p-14 text-white relative">
+                                <div className="absolute top-0 right-0 p-10 opacity-10"><FiAward size={150} /></div>
+                                <span className="bg-orange-500 text-[10px] font-black px-5 py-1.5 rounded-full uppercase tracking-widest mb-4 inline-block">Session 2026-27</span>
+                                <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">Admission Enrollment</h2>
                             </div>
 
-                            <div className="p-6 md:p-14 space-y-12">
-                                {/* BIOMETRIC */}
+                            <div className="p-8 md:p-16 space-y-16">
                                 <div className="flex flex-col items-center">
                                     <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileSelect} />
-                                    <div className="relative cursor-pointer" onClick={() => fileInputRef.current.click()}>
-                                        <div className={`w-36 h-36 md:w-44 md:h-44 bg-slate-50 rounded-[3rem] border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center ${isValidatingImage ? 'animate-pulse' : ''}`}>
-                                            {previewImage ? <img src={previewImage} className="w-full h-full object-cover" /> : <FiCamera className="text-4xl text-slate-200" />}
+                                    <div className="relative cursor-pointer group" onClick={() => fileInputRef.current.click()}>
+                                        <div className={`w-40 h-40 md:w-52 md:h-52 bg-slate-50 rounded-[3.5rem] border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform ${isValidatingImage ? 'animate-pulse' : ''}`}>
+                                            {previewImage ? <img src={previewImage} className="w-full h-full object-cover" /> : <FiCamera className="text-5xl text-slate-200" />}
                                         </div>
-                                        <div className="absolute -bottom-1 -right-1 bg-orange-600 p-3 rounded-2xl text-white shadow-xl"><FiUpload size={18} /></div>
+                                        <div className="absolute -bottom-2 -right-2 bg-orange-600 p-4 rounded-2xl text-white shadow-xl group-hover:rotate-12 transition-transform"><FiUpload size={22} /></div>
                                     </div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mt-4 tracking-widest">Face Biometric Required</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase mt-6 tracking-[0.2em] italic">Biometric Facial Identity Required</p>
                                 </div>
 
-                                <div className="space-y-12">
+                                <div className="space-y-16">
                                     <section>
-                                        <SectionTitle title="1. Identity Information" />
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                        <SectionTitle title="1. Identity & Physical Address" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
                                             <InputField label="Student Full Name" icon={<FiUser />} value={formData.name} error={errors.name} onChange={(v) => setFormData({...formData, name: v.replace(/[^a-zA-Z\s]/g, '')})} />
-                                            <InputField label="Father's Name" icon={<FiUser />} value={formData.fatherName} onChange={(v) => setFormData({...formData, fatherName: v.replace(/[^a-zA-Z\s]/g, '')})} />
-                                            <InputField label="Date of Birth" icon={<FiCalendar />} type="date" value={formData.dob} onChange={handleDobChange} max={today} />
-                                            <InputField label="Aadhaar Number" icon={<FiFileText />} maxLength={12} value={formData.aadhaarNo} error={errors.aadhaarNo} onChange={(v) => setFormData({...formData, aadhaarNo: v.replace(/\D/g, '')})} />
-                                            <InputField label="WhatsApp Number" icon={<FiPhone />} maxLength={10} value={formData.phone} error={errors.phone} onChange={(v) => setFormData({...formData, phone: v.replace(/\D/g, '')})} />
-                                            <InputField label="Current Address" placeholder="Street, City, Pincode" value={formData.address} onChange={(v) => setFormData({...formData, address: v})} />
+                                            <InputField label="Father's Full Name" icon={<FiUser />} value={formData.fatherName} onChange={(v) => setFormData({...formData, fatherName: v.replace(/[^a-zA-Z\s]/g, '')})} />
+                                            <InputField label="Birth Date" icon={<FiCalendar />} type="date" value={formData.dob} onChange={handleDobChange} max={today} />
+                                            <InputField label="Aadhaar ID Number" icon={<FiFileText />} maxLength={12} value={formData.aadhaarNo} error={errors.aadhaarNo} onChange={(v) => setFormData({...formData, aadhaarNo: v.replace(/\D/g, '')})} placeholder="12 Digit ID" />
+                                            <InputField label="Primary Mobile" icon={<FiPhone />} maxLength={10} value={formData.phone} error={errors.phone} onChange={(v) => setFormData({...formData, phone: v.replace(/\D/g, '')})} />
+                                            <InputField label="Home Address" placeholder="Street, City, Pincode" value={formData.address} onChange={(v) => setFormData({...formData, address: v})} />
                                         </div>
                                     </section>
 
                                     <section>
-                                        <SectionTitle title="2. Academic Records" />
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                                            <AcademicBox title="High School (10th)" prefix="highSchool" formData={formData} setFormData={setFormData} onYear={handleAcademicYear} onPercent={handlePercent} />
-                                            <AcademicBox title="Intermediate (12th)" prefix="inter" formData={formData} setFormData={setFormData} onYear={handleAcademicYear} onPercent={handlePercent} />
+                                        <SectionTitle title="2. Academic History" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                                            <AcademicBox title="X (Secondary)" prefix="highSchool" formData={formData} setFormData={setFormData} onYear={handleAcademicYear} onPercent={handlePercent} />
+                                            <AcademicBox title="XII (Higher Secondary)" prefix="inter" formData={formData} setFormData={setFormData} onYear={handleAcademicYear} onPercent={handlePercent} />
                                         </div>
                                     </section>
 
-                                    {/* --- COURSE & PRICE MOVED BELOW ACADEMIC --- */}
-                                    <section className="pt-4">
-                                        <div className="p-8 md:p-10 bg-slate-900 rounded-[2.5rem] text-white flex flex-col md:flex-row justify-between items-center gap-6 border-b-4 border-orange-500 shadow-2xl overflow-hidden relative">
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                                    <section className="pt-6">
+                                        <div className="p-10 bg-slate-900 rounded-[3rem] text-white flex flex-col md:flex-row justify-between items-center gap-10 border-b-[8px] border-orange-500 shadow-2xl relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
                                             <div className="text-center md:text-left z-10">
-                                                <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-                                                    <FiAward className="text-orange-400" />
-                                                    <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Final Program Selection</p>
+                                                <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
+                                                    <FiAward className="text-orange-400" size={20} />
+                                                    <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest">Selected Program</p>
                                                 </div>
-                                                <h3 className="text-xl md:text-2xl font-black italic uppercase leading-tight tracking-tight">
-                                                    {formData.course || "General Admission"}
-                                                </h3>
+                                                <h3 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-tight">{formData.course}</h3>
                                             </div>
-                                            
-                                            <div className="h-px w-2/3 md:h-16 md:w-px bg-slate-700"></div>
-
+                                            <div className="h-px w-2/3 md:h-20 md:w-px bg-slate-700"></div>
                                             <div className="text-center md:text-right z-10">
-                                                <div className="flex items-center justify-center md:justify-end gap-2 mb-2">
-                                                    <FiDollarSign className="text-slate-400" />
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Enrollment Fee</p>
+                                                <div className="flex items-center justify-center md:justify-end gap-3 mb-3">
+                                                    <FiDollarSign className="text-slate-400" size={20} />
+                                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Course Fee</p>
                                                 </div>
-                                                <p className="text-4xl md:text-5xl font-black text-orange-500">
-                                                    ₹{selectedPrice?.toLocaleString()}
-                                                </p>
+                                                <p className="text-5xl font-black text-orange-500 tracking-tighter">₹{selectedPrice?.toLocaleString()}</p>
                                             </div>
                                         </div>
                                     </section>
                                 </div>
 
-                                <button onClick={() => { if(validateForm()) setShowReview(true); }} className="w-full py-6 md:py-8 bg-[#1A5F7A] text-white rounded-[2.5rem] text-xl font-black uppercase shadow-3xl flex items-center justify-center gap-4 transition-transform active:scale-95">
-                                    Continue to Review <FiArrowRight />
+                                <button onClick={() => { if(validateForm()) setShowReview(true); }} className="w-full py-8 bg-[#1A5F7A] text-white rounded-[2.5rem] text-xl font-black uppercase shadow-3xl flex items-center justify-center gap-5 transition-all hover:bg-slate-800 active:scale-95 shadow-blue-900/20">
+                                    Continue to Final Review <FiArrowRight />
                                 </button>
                             </div>
                         </motion.div>
@@ -294,36 +296,39 @@ export default function RegistrationForm() {
                 </AnimatePresence>
             </div>
 
-            {/* REVIEW SLIDE-OVER */}
+            {/* FINAL REVIEW SLIDE-UP */}
             <AnimatePresence>
                 {showReview && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1500] bg-slate-950/90 backdrop-blur-sm flex items-end md:items-center justify-center">
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25 }} className="bg-white rounded-t-[2.5rem] md:rounded-[3.5rem] w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
-                            <div className="p-8 bg-orange-50 flex justify-between items-center border-b">
-                                <h2 className="text-xl font-black text-slate-800 uppercase italic">Final Review</h2>
-                                <button onClick={() => setShowReview(false)} className="p-2 bg-white rounded-full text-slate-400 shadow-sm"><FiX size={20} /></button>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1500] bg-slate-950/90 backdrop-blur-md flex items-end md:items-center justify-center">
+                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25 }} className="bg-white rounded-t-[3rem] md:rounded-[4rem] w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col">
+                            <div className="p-10 bg-orange-50 flex justify-between items-center border-b">
+                                <h2 className="text-2xl font-black text-slate-800 uppercase italic">Confirm Enrollment Details</h2>
+                                <button onClick={() => setShowReview(false)} className="p-3 bg-white rounded-full text-slate-400 shadow-md hover:text-red-500 transition-colors"><FiX size={24} /></button>
                             </div>
-                            <div className="p-6 md:p-10 overflow-y-auto space-y-6">
-                                <div className="flex items-center gap-5 pb-6 border-b">
-                                    <img src={previewImage} className="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-lg" />
+                            <div className="p-8 md:p-12 overflow-y-auto space-y-10">
+                                <div className="flex items-center gap-6 pb-8 border-b">
+                                    <img src={previewImage} className="w-24 h-24 rounded-[2rem] object-cover border-4 border-white shadow-xl" />
                                     <div>
-                                        <p className="text-2xl font-black text-slate-800 leading-none">{formData.name}</p>
-                                        <p className="text-sm font-bold text-orange-600 mt-2 uppercase tracking-wide">{formData.course}</p>
+                                        <p className="text-3xl font-black text-slate-800 leading-none">{formData.name}</p>
+                                        <p className="text-sm font-bold text-orange-600 mt-2 uppercase tracking-widest">{formData.course}</p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <ReviewItem label="Official Email" value={formData.email} />
-                                    <ReviewItem label="WhatsApp Phone" value={formData.phone} />
-                                    <ReviewItem label="Aadhaar Number" value={formData.aadhaarNo} />
-                                    <ReviewItem label="Date of Birth" value={formData.dob} />
-                                    <ReviewItem label="10th Percentage" value={`${formData.highSchoolPercent}%`} />
-                                    <ReviewItem label="12th Percentage" value={`${formData.interPercent}%`} />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ReviewItem label="Email Identity" value={formData.email} />
+                                    <ReviewItem label="Aadhaar ID" value={formData.aadhaarNo} />
+                                    <ReviewItem label="Phone Contact" value={formData.phone} />
+                                    <ReviewItem label="Birth Date" value={formData.dob} />
+                                    <ReviewItem label="Parent Name" value={formData.fatherName} />
+                                    <ReviewItem label="Residential Address" value={formData.address} />
+                                </div>
+                                <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800 text-[11px] font-bold leading-relaxed">
+                                    By confirming, you agree that your facial biometric and Aadhaar identity will be used for session security and certificate generation.
                                 </div>
                             </div>
-                            <div className="p-6 md:p-10 bg-slate-50 flex flex-col-reverse sm:flex-row gap-4 border-t">
-                                <button onClick={() => setShowReview(false)} className="flex-1 py-4 font-black uppercase text-[11px] tracking-widest text-slate-400">Modify Data</button>
-                                <button onClick={handleFinalSubmit} disabled={isSubmitting} className="flex-[2] py-4 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase text-[11px] flex items-center justify-center gap-2 shadow-xl">
-                                    {isSubmitting ? <FiRefreshCw className="animate-spin" /> : "Confirm Enrollment"}
+                            <div className="p-8 md:p-12 bg-slate-50 flex flex-col-reverse sm:flex-row gap-6 border-t">
+                                <button onClick={() => setShowReview(false)} className="flex-1 py-5 font-black uppercase text-xs tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Modify Profile</button>
+                                <button onClick={handleFinalSubmit} disabled={isSubmitting} className="flex-[2] py-5 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-3 shadow-xl shadow-blue-900/20 active:scale-95 transition-transform">
+                                    {isSubmitting ? <FiRefreshCw className="animate-spin" /> : "Confirm & Send Credentials"}
                                 </button>
                             </div>
                         </motion.div>
@@ -334,33 +339,32 @@ export default function RegistrationForm() {
     );
 }
 
-// --- SHARED UI COMPONENTS ---
 function SectionTitle({ title }) {
-    return <h4 className="text-[11px] md:text-[13px] font-black text-[#1A5F7A] uppercase flex items-center gap-3 tracking-widest"><span className="h-5 w-1.5 bg-orange-500 rounded-full"></span>{title}</h4>;
+    return <h4 className="text-[12px] font-black text-[#1A5F7A] uppercase flex items-center gap-4 tracking-[0.2em]"><span className="h-6 w-2 bg-orange-500 rounded-full shadow-lg shadow-orange-500/50"></span>{title}</h4>;
 }
 
 function InputField({ label, icon, type = "text", value, onChange, maxLength, error, placeholder, max }) {
     return (
-        <div className="w-full">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-4 mb-2 block tracking-widest">{label}</label>
+        <div className="w-full text-left">
+            <label className="text-[10px] font-black uppercase text-slate-400 ml-5 mb-3 block tracking-widest">{label}</label>
             <div className="relative">
-                {icon && <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">{icon}</div>}
+                {icon && <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">{icon}</div>}
                 <input type={type} max={max} maxLength={maxLength} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} 
-                    className={`w-full text-sm ${icon ? 'pl-12' : 'px-6'} py-4 bg-slate-50 border-2 rounded-2xl md:rounded-3xl outline-none font-bold text-slate-700 transition-all ${error ? 'border-red-400 bg-red-50' : 'border-slate-100 focus:border-orange-500 focus:bg-white'}`} />
+                    className={`w-full text-sm ${icon ? 'pl-14' : 'px-8'} py-5 bg-slate-50 border-2 rounded-[1.5rem] md:rounded-[2rem] outline-none font-bold text-slate-700 transition-all ${error ? 'border-red-400 bg-red-50' : 'border-slate-100 focus:border-orange-500 focus:bg-white focus:shadow-xl focus:shadow-orange-500/5'}`} />
             </div>
-            {error && <p className="text-[9px] text-red-500 font-black mt-2 ml-5 italic flex items-center gap-1"><FiAlertTriangle size={10} /> {error}</p>}
+            {error && <p className="text-[10px] text-red-500 font-black mt-3 ml-6 italic flex items-center gap-2"><FiAlertTriangle size={12} /> {error}</p>}
         </div>
     );
 }
 
 function AcademicBox({ title, prefix, formData, setFormData, onYear, onPercent }) {
     return (
-        <div className="p-6 bg-slate-50/50 rounded-[2.5rem] border-2 border-slate-100 space-y-4 shadow-sm">
-            <p className="text-[10px] font-black text-[#1A5F7A] uppercase tracking-widest flex items-center gap-2"><FiAward className="text-orange-500" /> {title}</p>
-            <InputField label="Board Name" value={formData[`${prefix}Board`]} onChange={(v) => setFormData({...formData, [`${prefix}Board`]: v})} />
-            <div className="grid grid-cols-2 gap-4">
-                <InputField label="Year" maxLength={4} value={formData[`${prefix}Year`]} onChange={(v) => onYear(prefix, v)} />
-                <InputField label="Marks %" value={formData[`${prefix}Percent`]} onChange={(v) => onPercent(prefix, v)} />
+        <div className="p-8 bg-slate-50/50 rounded-[3rem] border-2 border-slate-100 space-y-6 shadow-sm">
+            <p className="text-[11px] font-black text-[#1A5F7A] uppercase tracking-widest flex items-center gap-3"><FiAward className="text-orange-500" /> {title}</p>
+            <InputField label="Full Board Name" value={formData[`${prefix}Board`]} onChange={(v) => setFormData({...formData, [`${prefix}Board`]: v})} />
+            <div className="grid grid-cols-2 gap-5">
+                <InputField label="Pass Year" maxLength={4} value={formData[`${prefix}Year`]} onChange={(v) => onYear(prefix, v)} />
+                <InputField label="Percentage" value={formData[`${prefix}Percent`]} onChange={(v) => onPercent(prefix, v)} />
             </div>
         </div>
     );
@@ -368,9 +372,9 @@ function AcademicBox({ title, prefix, formData, setFormData, onYear, onPercent }
 
 function ReviewItem({ label, value }) {
     return (
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-            <p className="text-[9px] font-black uppercase text-slate-400 tracking-tighter mb-1">{label}</p>
-            <p className="font-bold text-slate-700 truncate text-sm">{value || 'N/A'}</p>
+        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">{label}</p>
+            <p className="font-bold text-slate-700 truncate text-sm leading-none">{value || 'Not Specified'}</p>
         </div>
     );
 }

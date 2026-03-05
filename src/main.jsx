@@ -30,6 +30,7 @@ import StudyMaterial from './components/StudentPortal/StudyMaterial.jsx'
 import { FaCertificate } from 'react-icons/fa'
 import AddLecture from './components/Admin/AddLecture.jsx'
 import Certificates from './components/StudentPortal/Certificates.jsx';
+import BatchScheduler from './components/Admin/BatchScheduler.jsx';
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -47,7 +48,7 @@ const router = createBrowserRouter(
       <Route path='courses' element={<CourseSection />} />
       <Route path='student-login' element={<StudentLogin />} />
       <Route path='forgot-password' element={<ForgotPassword />} />
-      
+      <Route path='batch-scheduler' element={<BatchScheduler />} />
 
       <Route path="erp" element={<ERPLayout />}>
         {/* These paths are relative to /erp/ */}
