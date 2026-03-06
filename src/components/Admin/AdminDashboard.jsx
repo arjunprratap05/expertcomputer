@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiUsers, FiMessageSquare, FiLogOut, FiActivity, FiX, FiMenu, FiSearch, 
     FiCheckCircle, FiCreditCard, FiPieChart, FiDollarSign, FiVideo, FiBookOpen, 
-    FiGrid, FiClock, FiShield, FiTrendingUp, FiRefreshCw, FiAlertTriangle, FiKey
+    FiGrid, FiClock, FiShield, FiTrendingUp, FiRefreshCw, FiAlertTriangle, FiPlus, FiKey
 } from 'react-icons/fi';
 
 // DATA SOURCES
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
         const allCourses = [...techCoursesData, ...universityPrograms];
         const syncedCourseIdentifiers = batches
             .filter(b => student.activeBatches?.includes(b._id))
-            .flatMap(b => [b.courseId?.toLowerCase().trim(), b.courseTitle?.toLowerCase().trim()]);
+            .flatMap(b => [b.courseId?.toLowerCase().trim()]);
 
         return student.enrollments.filter(e => {
             const enrolledTitle = e.course.toLowerCase().trim();
@@ -97,6 +97,7 @@ export default function AdminDashboard() {
         });
     };
 
+    // --- 4. API ACTIONS ---
     const handleActivatePortal = async (student) => {
         try {
             const res = await axios.patch(`${API_URL}/admin/registrations/${student._id}/grant-access`, 
@@ -120,6 +121,19 @@ export default function AdminDashboard() {
         } catch (err) { alert("Sync Failed"); }
     };
 
+    const handlePaymentPush = async (e) => {
+        e.preventDefault();
+        try {
+            const newTotal = (paymentModal.student.amountPaid || 0) + parseInt(paymentModal.amount);
+            await axios.patch(`${API_URL}/admin/registrations/${paymentModal.student._id}/update-payment`, 
+                { amountPaid: newTotal }, { headers: { Authorization: `Bearer ${token}` } }
+            );
+            triggerToast("LEDGER UPDATED");
+            setPaymentModal({ show: false, student: null, amount: "" });
+            fetchData();
+        } catch (err) { alert("Ledger update failed"); }
+    };
+
     const handleQuickSync = (student) => {
         const unsynced = getUnsyncedCourses(student);
         if (unsynced.length === 0) return;
@@ -135,26 +149,21 @@ export default function AdminDashboard() {
         setApprovalModal({ show: true, student });
     };
 
-    const handlePaymentPush = async (e) => {
-        e.preventDefault();
-        try {
-            const newTotal = (paymentModal.student.amountPaid || 0) + parseInt(paymentModal.amount);
-            await axios.patch(`${API_URL}/admin/registrations/${paymentModal.student._id}/update-payment`, 
-                { amountPaid: newTotal }, { headers: { Authorization: `Bearer ${token}` } }
-            );
-            triggerToast("LEDGER UPDATED");
-            setPaymentModal({ show: false, student: null, amount: "" });
-            fetchData();
-        } catch (err) { alert("Ledger update failed"); }
-    };
-
     const fetchData = useCallback(async () => {
         if (!token) return navigate('/admin/login');
         try {
+            // Load Registrations or Enquiries based on tab
             const endpoint = activeTab === 'registrations' ? '/admin/registrations' : activeTab === 'enquiries' ? '/admin/enquiries' : null;
             if (endpoint && hasAccess(activeTab)) {
                 const res = await axios.get(`${API_URL}${endpoint}`, { headers: { Authorization: `Bearer ${token}` } });
                 setData(res.data.data || []); 
+            }
+
+            // Load Audit Logs and Stats for Founder node
+            if (userRole === 'founder' && (activeTab === 'logs' || activeTab === 'overview')) {
+                const res = await axios.get(`${API_URL}/admin/audit-logs`, { headers: { Authorization: `Bearer ${token}` } });
+                setAuditLogs(res.data.logs || []);
+                setFinances({ total: res.data.totalRevenue || 0, topCourses: res.data.topCourses || [] });
             }
         } catch (err) { if (err.response?.status === 401) handleLogout(); }
     }, [activeTab, token, userRole, navigate]);
@@ -197,8 +206,8 @@ export default function AdminDashboard() {
                     {hasAccess('batches') && <button onClick={() => handleTabChange('batches')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'batches' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiClock /> Batch Master</button>}
                     <button onClick={() => handleTabChange('lectures')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'lectures' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiVideo /> Live Classroom</button>
                     <button onClick={() => handleTabChange('materials')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'materials' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiBookOpen /> Study Vault</button>
+                    {hasAccess('logs') && <button onClick={() => handleTabChange('logs')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'logs' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiActivity /> Audit Logs</button>}
                 </nav>
-                {/* Always visible at bottom of sidebar */}
                 <button onClick={() => setLogoutModal(true)} className="mt-4 p-4 rounded-2xl font-black text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white transition-all uppercase text-[10px] flex items-center justify-center gap-2 border border-red-500/20"><FiLogOut /> Terminate Session</button>
             </aside>
 
@@ -215,18 +224,31 @@ export default function AdminDashboard() {
                             <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest">Node: {userRole}</span>
                             <div className="flex items-center gap-2 mt-1 justify-end"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div><span className="text-[#F37021] text-[10px] font-black italic uppercase">Live</span></div>
                         </div>
-                        {/* MOBILE LOGOUT BUTTON (Crucial Fix) */}
-                        <button 
-                            onClick={() => setLogoutModal(true)} 
-                            className="p-3 bg-red-50 text-red-500 rounded-2xl transition-all shadow-sm active:scale-90"
-                            aria-label="Logout"
-                        >
-                            <FiLogOut size={20} />
-                        </button>
+                        <button onClick={() => setLogoutModal(true)} className="p-3 bg-red-50 text-red-500 rounded-2xl transition-all shadow-sm active:scale-90"><FiLogOut size={20} /></button>
                     </div>
                 </header>
 
                 <main className="p-4 md:p-10 overflow-y-auto flex-1 no-scrollbar">
+                    
+                    {/* OVERVIEW TAB */}
+                    {activeTab === 'overview' && userRole === 'founder' && (
+                        <div className="space-y-10 animate-in fade-in duration-500">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-[#1A5F7A] text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+                                    <FiDollarSign className="absolute -right-4 -bottom-4 text-9xl opacity-10" />
+                                    <p className="text-[10px] uppercase font-black opacity-60 tracking-widest leading-none mb-1">Aggregate Revenue</p>
+                                    <div className="text-4xl font-black italic">₹{finances.total.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 flex items-center gap-5 shadow-sm">
+                                    <div className="p-4 bg-orange-50 text-[#F37021] rounded-2xl"><FiPieChart size={30}/></div>
+                                    <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Top Performer</p><div className="text-xl font-black text-[#1A5F7A] italic leading-none truncate max-w-[150px]">{finances.topCourses[0]?.name || 'N/A'}</div></div>
+                                </div>
+                            </div>
+                            <AuditTable logs={auditLogs.slice(0, 10)} title="Real-Time Security Monitor" />
+                        </div>
+                    )}
+
+                    {/* REGISTRATIONS TAB */}
                     {activeTab === 'registrations' && (
                         <div className="space-y-6">
                             <div className="relative max-w-xl"><FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"/><input type="text" placeholder="Search Identity..." className="w-full pl-14 pr-6 py-4 bg-white border border-slate-100 rounded-2xl font-bold shadow-sm outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/></div>
@@ -262,7 +284,17 @@ export default function AdminDashboard() {
                                                             <div className={`text-[8px] font-black uppercase italic ${ledger.due > 0 ? 'text-red-500' : 'text-green-600'}`}>{ledger.due > 0 ? `Due: ₹${ledger.due.toLocaleString()}` : "Cleared"}</div>
                                                         </div>
                                                     </td>
-                                                    <td className="p-6"><button onClick={() => handleQuickSync(item)} className="p-2.5 bg-orange-500 text-white rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"><FiRefreshCw size={14}/></button></td>
+                                                    <td className="p-6 flex items-center gap-2">
+                                                        {/* PAYMENT UPDATE OPTION RESTORED */}
+                                                        <button 
+                                                            onClick={() => setPaymentModal({ show: true, student: item, amount: "" })}
+                                                            className="p-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                                                            title="Update Ledger"
+                                                        >
+                                                            <FiCreditCard size={14}/>
+                                                        </button>
+                                                        <button onClick={() => handleQuickSync(item)} className="p-2.5 bg-orange-500 text-white rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"><FiRefreshCw size={14}/></button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
@@ -271,6 +303,14 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
+
+                    {/* AUDIT LOGS TAB */}
+                    {activeTab === 'logs' && userRole === 'founder' && (
+                        <div className="animate-in slide-in-from-bottom-5 duration-500">
+                             <AuditTable logs={auditLogs} title="Full System Audit Trail" />
+                        </div>
+                    )}
+
                     {activeTab === 'batches' && <BatchScheduler />}
                     {activeTab === 'lectures' && <AddLecture />}
                     {activeTab === 'materials' && <AddMaterial />}
@@ -283,7 +323,7 @@ export default function AdminDashboard() {
                     <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border-t-[10px] border-[#1A5F7A]">
                         <button onClick={() => setApprovalModal({ show: false, student: null })} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><FiX size={24} /></button>
                         <h3 className="text-xl font-black text-[#1A5F7A] uppercase mb-1 italic">Stream Sync</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Authorized Program: {approvalModal.student?.enrollments?.map(e => e.course).join(', ')}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Program: {approvalModal.student?.enrollments?.map(e => e.course).join(', ')}</p>
                         <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                             {batches.filter(batch => {
                                 const enrollments = approvalModal.student?.enrollments || [];
@@ -306,13 +346,30 @@ export default function AdminDashboard() {
                 </motion.div>
             )}</AnimatePresence>
 
+            {/* PAYMENT MODAL (Restored functionality) */}
+            <AnimatePresence>{paymentModal.show && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[800] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative border-t-[12px] border-green-600">
+                        <button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-8 right-8 text-slate-300 hover:text-red-500"><FiX size={24} /></button>
+                        <h3 className="text-xl font-black text-[#1A5F7A] uppercase text-center italic leading-none">Update Ledger</h3>
+                        <div className="p-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200 mt-6 mb-8 flex justify-between">
+                            <div><p className="text-[8px] font-black text-slate-400 uppercase">Current Paid</p><p className="text-base font-black text-[#1A5F7A]">₹{paymentModal.student?.amountPaid?.toLocaleString()}</p></div>
+                            <div className="text-right"><p className="text-[8px] font-black text-slate-400 uppercase">Package Sum</p><p className="text-base font-black text-slate-500">₹{calculateAggregateLedger(paymentModal.student).totalContractValue.toLocaleString()}</p></div>
+                        </div>
+                        <form onSubmit={handlePaymentPush} className="space-y-6">
+                            <input autoFocus type="number" placeholder="Enter Amount (₹)" className="w-full p-5 bg-slate-50 rounded-2xl font-black text-3xl text-[#1A5F7A] outline-none text-center border-2 border-transparent focus:border-green-100 transition-all shadow-inner" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} />
+                            <button type="submit" className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest hover:bg-green-700 transition-all">Push Payment to Sync</button>
+                        </form>
+                    </motion.div>
+                </motion.div>
+            )}</AnimatePresence>
+
             {/* LOGOUT CONFIRMATION MODAL */}
             <AnimatePresence>{logoutModal && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 text-center">
                     <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl border-t-8 border-red-500">
                         <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><FiLogOut size={32} /></div>
                         <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic leading-tight">Terminate Session?</h3>
-                        <p className="text-slate-400 text-xs font-bold mt-2">You will need to re-authenticate to access the admin node.</p>
                         <div className="grid grid-cols-2 gap-4 mt-8">
                             <button onClick={() => setLogoutModal(false)} className="py-4 bg-slate-100 rounded-2xl font-black uppercase text-[10px] text-slate-500 hover:bg-slate-200">Go Back</button>
                             <button onClick={handleLogout} className="py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl shadow-red-200 hover:bg-red-600">Logout</button>
@@ -320,6 +377,36 @@ export default function AdminDashboard() {
                     </motion.div>
                 </motion.div>
             )}</AnimatePresence>
+        </div>
+    );
+}
+
+/**
+ * AuditTable Sub-Component (Restored)
+ */
+function AuditTable({ logs, title }) {
+    return (
+        <div className="space-y-6">
+            <h3 className="text-xl font-black text-[#1A5F7A] uppercase italic px-2 flex items-center gap-2"><FiShield className="text-[#F37021]"/> {title}</h3>
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]">
+                    <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
+                        <tr><th className="p-6">Staff Member</th><th>Action</th><th>Target Identity</th><th>Time</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                        {logs.length > 0 ? logs.map(log => (
+                            <tr key={log._id} className="hover:bg-slate-50 text-[11px]">
+                                <td className="p-6 font-bold uppercase text-[#1A5F7A]"><span className="px-2 py-1 bg-slate-100 rounded-lg text-[9px]">{log.performedBy}</span></td>
+                                <td className="font-black text-[#1A5F7A] uppercase italic text-[10px]">{log.action}</td>
+                                <td className="font-bold text-slate-500 uppercase">{log.targetName}</td>
+                                <td className="text-slate-400 font-bold">{new Date(log.timestamp).toLocaleTimeString()}</td>
+                            </tr>
+                        )) : (
+                            <tr><td colSpan="4" className="p-20 text-center font-black text-slate-300 uppercase italic tracking-widest text-xs">No Security events logged</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
