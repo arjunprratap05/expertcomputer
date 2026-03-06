@@ -32,45 +32,43 @@ export default function StudentLogin() {
     const handleLogin = async (e) => {
         e.preventDefault();
         
-        // Basic Client-side Validation
         if (!regId.trim() || !password) {
             setError("Please enter both Registration ID and Password.");
             return;
         }
-
+    
         setIsLoading(true);
         setError("");
-
+    
         try {
-            const API_URL = import.meta.env.VITE_API_BASE_URL;
+            const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
             
-            // PROD TIP: Always use a timeout or interceptor for production APIs
             const response = await axios.post(`${API_URL}/auth/login`, {
-                registrationId: regId.trim().toUpperCase(),
+                registrationId: regId.trim(), // Removed .toUpperCase() to let regex handle it
                 password: password
-            }, { timeout: 10000 }); // 10s timeout
-
+            });
+    
             if (response.data.success) {
-                // Clear any old data first
                 localStorage.clear(); 
-
-                // Secure Storage
                 localStorage.setItem("studentToken", response.data.token);
+                // studentData now includes 'activeBatches' for the Multi-Course Sync
                 localStorage.setItem("studentData", JSON.stringify(response.data.student));
                 
-                // Navigate to dashboard
                 navigate("/erp/profile");
             }
         } catch (err) {
-            console.error("Login Error:", err);
-            // Enhanced error mapping
-            const message = err.response?.data?.msg || "Server unreachable. Please check your internet.";
-            setError(message);
+            // --- PROD FIX: Handle Activation Status ---
+            if (err.response?.status === 403) {
+                setError("PORTAL ACCESS PENDING: Your account is registered but awaiting admin activation.");
+            } else {
+                const message = err.response?.data?.msg || "Identity verification failed. Please try again.";
+                setError(message);
+            }
         } finally {
             setIsLoading(false);
         }
     };
-
+    
     return (
         <div className="min-h-screen bg-[#F1F5F9] flex items-center justify-center p-4 font-sans selection:bg-[#F37021]/30">
             <motion.div
