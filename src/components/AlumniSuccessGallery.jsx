@@ -49,9 +49,7 @@ export default function AlumniSuccessGallery() {
         <div className="min-h-screen bg-slate-50 py-12 md:py-20 px-4 md:px-6 font-sans relative scroll-smooth overflow-x-hidden">
             <div className="max-w-7xl mx-auto">
                 <div className="text-center mb-16 md:mb-20">
-                    <Link to="/" className="inline-flex items-center gap-2 text-[#1A5F7A] font-bold mb-6 hover:underline group">
-                        <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Return to Home
-                    </Link>
+                   
                     <h1 className="text-4xl md:text-6xl font-black text-[#1A5F7A] mb-4 uppercase tracking-tighter">The Hall of Fame</h1>
                     <p className="text-slate-500 max-w-2xl mx-auto font-medium mb-12 px-4">
                         Celebrating Patna's 38-years technical legacy through our certified alumni
