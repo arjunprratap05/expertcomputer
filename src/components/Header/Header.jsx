@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiChevronDown, FiBook, FiShield, FiX, FiMenu, FiUser, FiArrowRight } from 'react-icons/fi';
+import { FiChevronDown, FiBook, FiShield, FiX, FiMenu, FiUser, FiArrowRight, FiMessageCircle } from 'react-icons/fi';
 import { techCoursesData } from '../../data/courses';
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
 
@@ -36,13 +36,12 @@ export default function Header() {
     };
 
     return (
-        // FIXED: Added a distinct border-b and shadow transition to anchor the header as a separate component
-        <header className={`sticky top-0 z-[60] w-full transition-all duration-500 ${
+        <header className={`sticky top-0 z-[60] w-full transition-all duration-300 ${
             isScrolled 
-            ? 'bg-white/95 backdrop-blur-md shadow-[0_10px_30px_-10px_rgba(0,0,0,0.1)] border-b border-slate-200 py-0' 
-            : 'bg-white border-b border-slate-100 py-1'
+            ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-200' 
+            : 'bg-white border-b border-slate-50'
         }`}>
-            {/* VIBRANT TOP ACCENT - Acts as the visual "roof" of the site */}
+            {/* VIBRANT TOP ACCENT */}
             <div className="h-[4px] w-full bg-gradient-to-r from-[#1A5F7A] via-[#F37021] to-[#1A5F7A]"></div>
             
             <nav className="max-w-screen-2xl mx-auto px-4 lg:px-10">
@@ -71,7 +70,6 @@ export default function Header() {
                                 </li>
                             ))}
                             
-                            {/* COURSES DROPDOWN */}
                             <li className="relative group" onMouseEnter={() => setIsDropdownOpen(true)} onMouseLeave={() => setIsDropdownOpen(false)}>
                                 <button className={`flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-widest py-8 transition-colors ${isDropdownOpen ? 'text-[#F37021]' : 'text-[#1A5F7A]'}`}>
                                     Courses <FiChevronDown className={`transition-transform duration-500 ${isDropdownOpen ? 'rotate-180 text-[#F37021]' : ''}`} />
@@ -96,7 +94,6 @@ export default function Header() {
                             </li>
                         </ul>
 
-                        {/* ACTION ZONE: Visual separation with border-l */}
                         <div className="flex items-center gap-4 border-l border-slate-200 pl-8">
                             <Link to="/admin/login" className="flex items-center gap-2 text-[#1A5F7A] bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl font-bold text-[11px] uppercase tracking-tighter hover:bg-[#1A5F7A] hover:text-white transition-all shadow-sm">
                                 <FiShield className="text-[#F37021]" /> Admin
@@ -112,7 +109,6 @@ export default function Header() {
                         </div>
                     </div>
 
-                    {/* MOBILE MENU TOGGLE */}
                     <button className="lg:hidden text-3xl text-[#1A5F7A] p-2 hover:bg-slate-50 rounded-xl transition-colors" onClick={() => setIsMobileMenuOpen(true)}>
                         <FiMenu />
                     </button>
@@ -122,10 +118,10 @@ export default function Header() {
             {/* MOBILE DRAWER */}
             <div className={`lg:hidden fixed inset-0 z-[100] transition-all duration-500 ${isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                 <div className="absolute inset-0 bg-[#1A5F7A]/40 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-                <div className={`absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-[-20px_0_50px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-500 ease-out ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                <div className={`absolute right-0 top-0 h-full w-[85%] max-w-[340px] bg-white shadow-[-20px_0_50px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-500 ease-out ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                     
                     <div className="flex justify-between items-center p-6 border-b border-slate-50 bg-slate-50/50">
-                        <img src={expertcomputerlogo} className="h-12" alt="Logo" />
+                        <img src={expertcomputerlogo} className="h-10" alt="Logo" />
                         <button className="p-2 bg-white rounded-full shadow-md text-[#F37021]" onClick={() => setIsMobileMenuOpen(false)}>
                             <FiX size={24} />
                         </button>
@@ -152,12 +148,12 @@ export default function Header() {
                             </button>
                             
                             {activeMobileDropdown && (
-                                <div className="mt-2 space-y-1 pl-4">
+                                <div className="mt-2 space-y-1 pl-4 border-l-2 border-[#F37021]/10">
                                     {techCoursesData.map(c => (
                                         <button 
                                             key={c.id} 
                                             onClick={() => handleCourseClick(c)} 
-                                            className="w-full text-left py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-tighter flex items-center gap-3 border-l-2 border-slate-100 hover:border-[#F37021] hover:text-[#1A5F7A]"
+                                            className="w-full text-left py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-tighter flex items-center gap-3"
                                         >
                                             <FiBook className="text-[#F37021]" size={14} /> {c.title}
                                         </button>
@@ -166,14 +162,28 @@ export default function Header() {
                             )}
                         </div>
 
+                        {/* MOBILE ACTION ZONE */}
                         <div className="mt-8 pt-8 border-t border-slate-100 space-y-4 pb-10">
-                            <Link to="/student-login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-orange-50 text-[#F37021] font-black text-xs uppercase tracking-widest border border-orange-100 shadow-sm active:scale-95 transition-all">
+                            {/* STUDENT PORTAL */}
+                            <Link to="/student-login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-orange-50 text-[#F37021] font-black text-xs uppercase tracking-widest border border-orange-100">
                                 <FiUser size={18} /> Student Portal
                             </Link>
-                            <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-slate-50 text-[#1A5F7A] font-black text-xs uppercase tracking-widest border border-slate-200 shadow-sm active:scale-95 transition-all">
+                            
+                            {/* ADMIN ACCESS (RESTORED) */}
+                            <Link to="/admin/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-slate-50 text-[#1A5F7A] font-black text-xs uppercase tracking-widest border border-slate-200">
                                 <FiShield size={18} /> Admin Access
                             </Link>
-                            <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-3 w-full py-5 rounded-2xl bg-[#1A5F7A] text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-900/20 active:scale-95 transition-all">
+
+                            {/* LIVE SUPPORT */}
+                            <button 
+                                onClick={() => window.open('https://wa.me/917282983335', '_blank')}
+                                className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-green-50 text-green-600 font-black text-xs uppercase tracking-widest border border-green-100"
+                            >
+                                <FiMessageCircle size={18} /> Live Support
+                            </button>
+
+                            {/* JOIN NOW */}
+                            <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-3 w-full py-5 rounded-2xl bg-[#1A5F7A] text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl">
                                 Join Now
                             </Link>
                         </div>
