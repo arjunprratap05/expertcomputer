@@ -12,7 +12,7 @@ export const techCoursesData = [
     { id: "prog-cpp", title: "Programming using C++", fee: "3540", modules: ["OOPS Masterclass", "Inheritance", "Polymorphism"] },
     { id: "prog-c-cpp", title: "Programming using C & C++", fee: "6450", modules: ["Foundational Logic", "Advanced OOPS"] },
     { id: "dsa", title: "Data structure & Algorithim", fee: "4842", modules: ["Stacks & Queues", "Linked Lists", "Sorting", "Trees"] },
-    { id: "dca-diploma", title: "Diploma in Computer Application", fee: "6500", modules: ["Operating Systems", "MS Office", "Internet Basics"] },
+    { id: "fpit", title: "Foundation Program Information Technology", fee: "6500", modules: ["Operating Systems", "MS Office", "Internet Basics"] },
     { id: "data-analytics", title: "Professional Program in Data Analytics", fee: "22500", modules: ["SQL", "Tableau", "Power BI", "Python"] },
     { 
         id: "gen-ai-master", 
