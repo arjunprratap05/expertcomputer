@@ -96,7 +96,7 @@ export default function Contact() {
                             <div>
                                 <h3 className="text-2xl md:text-3xl font-bold mb-6 italic">Academy Hub</h3>
                                 <div className="space-y-6 md:space-y-8">
-                                    <ContactItem icon={<FiMapPin />} title="Campus" detail="Kumar Tower, 2nd Floor, Boring Rd, Patna" />
+                                    <ContactItem icon={<FiMapPin />} title="Campus" detail="Kumar Tower, 2nd Floor, Boring Road crossing, Patna -800001" />
                                     <ContactItem icon={<FiPhone />} title="Support" detail="+91 7282983335" isLink="tel:+917282983335" />
                                     <ContactItem icon={<FiMail />} title="Email" detail="expertcomputeracademy@gmail.com" isLink="mailto:expertcomputeracademy@gmail.com" />
                                     <ContactItem icon={<FiClock />} title="Hours" detail="Mon - Sat: 8:00 AM - 8:00 PM" />

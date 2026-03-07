@@ -31,9 +31,9 @@ export default function About() {
 
     const advantages = [
         "38+ Years of Experience", "2 Lac Alumni", "1,00,000+ Placements",
-        "100% Placement Assistance", "100% Practical Classes", "28 Years Expert Faculty",
-        "Uninterrupted Power", "AC Classrooms", "Personality Grooming",
-        "Flexible Batches", "Recognized Certificates", "TEPL Partner"
+        "100% Placement Assistance", "100% Practical Classes", "Certified Faculty / 28 Years of Experience",
+        "Internship Available", "Premiun Quality Classrooms", "Personality Development & Interview Success Training",
+        "Customized Flexible Batches", "Recognized Certificates", "Authorized Partner of Tally LTD"
     ];
 
     const stats = [
@@ -150,7 +150,7 @@ export default function About() {
             {/* THE EXPERT ADVANTAGE GRID */}
             <section className="py-24 relative z-10">
                 <div className="container mx-auto px-6 text-center">
-                    <h3 className="text-4xl font-bold text-[#1A5F7A] mb-12">The Expert Advantage</h3>
+                    <h3 className="text-4xl font-bold text-[#1A5F7A] mb-12">The Expert Advantages</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {advantages.map((adv, index) => (
                             <motion.div 

@@ -66,8 +66,8 @@ export default function Founder() {
             ]
         },
         { name: "Dhananjay Kumar", role: "Faculty", exp: "20 Years", specialty: "C/C++ Specialist", image: dananjay },
-        { name: "Sanchita Ghosh", role: "Faculty", exp: "20 Years", specialty: "Counselor", image: sanchita },
-        { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Counselor", image: amit }
+        { name: "Sanchita Ghosh", role: "Faculty", exp: "25 Years", specialty: "Bussiness Head & Communication Skills Expert", image: sanchita },
+        { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Bussiness Executive", image: amit }
     ];
 
     return (
@@ -89,7 +89,7 @@ export default function Founder() {
                         <span className="text-[#1A5F7A] text-[9px] md:text-[10px] font-black uppercase tracking-widest">The Pillars of ECA Patna</span>
                     </div>
                     <h1 className="text-4xl md:text-7xl font-black text-[#1A5F7A] leading-[1.1] md:leading-[0.9] tracking-tighter mb-6">
-                        Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F37021] to-[#ff9f67]">Leadership</span> & Faculty.
+                        Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F37021] to-[#ff9f67]">Leadership</span> & Faculty
                     </h1>
                 </div>
 

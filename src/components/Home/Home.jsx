@@ -66,9 +66,6 @@ export default function Home() {
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     
-    // --- UPDATED STATE MANAGEMENT ---
-    // We check sessionStorage immediately. If 'hasSeenHomeLoader' exists, 
-    // pageLoading starts as 'false', skipping the animation entirely.
     const [pageLoading, setPageLoading] = useState(() => {
         return !sessionStorage.getItem("hasSeenHomeLoader");
     });
@@ -77,12 +74,9 @@ export default function Home() {
     const [showBackToTop, setShowBackToTop] = useState(false);
     const targetRef = useRef(null);
 
-    // --- 1. UPDATED INITIAL PAGE LOAD LOGIC ---
     useEffect(() => {
         const hasSeen = sessionStorage.getItem("hasSeenHomeLoader");
-        
         if (!hasSeen) {
-            // Only run the timer if the user hasn't seen the loader in this session
             const timer = setTimeout(() => {
                 setPageLoading(false);
                 sessionStorage.setItem("hasSeenHomeLoader", "true");
@@ -91,7 +85,6 @@ export default function Home() {
         }
     }, []);
 
-    // --- 2. MODAL PERSISTENCE (URL SEARCH PARAMS) ---
     const courseIdFromUrl = searchParams.get("course");
     useEffect(() => {
         if (courseIdFromUrl) {
@@ -105,7 +98,6 @@ export default function Home() {
     const handleOpenModal = (course) => setSearchParams({ course: course.id });
     const handleCloseModal = () => setSearchParams({});
 
-    // --- 3. ROBUST SCROLL & REFRESH LOGIC ---
     useEffect(() => {
         const targetId = location.state?.targetId || sessionStorage.getItem("lastTargetId");
         if (targetId) {
@@ -125,14 +117,12 @@ export default function Home() {
         }
     }, [location.pathname, location.state]);
 
-    // --- 4. BACK TO TOP VISIBILITY ---
     useEffect(() => {
         const handleScroll = () => setShowBackToTop(window.scrollY > 600);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // --- DATA SELECTORS ---
     const genAiData = techCoursesData.find(c => c.id === 'gen-ai-master');
     const featuredPosters = [
         { title: "Java Programming", image: javaPoster, id: "java-pro" },
@@ -147,18 +137,17 @@ export default function Home() {
         { name: "Ankit Shubham", text: "Gen-AI ready curriculum is world-class.", image: ankitImg }
     ];
     const categories = [
-        { title: "School Students", desc: "Foundation coding.", image: schoolImg },
-        { title: "College Students", desc: "Advanced tech skills.", image: collegeImg },
-        { title: "Graduates", desc: "Career-ready Master's.", image: graduatesImg },
-        { title: "Working Professionals", desc: "Upskill with AI.", image: workingImg },
-        { title: "Home Makers", desc: "Digital literacy.", image: homemakerImg },
-        { title: "Retired Persons", desc: "Stay tech-savvy.", image: retiredImg },
+        { title: "School Students", desc: "Foundation coding", image: schoolImg },
+        { title: "College Students", desc: "Advanced tech skills", image: collegeImg },
+        { title: "Graduates", desc: "Career-ready Master's", image: graduatesImg },
+        { title: "Working Professionals", desc: "Upskill with AI", image: workingImg },
+        { title: "Home Makers", desc: "Digital literacy", image: homemakerImg },
+        { title: "Retired Persons", desc: "Stay tech-savvy", image: retiredImg },
     ];
 
     const { scrollYProgress } = useScroll({ target: targetRef, offset: ["start start", "end start"] });
     const heroOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
 
-    // --- FULL PAGE LOADER (Only visible on first visit of session) ---
     if (pageLoading) {
         return (
             <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
@@ -193,7 +182,6 @@ export default function Home() {
     return (
         <div ref={targetRef} className="mx-auto w-full max-w-7xl px-4 md:px-6 font-sans text-slate-900 bg-white overflow-x-hidden relative">
             
-            {/* BACK TO TOP BUTTON */}
             <AnimatePresence>
                 {showBackToTop && (
                     <motion.button
@@ -212,11 +200,12 @@ export default function Home() {
             <section className="py-6 md:py-10">
                 <div className="flex flex-col lg:flex-row items-center gap-8">
                     <div className="w-full lg:w-1/2 space-y-5 text-center lg:text-left order-2 lg:order-1">
-                        <div className="inline-flex items-center gap-2 bg-orange-50 text-[#F37021] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                            <FiShield /> ISO 9001:2015 Certified
+                        {/* UPDATED: Larger font size and Extra Bold weight for Certification */}
+                        <div className="inline-flex items-center gap-2 bg-orange-50 text-[#F37021] px-5 py-2 rounded-full text-xs md:text-sm font-extrabold uppercase tracking-widest border border-orange-100 shadow-sm">
+                            <FiShield /> ISO 9001:2015 Certified & MSME Certified
                         </div>
                         <h1 className="text-4xl md:text-6xl font-black text-[#1A5F7A] leading-tight">
-                            Build Your <span className="text-[#F37021] italic">Future</span> In Tech.
+                            Build Your <span className="text-[#F37021] italic">Future</span> In Technology
                         </h1>
                         <p className="text-sm md:text-base text-slate-500 max-w-lg mx-auto lg:mx-0 leading-relaxed">
                             Patna's legacy academy since 1987. Traditional excellence meets Gen-AI innovation. 
@@ -248,7 +237,7 @@ export default function Home() {
                                 <FiZap className="animate-pulse" /> New Launch 2026
                             </div>
                             <h2 className="text-3xl md:text-5xl font-black text-white leading-tight uppercase italic tracking-tighter">
-                                <span className="text-[#F37021]">Advanced Diploma</span> Program in Generative AI.
+                                <span className="text-[#F37021]">Advanced Diploma</span> Program in Generative AI
                             </h2>
                             <p className="text-blue-100/60 text-sm md:text-base font-medium max-w-md leading-relaxed">
                                 Unlock the future. Create, Innovate, and Earn with our industry-leading Gen-AI Master Curriculum.
@@ -297,7 +286,7 @@ export default function Home() {
 
             {/* 4. UNIVERSITY TRACKS */}
             <section id="university-programs" className="py-10 bg-slate-50/50 mx-0 md:-mx-4 px-4 md:px-12 rounded-[2rem] md:rounded-[3rem] overflow-hidden scroll-mt-20">
-                <h2 className="text-2xl md:text-3xl font-black text-[#1A5F7A] mb-8 uppercase tracking-tighter italic px-4">University Degrees</h2>
+                <h2 className="text-2xl md:text-3xl font-black text-[#1A5F7A] mb-8 uppercase tracking-tighter italic px-4">University Degree</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
                     {universityPrograms.map((program) => (
                         <div key={program.id} className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
@@ -375,7 +364,6 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* MODAL SYSTEM */}
             {selectedSyllabus && (
                 <SyllabusModal course={selectedSyllabus} onClose={handleCloseModal} />
             )}

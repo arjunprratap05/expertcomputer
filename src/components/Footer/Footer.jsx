@@ -49,7 +49,7 @@ export default function Footer() {
                         </button>
                         <p className="text-sm text-slate-300 leading-relaxed max-w-xs">
                             Empowering students in Patna with IT excellence since 1987. 
-                            Our 38+ year legacy is built on 100% practical learning.
+                            Our 38+ years legacy is built on 100% practical learning.
                         </p>
                         <div className="flex gap-4">
                             {[
@@ -132,7 +132,7 @@ export default function Footer() {
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Boring Road Campus</p>
-                                    <p className="text-sm font-medium leading-tight">Kumar Tower, Boring Road, Patna</p>
+                                    <p className="text-sm font-medium leading-tight">Kumar Tower, 2nd Floor, Boring Road crossing, Patna</p>
                                 </div>
                             </a>
                         </div>

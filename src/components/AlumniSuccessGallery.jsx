@@ -20,11 +20,11 @@ const alumniData = [
     { name: "Suruchi Rai", course: "HTML5 Programming", cat: "Web Development", image: suruchiImg, regNo: "ECA/2025/WEB/001", date: "Jan 2025" },
     { name: "Ankit Shubham", course: "Python Data Analyst", cat: "Data Science", image: ankitImg, regNo: "ECA/2025/PY/042", date: "Dec 2024" },
     { name: "Arpita Neeti", course: "Advanced Excel", cat: "Office Skills", image: arpitaImg, regNo: "ECA/2025/EX/015", date: "Jan 2025" },
-    { name: "Harsh Raj", course: "ADCA Diploma", cat: "Professional Diplomas", image: harshImg, regNo: "ECA/2025/DIP/088", date: "Nov 2024" },
+    { name: "Harsh Raj", course: "Advance Diploma in Computer Application", cat: "Professional Diplomas", image: harshImg, regNo: "ECA/2025/DIP/088", date: "Nov 2024" },
     { name: "Gaurav Kumar", course: "Microsoft Office", cat: "Office Skills", image: gauravImg, regNo: "ECA/2025/MS/009", date: "Oct 2024" },
     { name: "Ghanshyam Kumar", course: "Digital Marketing", cat: "Marketing", image: ghanshyamImg, regNo: "ECA/2025/DM/023", date: "Jan 2025" },
-    { name: "Group Batch", course: "ADCA Graduates", cat: "Professional Diplomas", image: batchImg, regNo: "BATCH-2025-A", date: "Jan 2025" },
-    { name: "Group Batch", course: "ADCA Graduates", cat: "Professional Diplomas", image: schoolStudent, regNo: "BATCH-2025-B", date: "Jan 2025" }
+    { name: "Group Batch", course: "Advance Diploma in Computer Application", cat: "Professional Diplomas", image: batchImg, regNo: "BATCH-2025-A", date: "Jan 2025" },
+    { name: "Group Batch", course: "Advance Diploma in Computer Application", cat: "Professional Diplomas", image: schoolStudent, regNo: "BATCH-2025-B", date: "Jan 2025" }
 ];
 
 export default function AlumniSuccessGallery() {
@@ -54,7 +54,7 @@ export default function AlumniSuccessGallery() {
                     </Link>
                     <h1 className="text-4xl md:text-6xl font-black text-[#1A5F7A] mb-4 uppercase tracking-tighter">The Hall of Fame</h1>
                     <p className="text-slate-500 max-w-2xl mx-auto font-medium mb-12 px-4">
-                        Celebrating Patna's 38-year technical legacy through our certified alumni.
+                        Celebrating Patna's 38-years technical legacy through our certified alumni
                     </p>
 
                     <div className="max-w-2xl mx-auto bg-white p-1.5 md:p-2 rounded-[2rem] shadow-2xl border border-orange-100 flex items-center group">
