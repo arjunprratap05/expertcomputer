@@ -304,7 +304,7 @@ export default function Home() {
                 <div className="flex flex-col md:flex-row justify-between items-end mb-12 px-4 gap-6">
                     <div>
                         <p className="text-[#F37021] font-black uppercase text-[11px] tracking-[0.3em] mb-3">Higher Education</p>
-                        <h2 className="text-4xl md:text-5xl font-black text-[#1A5F7A] uppercase tracking-tighter italic leading-none">University Degrees</h2>
+                        <h2 className="text-4xl md:text-5xl font-black text-[#1A5F7A] uppercase tracking-tighter italic leading-none">University Degree</h2>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
