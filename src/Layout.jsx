@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header/Header';
@@ -9,11 +9,15 @@ import expertcomputerlogo from './assets/expertcomputerlogo.png';
 export default function Layout() {
     const location = useLocation();
     
-    // Memoize hasSeen status to prevent re-reading during render
+    // 1. ERP DETECTION LOGIC
+    // This checks if the current URL starts with /erp. 
+    // When true, we hide the main website header/footer.
+    const isERPPage = location.pathname.startsWith('/erp');
+    
     const hasSeenLoader = useMemo(() => sessionStorage.getItem("hasSeenLoader"), []);
 
-    // Only trigger loading on the Home page ('/') and if not seen before
     const [isLoading, setIsLoading] = useState(() => {
+        // Only trigger loading on the Home page and if not an ERP subpage
         return location.pathname === '/' && !hasSeenLoader;
     });
 
@@ -21,8 +25,6 @@ export default function Layout() {
         if (isLoading) {
             document.body.style.overflow = 'hidden';
             
-            // Fixed Fast-Track: 800ms is the sweet spot for perceived speed
-            // while allowing the logo animation to finish.
             const timer = setTimeout(() => {
                 setIsLoading(false);
                 document.body.style.overflow = 'unset';
@@ -48,7 +50,6 @@ export default function Layout() {
                         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white"
                     >
                         <div className="relative mb-6">
-                            {/* Static Spinner for GPU efficiency */}
                             <motion.div 
                                 animate={{ rotate: 360 }} 
                                 transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
@@ -67,26 +68,30 @@ export default function Layout() {
                 )}
             </AnimatePresence>
 
-            {/* Render site content behind loader for instant visibility when loader fades */}
+            {/* Render site content behind loader */}
             <div className={`flex flex-col min-h-screen transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
-                <Header />
+                
+                {/* 2. CONDITIONAL HEADER: Hidden on ERP pages */}
+                {!isERPPage && <Header />}
+
                 <main className="flex-grow">
                     <Outlet /> 
                 </main>
-                <Footer />
+
+                {/* 3. CONDITIONAL FOOTER: Hidden on ERP pages */}
+                {!isERPPage && <Footer />}
                 
-                {/* Delayed Load: Prevents Chatbot scripts from slowing down First Contentful Paint */}
-                {!isLoading && <DelayedChatBot />}
+                {/* Delayed Load Chatbot: Also hidden on ERP pages to avoid UI overlap */}
+                {!isLoading && !isERPPage && <DelayedChatBot />}
             </div>
         </div>
     );
 }
 
-// Small sub-component to lazy-load the chatbot after the main UI is stable
 function DelayedChatBot() {
     const [render, setRender] = useState(false);
     useEffect(() => {
-        const t = setTimeout(() => setRender(true), 2500); // Wait 2.5s
+        const t = setTimeout(() => setRender(true), 2500);
         return () => clearTimeout(t);
     }, []);
     return render ? <ChatBot /> : null;
