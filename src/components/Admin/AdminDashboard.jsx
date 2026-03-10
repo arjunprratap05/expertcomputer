@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiUsers, FiMessageSquare, FiLogOut, FiActivity, FiX, FiMenu, FiSearch, 
     FiCheckCircle, FiCreditCard, FiPieChart, FiDollarSign, FiVideo, FiBookOpen, 
-    FiGrid, FiClock, FiShield, FiTrendingUp, FiRefreshCw, FiAlertTriangle, FiPlus, FiKey
+    FiGrid, FiClock, FiShield, FiTrendingUp, FiRefreshCw, FiAlertTriangle, FiPlus, FiKey, FiMail, FiPhone
 } from 'react-icons/fi';
 
 // DATA SOURCES
@@ -60,6 +60,7 @@ export default function AdminDashboard() {
     const handleTabChange = (tab) => {
         setActiveTab(tab);
         setIsSidebarOpen(false); 
+        setData([]); // Clear old data to prevent flicker
     };
 
     const handleLogout = () => {
@@ -182,7 +183,8 @@ export default function AdminDashboard() {
     const filteredData = useMemo(() => {
         return (data || []).filter(item => 
             (item.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
-            (item.phone || "").includes(searchQuery)
+            (item.phone || "").includes(searchQuery) ||
+            (item.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
         );
     }, [data, searchQuery]);
 
@@ -202,13 +204,15 @@ export default function AdminDashboard() {
                 </div>
                 <nav className="flex flex-col gap-2 flex-1 no-scrollbar overflow-y-auto">
                     {hasAccess('overview') && <button onClick={() => handleTabChange('overview')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'overview' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiGrid /> Overview</button>}
+                    {/* ADDED ENQUIRIES SIDEBAR BUTTON */}
+                    {hasAccess('enquiries') && <button onClick={() => handleTabChange('enquiries')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'enquiries' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiMessageSquare /> Admission Enquiries</button>}
                     {hasAccess('registrations') && <button onClick={() => handleTabChange('registrations')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'registrations' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiUsers /> Registrations</button>}
                     {hasAccess('batches') && <button onClick={() => handleTabChange('batches')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'batches' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiClock /> Batch Master</button>}
                     <button onClick={() => handleTabChange('lectures')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'lectures' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiVideo /> Live Classroom</button>
                     <button onClick={() => handleTabChange('materials')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'materials' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiBookOpen /> Study Vault</button>
                     {hasAccess('logs') && <button onClick={() => handleTabChange('logs')} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${activeTab === 'logs' ? 'bg-[#F37021]' : 'hover:bg-white/10'}`}><FiActivity /> Audit Logs</button>}
                 </nav>
-                <button onClick={() => setLogoutModal(true)} className="mt-4 p-4 rounded-2xl font-black text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white transition-all uppercase text-[10px] flex items-center justify-center gap-2 border border-red-500/20"><FiLogOut /> Terminate Session</button>
+                
             </aside>
 
             {/* MAIN AREA */}
@@ -248,9 +252,58 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* ENQUIRIES TAB (NEW SECTION ADDED HERE) */}
+                    {activeTab === 'enquiries' && (
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic">Admission Enquiries</h3>
+                                <div className="relative max-w-md w-full">
+                                    <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"/>
+                                    <input type="text" placeholder="Search leads..." className="w-full pl-14 pr-6 py-3.5 bg-white border border-slate-100 rounded-2xl font-bold shadow-sm outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-[2rem] shadow-sm border overflow-hidden overflow-x-auto">
+                                <table className="w-full text-left min-w-[800px]">
+                                    <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
+                                        <tr>
+                                            <th className="p-6">Lead Identity</th>
+                                            <th>Contact Detail</th>
+                                            <th>Course Interest</th>
+                                            <th>Submission Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {filteredData.length > 0 ? filteredData.map(item => (
+                                            <tr key={item._id} className="hover:bg-slate-50/80 transition-colors text-[11px]">
+                                                <td className="p-6">
+                                                    <div className="font-black text-[#1A5F7A] uppercase italic">{item.name}</div>
+                                                    <div className="text-slate-400 font-bold lowercase">{item.email}</div>
+                                                </td>
+                                                <td>
+                                                    <div className="flex items-center gap-2 font-bold text-slate-600"><FiPhone className="text-[#F37021]"/> {item.phone}</div>
+                                                </td>
+                                                <td>
+                                                    <span className="px-3 py-1 bg-orange-50 text-[#F37021] rounded-full font-black uppercase text-[9px] border border-orange-100">{item.course || 'General Enquiry'}</span>
+                                                </td>
+                                                <td>
+                                                    <div className="text-slate-400 font-bold italic">{new Date(item.createdAt).toLocaleDateString()} at {new Date(item.createdAt).toLocaleTimeString()}</div>
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr>
+                                                <td colSpan="4" className="p-20 text-center font-black text-slate-200 uppercase italic text-sm tracking-widest">No enquiry data captured</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     {/* REGISTRATIONS TAB */}
                     {activeTab === 'registrations' && (
-                        <div className="space-y-6">
+                        <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="relative max-w-xl"><FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"/><input type="text" placeholder="Search Identity..." className="w-full pl-14 pr-6 py-4 bg-white border border-slate-100 rounded-2xl font-bold shadow-sm outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/></div>
                             <div className="bg-white rounded-[2rem] shadow-sm border overflow-hidden overflow-x-auto">
                                 <table className="w-full text-left min-w-[1000px]">
@@ -285,7 +338,6 @@ export default function AdminDashboard() {
                                                         </div>
                                                     </td>
                                                     <td className="p-6 flex items-center gap-2">
-                                                        {/* PAYMENT UPDATE OPTION RESTORED */}
                                                         <button 
                                                             onClick={() => setPaymentModal({ show: true, student: item, amount: "" })}
                                                             className="p-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm"
@@ -346,7 +398,7 @@ export default function AdminDashboard() {
                 </motion.div>
             )}</AnimatePresence>
 
-            {/* PAYMENT MODAL (Restored functionality) */}
+            {/* PAYMENT MODAL */}
             <AnimatePresence>{paymentModal.show && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[800] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative border-t-[12px] border-green-600">
@@ -366,7 +418,7 @@ export default function AdminDashboard() {
 
             {/* LOGOUT CONFIRMATION MODAL */}
             <AnimatePresence>{logoutModal && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 text-center">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 text-center">
                     <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl border-t-8 border-red-500">
                         <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><FiLogOut size={32} /></div>
                         <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic leading-tight">Terminate Session?</h3>
@@ -381,9 +433,6 @@ export default function AdminDashboard() {
     );
 }
 
-/**
- * AuditTable Sub-Component (Restored)
- */
 function AuditTable({ logs, title }) {
     return (
         <div className="space-y-6">
