@@ -7,7 +7,7 @@ import {
     FiUser, FiMail, FiCheckCircle, FiFileText, 
     FiCamera, FiCalendar, FiX, FiRefreshCw, 
     FiAward, FiDollarSign, FiShield, FiArrowRight, FiLock,
-    FiPhone, FiUpload, FiAlertTriangle, FiCheck
+    FiPhone, FiUpload, FiAlertTriangle, FiCheck, FiLoader
 } from 'react-icons/fi';
 import { techCoursesData, universityPrograms } from '../../data/courses';
 
@@ -61,9 +61,11 @@ export default function RegistrationForm() {
         }
     }, [location.state]);
 
+    // LOAD FACE MODELS
     useEffect(() => {
         const loadModels = async () => {
             try {
+                // Using standard lightweight models for production
                 await faceapi.nets.tinyFaceDetector.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models');
             } catch (err) { console.error("FaceAPI Load Error", err); }
         };
@@ -109,22 +111,46 @@ export default function RegistrationForm() {
         } catch (err) { triggerToast("Invalid Verification Code."); }
     };
 
+    // --- UPDATED FIXED: IMAGE VALIDATION WITH FACE DETECTION ---
     const handleFileSelect = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        // Visual feedback
         setIsValidatingImage(true);
+        setPreviewImage(null);
+
         try {
+            // Convert file to Image element
             const img = await faceapi.bufferToImage(file);
-            const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions());
-            if (detections.length !== 1) {
-                triggerToast("Upload a clear photo with exactly one face.");
+            
+            // Detect faces
+            const detections = await faceapi.detectAllFaces(
+                img, 
+                new faceapi.TinyFaceDetectorOptions()
+            );
+
+            if (detections.length === 0) {
+                triggerToast("No human face detected. Please upload a clear passport photo.");
+                e.target.value = ""; // Clear input
+                setFormData({ ...formData, studentImage: null });
+            } else if (detections.length > 1) {
+                triggerToast("Multiple faces detected. Please upload a photo with ONLY the student.");
                 e.target.value = "";
+                setFormData({ ...formData, studentImage: null });
             } else {
+                // Success: Exactly one face found
                 setFormData({ ...formData, studentImage: file });
                 setPreviewImage(URL.createObjectURL(file));
+                triggerToast("Identity Photo Validated Successfully", "success");
             }
-        } catch (e) { triggerToast("Biometric analysis failed."); }
-        setIsValidatingImage(false);
+        } catch (err) {
+            console.error(err);
+            triggerToast("Scanning Error: Ensure the image is a valid JPG/PNG portrait.");
+            e.target.value = "";
+        } finally {
+            setIsValidatingImage(false);
+        }
     };
 
     const validateForm = () => {
@@ -132,7 +158,7 @@ export default function RegistrationForm() {
         if (!formData.name || formData.name.length < 3) tmp.name = "Enter valid name";
         if (!/^[6-9]\d{9}$/.test(formData.phone)) tmp.phone = "Enter 10-digit mobile";
         if (!validateAadhaar(formData.aadhaarNo)) tmp.aadhaarNo = "Invalid 12-digit Aadhaar";
-        if (!formData.studentImage) tmp.image = "Photo Required";
+        if (!formData.studentImage) tmp.image = "Face Verified Photo Required";
         setErrors(tmp);
         return Object.keys(tmp).length === 0;
     };
@@ -152,7 +178,7 @@ export default function RegistrationForm() {
                 setRegSuccessData({ 
                     regId: res.data.registrationId, 
                     pass: res.data.rawPassword,
-                    isReturning: res.data.isReturning // Capture multi-enrollment flag
+                    isReturning: res.data.isReturning 
                 });
                 setShowReview(false);
             }
@@ -165,7 +191,7 @@ export default function RegistrationForm() {
     };
 
     return (
-        <div className="min-h-screen py-6 bg-slate-50 relative overflow-x-hidden font-sans">
+        <div className="min-h-screen py-6 bg-slate-50 relative overflow-x-hidden font-sans text-left">
             <AnimatePresence>
                 {toast.show && (
                     <motion.div initial={{ y: -100, x: '-50%' }} animate={{ y: 20, x: '-50%' }} exit={{ y: -100, x: '-50%' }}
@@ -175,19 +201,14 @@ export default function RegistrationForm() {
                 )}
             </AnimatePresence>
 
+            {/* SUCCESS MODAL ... same as your code */}
             <AnimatePresence>
                 {regSuccessData && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[2000] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
                         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[3rem] p-10 max-w-md w-full text-center border-t-[12px] border-[#1A5F7A]">
                             <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6"><FiCheck size={40} /></div>
-                            <h2 className="text-3xl font-black text-slate-800 uppercase italic">
-                                {regSuccessData.isReturning ? "Course Added!" : "Welcome!"}
-                            </h2>
-                            <p className="text-slate-500 font-bold mt-2 leading-relaxed">
-                                {regSuccessData.isReturning 
-                                    ? "Your profile has been updated with the new program. Access all your courses with one login." 
-                                    : "Your enrollment is recorded. Credentials have been mailed to your official address."}
-                            </p>
+                            <h2 className="text-3xl font-black text-slate-800 uppercase italic">{regSuccessData.isReturning ? "Course Added!" : "Welcome!"}</h2>
+                            <p className="text-slate-500 font-bold mt-2 leading-relaxed">Your registration has been successfully processed.</p>
                             <div className="mt-8 space-y-4">
                                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-inner">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Registration ID</p>
@@ -195,12 +216,10 @@ export default function RegistrationForm() {
                                 </div>
                                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-inner">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Portal Access Key</p>
-                                    <p className="text-2xl font-mono font-bold text-orange-600">
-                                        {regSuccessData.isReturning ? "Use Existing Password" : regSuccessData.pass}
-                                    </p>
+                                    <p className="text-2xl font-mono font-bold text-orange-600">{regSuccessData.isReturning ? "Use Existing Password" : regSuccessData.pass}</p>
                                 </div>
                             </div>
-                            <button onClick={() => navigate('/student-login')} className="w-full mt-8 py-5 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 active:scale-95 transition-transform">Enter Learning Portal</button>
+                            <button onClick={() => navigate('/student-login')} className="w-full mt-8 py-5 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-transform">Enter Learning Portal</button>
                         </motion.div>
                     </motion.div>
                 )}
@@ -233,15 +252,29 @@ export default function RegistrationForm() {
                             </div>
 
                             <div className="p-8 md:p-16 space-y-16">
+                                {/* BIOMETRIC PHOTO UPLOAD SECTION */}
                                 <div className="flex flex-col items-center">
                                     <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileSelect} />
-                                    <div className="relative cursor-pointer group" onClick={() => fileInputRef.current.click()}>
-                                        <div className={`w-40 h-40 md:w-52 md:h-52 bg-slate-50 rounded-[3.5rem] border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform ${isValidatingImage ? 'animate-pulse' : ''}`}>
-                                            {previewImage ? <img src={previewImage} className="w-full h-full object-cover" /> : <FiCamera className="text-5xl text-slate-200" />}
+                                    <div className="relative cursor-pointer group" onClick={() => !isValidatingImage && fileInputRef.current.click()}>
+                                        <div className={`w-40 h-40 md:w-52 md:h-52 bg-slate-50 rounded-[3.5rem] border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center transition-all ${isValidatingImage ? 'scale-90 brightness-75' : 'group-hover:scale-105'}`}>
+                                            {isValidatingImage ? (
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <FiLoader className="text-4xl text-[#F37021] animate-spin" />
+                                                    <span className="text-[9px] font-black uppercase text-[#F37021]">Scanning Face...</span>
+                                                </div>
+                                            ) : previewImage ? (
+                                                <img src={previewImage} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <FiCamera className="text-5xl text-slate-200" />
+                                            )}
                                         </div>
-                                        <div className="absolute -bottom-2 -right-2 bg-orange-600 p-4 rounded-2xl text-white shadow-xl group-hover:rotate-12 transition-transform"><FiUpload size={22} /></div>
+                                        <div className="absolute -bottom-2 -right-2 bg-orange-600 p-4 rounded-2xl text-white shadow-xl group-hover:rotate-12 transition-transform">
+                                            {isValidatingImage ? <FiRefreshCw className="animate-spin" /> : <FiUpload size={22} />}
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase mt-6 tracking-[0.2em] italic">Biometric Facial Identity Required</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase mt-6 tracking-[0.2em] italic">
+                                        {isValidatingImage ? "AI Verification in progress..." : "Exactly one face must be visible"}
+                                    </p>
                                 </div>
 
                                 <div className="space-y-16">
@@ -266,9 +299,9 @@ export default function RegistrationForm() {
                                     </section>
 
                                     <section className="pt-6">
-                                        <div className="p-10 bg-slate-900 rounded-[3rem] text-white flex flex-col md:flex-row justify-between items-center gap-10 border-b-[8px] border-orange-500 shadow-2xl relative overflow-hidden">
+                                        <div className="p-10 bg-slate-900 rounded-[3rem] text-white flex flex-col md:flex-row justify-between items-center gap-10 border-b-[8px] border-orange-500 shadow-2xl relative overflow-hidden text-center md:text-left">
                                             <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
-                                            <div className="text-center md:text-left z-10">
+                                            <div className="z-10">
                                                 <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
                                                     <FiAward className="text-orange-400" size={20} />
                                                     <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest">Selected Program</p>
@@ -296,7 +329,7 @@ export default function RegistrationForm() {
                 </AnimatePresence>
             </div>
 
-            {/* FINAL REVIEW SLIDE-UP */}
+            {/* FINAL REVIEW MODAL ... same as your code */}
             <AnimatePresence>
                 {showReview && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1500] bg-slate-950/90 backdrop-blur-md flex items-end md:items-center justify-center">
@@ -339,6 +372,7 @@ export default function RegistrationForm() {
     );
 }
 
+// Sub-components ... InputField, SectionTitle, AcademicBox, ReviewItem same as your code
 function SectionTitle({ title }) {
     return <h4 className="text-[12px] font-black text-[#1A5F7A] uppercase flex items-center gap-4 tracking-[0.2em]"><span className="h-6 w-2 bg-orange-500 rounded-full shadow-lg shadow-orange-500/50"></span>{title}</h4>;
 }
