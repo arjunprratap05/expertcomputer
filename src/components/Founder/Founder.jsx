@@ -12,6 +12,7 @@ import dananjay from '../../assets/dananjay.jpeg';
 import amit from '../../assets/amit.jpeg';
 import sanchita from '../../assets/sanchita.jpeg';
 import pawan from '../../assets/pawan.jpeg';
+import amitsingh from '../../assets/AmitSingh.jpeg'
 
 // Certificate Imports
 import sudiptcertificate from '../../assets/certificates/Sudipt-Sengupta TCT Certificate.pdf';
@@ -67,7 +68,8 @@ export default function Founder() {
         },
         { name: "Dhananjay Kumar", role: "Faculty", exp: "20 Years", specialty: "C/C++ Specialist", image: dananjay },
         { name: "Sanchita Ghosh", role: "Faculty", exp: "25 Years", specialty: "Bussiness Head & Communication Skills Expert", image: sanchita },
-        { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Bussiness Executive", image: amit }
+        { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Bussiness Executive", image: amit },
+        { name: "Amit Singh", role: "Faculty", exp: "20 Years", specialty: "Accounnts", image: amitsingh }
     ];
 
     return (
