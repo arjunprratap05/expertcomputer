@@ -29,7 +29,6 @@ import tallyPoster from "../../assets/posters/Tally.jpeg";
 import genAIPoster from "../../assets/posters/GenerativeAI.jpeg"; 
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
 
-// --- HELPER COMPONENT: SKELETON IMAGE LOADER ---
 const OptimizedImage = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     return (
@@ -197,10 +196,9 @@ export default function Home() {
             </AnimatePresence>
 
             {/* 1. HERO SECTION */}
-            <section className="py-12 md:py-16 bg-white relative">
-                <div className="flex flex-col lg:flex-row items-center gap-10">
+            <section className="py-12 md:py-20 bg-white relative">
+                <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
                     <div className="w-full lg:w-1/2 space-y-6 text-center lg:text-left order-2 lg:order-1">
-                        {/* UPDATED: Larger font and Black weight for Certification Badge */}
                         <div className="inline-flex items-center gap-3 bg-orange-50 text-[#F37021] px-6 py-2.5 rounded-full text-[13px] md:text-sm font-black uppercase tracking-[0.1em] border border-orange-100 shadow-sm transition-transform hover:scale-105">
                             <FiShield className="text-lg" /> ISO 9001:2015 Certified & MSME Certified
                         </div>
@@ -217,7 +215,7 @@ export default function Home() {
                         <div className="flex justify-center lg:justify-start pt-4">
                             <button 
                                 onClick={() => navigate('/about')} 
-                                className="bg-[#1A5F7A] text-white px-10 py-5 rounded-2xl font-black hover:bg-[#F37021] transition-all duration-500 flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_rgba(26,95,122,0.3)] uppercase text-[12px] tracking-[0.2em] group"
+                                className="bg-[#1A5F7A] text-white px-10 py-5 rounded-2xl font-black hover:bg-[#F37021] transition-all duration-500 flex items-center justify-center gap-3 shadow-lg uppercase text-[12px] tracking-[0.2em] group"
                             >
                                 Start Your Journey <FiArrowRight className="group-hover:translate-x-2 transition-transform text-lg"/>
                             </button>
@@ -225,19 +223,35 @@ export default function Home() {
                     </div>
 
                     <motion.div style={{ opacity: heroOpacity }} className="w-full lg:w-1/2 order-1 lg:order-2">
-                        <div className="relative p-2">
-                            <div className="rounded-[3rem] overflow-hidden shadow-2xl border-[10px] border-white relative group">
+                        {/* Wrapper with padding to accommodate the overlapping badge */}
+                        <div className="relative pb-8 pr-8"> 
+                            <div className="rounded-[3rem] overflow-hidden shadow-2xl border-[10px] border-white relative group z-10">
                                 <OptimizedImage 
                                     src={expertcomuteroffice} 
                                     alt="Expert Computer Academy Campus" 
                                     className="w-full aspect-[4/3] object-cover transition-transform duration-700 group-hover:scale-105" 
                                 />
-                                {/* Floating Badge */}
-                                <div className="absolute bottom-6 right-6 bg-[#1A5F7A] text-white p-5 rounded-3xl shadow-2xl flex flex-col items-center">
-                                    <span className="font-black text-3xl italic leading-none">38+</span>
-                                    <span className="text-[9px] uppercase font-bold tracking-widest text-white/70 mt-1">Years Legacy</span>
-                                </div>
                             </div>
+                            
+                            {/* LOWER RIGHT FLOATING BADGE WITH BREATHING ANIMATION */}
+                            <motion.div 
+                                animate={{ 
+                                    scale: [1, 1.05, 1],
+                                    boxShadow: ["0px 10px 30px rgba(0,0,0,0.1)", "0px 15px 45px rgba(243,112,33,0.2)", "0px 10px 30px rgba(0,0,0,0.1)"]
+                                }}
+                                transition={{ 
+                                    repeat: Infinity, 
+                                    duration: 3, 
+                                    ease: "easeInOut" 
+                                }}
+                                className="absolute bottom-0 right-0 z-20 bg-[#1A5F7A] text-white p-5 md:p-7 rounded-3xl shadow-2xl flex flex-col items-center transform translate-x-1/3 translate-y-1/3 border-4 border-white"
+                            >
+                                <span className="font-black text-3xl md:text-5xl italic leading-none text-[#F37021]">38+</span>
+                                <span className="text-[9px] md:text-[11px] uppercase font-black tracking-widest text-white mt-1 whitespace-nowrap">Years Legacy</span>
+                                
+                                {/* Subtitle shimmer effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none" />
+                            </motion.div>
                         </div>
                     </motion.div>
                 </div>

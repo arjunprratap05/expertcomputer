@@ -113,10 +113,10 @@ export default function Header() {
 
                         <div className="flex items-center gap-3 border-l border-slate-200 pl-6">
                             <Link to="/admin/login" className="flex items-center gap-2 text-[#1A5F7A] bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-slate-100 transition-all">
-                                <FiShield className="text-[#F37021]" /> Admin
+                                <FiShield className="text-[#F37021]" /> Admin Portal
                             </Link>
                             <Link to="/student-login" className="flex items-center gap-2 text-[#F37021] bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase hover:bg-orange-100 transition-all">
-                                <FiUser /> ERP
+                                <FiUser /> Student ERP
                             </Link>
                             <Link to="/contact" className="bg-[#1A5F7A] text-white px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-[#F37021] transition-all flex items-center gap-2">
                                 Join Now <FiArrowRight />
