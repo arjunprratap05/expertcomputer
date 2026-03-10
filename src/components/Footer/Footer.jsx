@@ -56,7 +56,7 @@ export default function Footer() {
                                 { icon: <FaFacebookF />, url: "https://www.facebook.com/expertcomputeracademy/" },
                                 { icon: <FaInstagram />, url: "https://www.instagram.com/expertcomputeracademypatna/" },
                                 { icon: <FaYoutube />, url: "https://youtube.com/@expertcomputeracademy" },
-                                { icon: <FaLinkedinIn />, url: "https://linkedin.com/company/expert-computer-academy" }
+                                { icon: <FaLinkedinIn />, url: "https://linkedin.com/in/expert-computer-academy-9234363b6" }
                             ].map((social, i) => (
                                 <a key={i} href={social.url} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-[#F37021] hover:text-white transition-all duration-300 border border-white/5">
                                     {social.icon}
