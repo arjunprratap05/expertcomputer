@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiUsers, FiMessageSquare, FiLogOut, FiActivity, FiX, FiMenu, FiSearch, 
     FiCheckCircle, FiCreditCard, FiPieChart, FiDollarSign, FiVideo, FiBookOpen, 
-    FiGrid, FiClock, FiShield, FiTrendingUp, FiRefreshCw, FiAlertTriangle, FiPlus, FiKey, FiMail, FiPhone
+    FiGrid, FiClock, FiShield, FiTrendingUp, FiRefreshCw, FiAlertTriangle, FiPlus, FiKey, FiMail, FiPhone,
+    FiTag, FiCalendar, FiChevronRight, FiChevronLeft, FiSave, FiRotateCcw, FiTrash2, FiUser, FiEdit2
 } from 'react-icons/fi';
 
 // DATA SOURCES
@@ -22,12 +23,13 @@ export default function AdminDashboard() {
     const navigate = useNavigate();
     const token = localStorage.getItem("adminToken");
     const userRole = localStorage.getItem("userRole")?.toLowerCase(); 
+    const userName = localStorage.getItem("adminName") || "Administrator";
 
     // --- 1. RBAC PERMISSIONS ---
     const permissions = {
-        founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries'],
+        founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'coupons'],
         frontoffice: ['batches', 'lectures', 'materials', 'enquiries'],
-        accounts: ['registrations', 'batches', 'lectures', 'materials']
+        accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons']
     };
     const hasAccess = (tab) => permissions[userRole]?.includes(tab);
 
@@ -47,13 +49,24 @@ export default function AdminDashboard() {
     const [toast, setToast] = useState({ show: false, message: "" });
     const [prevLeadLength, setPrevLeadLength] = useState(0);
     
-    // Modals & Refs
+    // --- 3. COUPON WIZARD STATES (MATCHES WHATSAPP IMAGES) ---
+    const [couponStep, setCouponStep] = useState(1);
+    const [coupons, setCoupons] = useState([]);
+    const [couponForm, setCouponForm] = useState({
+        code: "", description: "", validFrom: "", validTo: "", 
+        type: "", maxUsage: "", isActive: true, purpose: "",
+        courseCode: "", paymentType: "", discountType: "PERCENTAGE", 
+        discountValue: "", isVisibleOnForm: false
+    });
+
     const audioRef = useRef(new Audio('/sounds/notification.mp3'));
     const [approvalModal, setApprovalModal] = useState({ show: false, student: null });
     const [selectedBatches, setSelectedBatches] = useState([]); 
     const [paymentModal, setPaymentModal] = useState({ show: false, student: null, amount: "" });
 
-    // --- 3. CORE LOGIC HANDLERS ---
+    const allCourses = useMemo(() => [...techCoursesData, ...universityPrograms], []);
+
+    // --- 4. CORE LOGIC HANDLERS ---
     const triggerToast = (msg) => {
         setToast({ show: true, message: msg });
         setTimeout(() => setToast({ show: false, message: "" }), 3000);
@@ -72,12 +85,10 @@ export default function AdminDashboard() {
     };
 
     const calculateAggregateLedger = (student) => {
-        const allProgramData = [...techCoursesData, ...universityPrograms];
+        if (!student) return { totalContractValue: 0, paid: 0, due: 0 };
         const totalContractValue = (student.enrollments || []).reduce((acc, curr) => {
-            const courseInfo = allProgramData.find(c => 
-                c.title.toLowerCase().trim() === curr.course.toLowerCase().trim()
-            );
-            const feeAmount = parseInt(courseInfo?.fee?.replace(/[^0-9]/g, "")) || 0;
+            const courseInfo = allCourses.find(c => c.title.toLowerCase().trim() === curr.course.toLowerCase().trim());
+            const feeAmount = parseInt(courseInfo?.fee?.toString().replace(/[^0-9]/g, "")) || 0;
             return acc + feeAmount;
         }, 0);
         const paid = student.amountPaid || 0;
@@ -85,8 +96,7 @@ export default function AdminDashboard() {
     };
 
     const getUnsyncedCourses = (student) => {
-        if (!student.enrollments || batches.length === 0) return [];
-        const allCourses = [...techCoursesData, ...universityPrograms];
+        if (!student || !student.enrollments || batches.length === 0) return [];
         const syncedCourseIdentifiers = batches
             .filter(b => student.activeBatches?.includes(b._id))
             .flatMap(b => [b.courseId?.toLowerCase().trim()]);
@@ -94,64 +104,19 @@ export default function AdminDashboard() {
         return student.enrollments.filter(e => {
             const enrolledTitle = e.course.toLowerCase().trim();
             const courseObj = allCourses.find(c => c.title.toLowerCase().trim() === enrolledTitle);
-            const courseId = courseObj?.id.toLowerCase().trim();
             return !syncedCourseIdentifiers.includes(enrolledTitle) && 
-                   (!courseId || !syncedCourseIdentifiers.includes(courseId));
+                   (!courseObj || !syncedCourseIdentifiers.includes(courseObj.id.toLowerCase().trim()));
         });
     };
 
-    // --- 4. API ACTIONS ---
-    const handleActivatePortal = async (student) => {
-        try {
-            const res = await axios.patch(`${API_URL}/admin/registrations/${student._id}/grant-access`, 
-                {}, { headers: { Authorization: `Bearer ${token}` } }
-            );
-            if (res.data.success) {
-                fetchData();
-                triggerToast("STUDENT ACCESS UNLOCKED");
-            }
-        } catch (err) { alert("Activation Failed"); }
-    };
+    const filteredData = useMemo(() => {
+        return (data || []).filter(item => 
+            (item.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
+            (item.phone || "").includes(searchQuery)
+        );
+    }, [data, searchQuery]);
 
-    const handleBatchSync = async () => {
-        try {
-            await axios.patch(`${API_URL}/admin/approve-student/${approvalModal.student._id}`, 
-                { batchIds: selectedBatches }, { headers: { Authorization: `Bearer ${token}` } }
-            );
-            triggerToast("STREAMS SYNCED");
-            fetchData(); 
-            setApprovalModal({ show: false, student: null });
-        } catch (err) { alert("Sync Failed"); }
-    };
-
-    const handlePaymentPush = async (e) => {
-        e.preventDefault();
-        try {
-            const newTotal = (paymentModal.student.amountPaid || 0) + parseInt(paymentModal.amount);
-            await axios.patch(`${API_URL}/admin/registrations/${paymentModal.student._id}/update-payment`, 
-                { amountPaid: newTotal }, { headers: { Authorization: `Bearer ${token}` } }
-            );
-            triggerToast("LEDGER UPDATED");
-            setPaymentModal({ show: false, student: null, amount: "" });
-            fetchData();
-        } catch (err) { alert("Ledger update failed"); }
-    };
-
-    const handleQuickSync = (student) => {
-        const unsynced = getUnsyncedCourses(student);
-        if (unsynced.length === 0) return;
-        const allCourses = [...techCoursesData, ...universityPrograms];
-        const matchingIds = batches.filter(b => {
-            return unsynced.some(e => {
-                const title = e.course.toLowerCase().trim();
-                const id = allCourses.find(c => c.title.toLowerCase().trim() === title)?.id.toLowerCase().trim();
-                return b.courseId?.toLowerCase().trim() === title || b.courseId?.toLowerCase().trim() === id;
-            });
-        }).map(b => b._id);
-        setSelectedBatches([...new Set([...(student.activeBatches || []), ...matchingIds])]);
-        setApprovalModal({ show: true, student });
-    };
-
+    // --- 5. API ACTIONS ---
     const fetchData = useCallback(async () => {
         if (!token) return navigate('/admin/login');
         const headers = { Authorization: `Bearer ${token}` };
@@ -160,15 +125,17 @@ export default function AdminDashboard() {
             if (endpoint && hasAccess(activeTab)) {
                 const res = await axios.get(`${API_URL}${endpoint}`, { headers });
                 const freshData = res.data.data || [];
-                
-                // Alert for new inquiries
                 if (activeTab === 'enquiries' && freshData.length > prevLeadLength && prevLeadLength !== 0) {
                     audioRef.current.play().catch(() => {});
                     triggerToast("NEW LEAD CAPTURED");
                 }
-                
                 setData(freshData);
                 if (activeTab === 'enquiries') setPrevLeadLength(freshData.length);
+            }
+
+            if (activeTab === 'coupons') {
+                const res = await axios.get(`${API_URL}/admin/coupons`, { headers });
+                setCoupons(res.data.data || []);
             }
 
             if (userRole === 'founder' && (activeTab === 'logs' || activeTab === 'overview')) {
@@ -190,14 +157,87 @@ export default function AdminDashboard() {
         loadInit();
     }, [token, activeTab, fetchData]);
 
-    const filteredData = useMemo(() => {
-        return (data || []).filter(item => 
-            (item.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
-            (item.phone || "").includes(searchQuery) ||
-            (item.source?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-            (item.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
-        );
-    }, [data, searchQuery]);
+    // Payment Sync Fix
+    const handlePaymentPush = async (e) => {
+        e.preventDefault();
+        try {
+            const currentPaid = Number(paymentModal.student.amountPaid) || 0;
+            const newTotal = currentPaid + Number(paymentModal.amount);
+            await axios.patch(`${API_URL}/admin/registrations/${paymentModal.student._id}/update-payment`, { amountPaid: newTotal }, { headers: { Authorization: `Bearer ${token}` } });
+            triggerToast("LEDGER UPDATED");
+            setPaymentModal({ show: false, student: null, amount: "" });
+            fetchData();
+        } catch (err) { alert("Payment Sync Failed"); }
+    };
+    const handleFinalCouponSave = async () => {
+        // 1. Data Cleaning & Enum Protection
+        const finalPayload = { 
+            ...couponForm,
+            // Ensure Enums are never empty strings
+            type: couponForm.type || "PROMOTIONAL",
+            paymentType: couponForm.paymentType || "ALL",
+            // Cast Numbers
+            maxUsage: Number(couponForm.maxUsage) || 0,
+            discountValue: Number(couponForm.discountValue) || 0,
+        };
+    
+        // 2. Debug Log - Check your console for this!
+        console.log("CLEANED PAYLOAD SENDING:", finalPayload);
+    
+        if (!finalPayload.code || !finalPayload.courseCode) {
+            return alert("Validation Error: Coupon Code and Target Course are mandatory.");
+        }
+    
+        try {
+            const res = await axios.post(`${API_URL}/admin/coupons`, finalPayload, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+    
+            if (res.data.success) {
+                triggerToast("COUPON DEPLOYED SUCCESSFULLY");
+                setCouponStep(1); 
+                setCouponForm({
+                    code: "", description: "", validFrom: "", validTo: "", 
+                    type: "PROMOTIONAL", maxUsage: "", isActive: true, purpose: "",
+                    courseCode: "", paymentType: "ALL", discountType: "PERCENTAGE", 
+                    discountValue: "", isVisibleOnForm: false
+                });
+                fetchData(); 
+            }
+        } catch (err) { 
+            console.error("BACKEND REJECTION:", err.response?.data);
+            alert(`Server Error: ${err.response?.data?.message || "Check enum values"}`); 
+        }
+    };
+
+    const handleActivatePortal = async (student) => {
+        try {
+            await axios.patch(`${API_URL}/admin/registrations/${student._id}/grant-access`, {}, { headers: { Authorization: `Bearer ${token}` } });
+            fetchData(); triggerToast("ACCESS UNLOCKED");
+        } catch (err) { alert("Activation Failed"); }
+    };
+
+    const handleBatchSync = async () => {
+        try {
+            await axios.patch(`${API_URL}/admin/approve-student/${approvalModal.student._id}`, { batchIds: selectedBatches }, { headers: { Authorization: `Bearer ${token}` } });
+            triggerToast("SYNCED"); fetchData(); setApprovalModal({ show: false, student: null });
+        } catch (err) { alert("Sync Failed"); }
+    };
+
+    // Card Component
+    const FinancialCards = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <div className="bg-[#1A5F7A] text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+                <FiDollarSign className="absolute -right-4 -bottom-4 text-9xl opacity-10" />
+                <p className="text-[10px] uppercase font-black opacity-60 tracking-widest leading-none mb-1">Aggregate Revenue</p>
+                <div className="text-4xl font-black italic">₹{finances.total.toLocaleString()}</div>
+            </div>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 flex items-center gap-5 shadow-sm">
+                <div className="p-4 bg-orange-50 text-[#F37021] rounded-2xl"><FiPieChart size={30}/></div>
+                <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Top Performer</p><div className="text-xl font-black text-[#1A5F7A] italic leading-none truncate max-w-[200px]">{finances.topCourses[0]?.name || 'N/A'}</div></div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans overflow-hidden relative text-left">
@@ -210,13 +250,14 @@ export default function AdminDashboard() {
             {/* SIDEBAR */}
             <aside className={`fixed lg:relative z-[200] h-full w-72 bg-[#1A5F7A] text-white p-6 flex flex-col shadow-2xl transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 <div className="mb-10 flex justify-between items-center">
-                    <div className="font-black text-[#F37021] italic text-xl uppercase tracking-tighter leading-tight">Expert Academy<br/><span className="text-[10px] text-white/40 tracking-[0.2em] font-bold not-italic">Admin Hub</span></div>
-                    <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-white/50 hover:text-white"><FiX size={24}/></button>
+                    <div className="font-black text-[#F37021] italic text-xl uppercase tracking-tighter leading-tight">Expert Academy<br/><span className="text-[10px] text-white/40 font-bold not-italic">Admin Hub</span></div>
+                    <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-white/50"><FiX size={24}/></button>
                 </div>
                 <nav className="flex flex-col gap-2 flex-1 no-scrollbar overflow-y-auto">
                     {hasAccess('overview') && <SidebarBtn active={activeTab === 'overview'} onClick={() => handleTabChange('overview')} icon={<FiGrid />} label="Overview" />}
-                    {hasAccess('enquiries') && <SidebarBtn active={activeTab === 'enquiries'} onClick={() => handleTabChange('enquiries')} icon={<FiMessageSquare />} label="Admission Enquiries" />}
+                    {hasAccess('enquiries') && <SidebarBtn active={activeTab === 'enquiries'} onClick={() => handleTabChange('enquiries')} icon={<FiMessageSquare />} label="Enquiries" />}
                     {hasAccess('registrations') && <SidebarBtn active={activeTab === 'registrations'} onClick={() => handleTabChange('registrations')} icon={<FiUsers />} label="Registrations" />}
+                    {hasAccess('coupons') && <SidebarBtn active={activeTab === 'coupons'} onClick={() => handleTabChange('coupons')} icon={<FiTag />} label="Coupon Engine" />}
                     {hasAccess('batches') && <SidebarBtn active={activeTab === 'batches'} onClick={() => handleTabChange('batches')} icon={<FiClock />} label="Batch Master" />}
                     <SidebarBtn active={activeTab === 'lectures'} onClick={() => handleTabChange('lectures')} icon={<FiVideo />} label="Live Classroom" />
                     <SidebarBtn active={activeTab === 'materials'} onClick={() => handleTabChange('materials')} icon={<FiBookOpen />} label="Study Vault" />
@@ -224,240 +265,157 @@ export default function AdminDashboard() {
                 </nav>
             </aside>
 
-            {/* MAIN AREA */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <header className="bg-white h-20 px-4 lg:px-10 flex items-center justify-between border-b sticky top-0 z-[100]">
+                <header className="bg-white h-20 px-10 flex items-center justify-between border-b sticky top-0 z-[100]">
                     <div className="flex items-center gap-3">
                         <button className="lg:hidden text-[#1A5F7A] p-2.5 bg-slate-50 rounded-xl" onClick={() => setIsSidebarOpen(true)}><FiMenu size={22} /></button>
-                        <h2 className="lg:hidden font-black text-[#1A5F7A] text-sm uppercase italic tracking-tighter">ECA Admin</h2>
+                        <h2 className="lg:hidden font-black text-[#1A5F7A] text-sm uppercase italic tracking-tighter">PRD System</h2>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="hidden sm:flex flex-col text-right">
-                            <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest">Node: {userRole}</span>
-                            <div className="flex items-center gap-2 mt-1 justify-end"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div><span className="text-[#F37021] text-[10px] font-black italic uppercase">Live Sync</span></div>
+                    <div className="flex items-center gap-6">
+                        <div className="hidden sm:flex flex-col text-right border-r pr-6 border-slate-100">
+                            <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest">Logged in as</span>
+                            <div className="flex items-center gap-2 mt-0.5 justify-end"><span className="text-[#1A5F7A] text-[12px] font-black uppercase italic">{userName}</span><div className="px-2 py-0.5 bg-orange-100 text-[#F37021] text-[8px] font-bold rounded-md uppercase tracking-tighter">{userRole}</div></div>
                         </div>
-                        <button onClick={() => setLogoutModal(true)} className="p-3 bg-red-50 text-red-500 rounded-2xl transition-all shadow-sm active:scale-90"><FiLogOut size={20} /></button>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-slate-50 border flex items-center justify-center text-[#1A5F7A]"><FiUser size={20} /></div>
+                            <button onClick={() => setLogoutModal(true)} className="p-3 bg-red-50 text-red-500 rounded-2xl active:scale-90 shadow-sm"><FiLogOut size={20} /></button>
+                        </div>
                     </div>
                 </header>
 
                 <main className="p-4 md:p-10 overflow-y-auto flex-1 no-scrollbar">
                     
-                    {/* OVERVIEW TAB */}
-                    {activeTab === 'overview' && userRole === 'founder' && (
-                        <div className="space-y-10 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-[#1A5F7A] text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
-                                    <FiDollarSign className="absolute -right-4 -bottom-4 text-9xl opacity-10" />
-                                    <p className="text-[10px] uppercase font-black opacity-60 tracking-widest leading-none mb-1">Aggregate Revenue</p>
-                                    <div className="text-4xl font-black italic">₹{finances.total.toLocaleString()}</div>
-                                </div>
-                                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 flex items-center gap-5 shadow-sm">
-                                    <div className="p-4 bg-orange-50 text-[#F37021] rounded-2xl"><FiPieChart size={30}/></div>
-                                    <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">Top Performer</p><div className="text-xl font-black text-[#1A5F7A] italic leading-none truncate max-w-[150px]">{finances.topCourses[0]?.name || 'N/A'}</div></div>
-                                </div>
-                            </div>
-                            <AuditTable logs={auditLogs.slice(0, 10)} title="Real-Time Security Monitor" />
-                        </div>
-                    )}
-
-                    {/* ENQUIRIES TAB (SYNCED WITH SOURCE) */}
+                    {/* ENQUIRIES */}
                     {activeTab === 'enquiries' && (
-                        <div className="space-y-6 animate-in fade-in duration-500">
+                         <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic">Admission Enquiries</h3>
-                                <div className="relative max-w-md w-full">
-                                    <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"/>
-                                    <input type="text" placeholder="Search name, phone, or source..." className="w-full pl-14 pr-6 py-3.5 bg-white border border-slate-100 rounded-2xl font-bold shadow-sm outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/>
-                                </div>
+                                <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic tracking-tight">Lead Console</h3>
+                                <div className="relative max-w-md w-full"><FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"/><input type="text" placeholder="Search Identity..." className="w-full pl-14 pr-6 py-3.5 bg-white border border-slate-100 rounded-2xl font-bold shadow-sm outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/></div>
                             </div>
                             <div className="bg-white rounded-[2rem] shadow-sm border overflow-hidden overflow-x-auto">
-                                <table className="w-full text-left min-w-[800px]">
-                                    <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
-                                        <tr><th className="p-6">Lead Identity</th><th>Contact Detail</th><th>Source</th><th>Course Interest</th><th>Submission Time</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {filteredData.length > 0 ? filteredData.map(item => (
-                                            <tr key={item._id} className="hover:bg-slate-50/80 transition-colors text-[11px]">
-                                                <td className="p-6">
-                                                    <div className="font-black text-[#1A5F7A] uppercase italic">{item.name || 'Prospect'}</div>
-                                                    <div className="text-slate-400 font-bold lowercase">{item.email}</div>
-                                                </td>
-                                                <td><div className="flex items-center gap-2 font-bold text-slate-600"><FiPhone className="text-[#F37021]"/> {item.phone}</div></td>
-                                                <td><SourceTag source={item.source} /></td>
-                                                <td><span className="px-3 py-1 bg-orange-50 text-[#F37021] rounded-full font-black uppercase text-[9px] border border-orange-100">{item.course || 'General'}</span></td>
-                                                <td><div className="text-slate-400 font-bold italic">{new Date(item.createdAt).toLocaleDateString()}</div></td>
-                                            </tr>
-                                        )) : (
-                                            <tr><td colSpan="5" className="p-20 text-center font-black text-slate-200 uppercase italic text-sm tracking-widest">No enquiry data captured</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                <table className="w-full text-left min-w-[800px]"><thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b"><tr><th className="p-6">Lead</th><th>Contact</th><th>Source</th><th>Course</th><th>Time</th></tr></thead>
+                                <tbody className="divide-y divide-slate-50">{filteredData.map(item => (<tr key={item._id} className="text-[11px]"><td className="p-6 font-black text-[#1A5F7A] uppercase italic">{item.name}</td><td>{item.phone}</td><td><SourceTag source={item.source} /></td><td><span className="px-3 py-1 bg-orange-50 text-[#F37021] rounded-full font-black uppercase text-[9px]">{item.course}</span></td><td>{new Date(item.createdAt).toLocaleDateString()}</td></tr>))}</tbody></table>
                             </div>
                         </div>
                     )}
 
-                    {/* REGISTRATIONS TAB (WITH UNLOCK & SYNC) */}
+                    {/* REGISTRATIONS */}
                     {activeTab === 'registrations' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
-                            <div className="relative max-w-xl"><FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"/><input type="text" placeholder="Search Identity..." className="w-full pl-14 pr-6 py-4 bg-white border border-slate-100 rounded-2xl font-bold shadow-sm outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}/></div>
                             <div className="bg-white rounded-[2rem] shadow-sm border overflow-hidden overflow-x-auto">
-                                <table className="w-full text-left min-w-[1000px]">
-                                    <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
-                                        <tr><th className="p-6">Identity</th><th>Access</th><th>Sync</th><th>Ledger</th><th>Action</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {filteredData.map(item => {
-                                            const ledger = calculateAggregateLedger(item);
-                                            const unsynced = getUnsyncedCourses(item);
-                                            return (
-                                                <tr key={item._id} className="hover:bg-slate-50/80 transition-colors">
-                                                    <td className="p-6 font-black text-[#1A5F7A] text-xs uppercase italic">{item.name}<br/><span className="text-slate-400 font-bold not-italic text-[9px]">{item.phone}</span></td>
-                                                    <td className="p-6">
-                                                        {item.isPortalActive ? (
-                                                            <div className="flex items-center gap-1 text-green-600 font-black text-[9px] uppercase italic bg-green-50 px-3 py-1 rounded-full w-fit"><FiShield size={12} /> Active</div>
-                                                        ) : (
-                                                            <button onClick={() => handleActivatePortal(item)} className="bg-[#1A5F7A] hover:bg-[#F37021] text-white px-4 py-2 rounded-xl font-black text-[8px] uppercase shadow-md transition-all flex items-center gap-1"><FiKey /> Unlock Access</button>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-6">
-                                                        <div className="flex flex-col gap-1 cursor-pointer" onClick={() => { setApprovalModal({ show: true, student: item }); setSelectedBatches(item.activeBatches || []); }}>
-                                                            <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded text-[8px] font-black uppercase w-fit border border-green-100">{item.activeBatches?.length || 0} Synced</span>
-                                                            {unsynced.length > 0 && <span className="text-red-500 text-[7px] font-black uppercase animate-pulse italic flex items-center gap-1"><FiAlertTriangle size={10}/> Sync Needed</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-6">
-                                                        <div className="space-y-1 min-w-[120px]">
-                                                            <div className="flex justify-between text-[10px] font-black text-[#1A5F7A]"><span>₹{ledger.paid.toLocaleString()}</span></div>
-                                                            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-green-500" style={{ width: `${Math.min((ledger.paid / ledger.totalContractValue) * 100, 100)}%` }} /></div>
-                                                            <div className={`text-[8px] font-black uppercase italic ${ledger.due > 0 ? 'text-red-500' : 'text-green-600'}`}>{ledger.due > 0 ? `Due: ₹${ledger.due.toLocaleString()}` : "Cleared"}</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-6 flex items-center gap-2">
-                                                        <button onClick={() => setPaymentModal({ show: true, student: item, amount: "" })} className="p-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm"><FiCreditCard size={14}/></button>
-                                                        <button onClick={() => handleQuickSync(item)} className="p-2.5 bg-orange-500 text-white rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"><FiRefreshCw size={14}/></button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                <table className="w-full text-left min-w-[1000px]"><thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b"><tr><th className="p-6">Identity</th><th>Access</th><th>Status</th><th>Ledger</th><th>Action</th></tr></thead>
+                                <tbody className="divide-y divide-slate-50">{filteredData.map(item => {
+                                    const ledger = calculateAggregateLedger(item);
+                                    const unsynced = getUnsyncedCourses(item);
+                                    return (
+                                        <tr key={item._id} className="hover:bg-slate-50 text-[11px]">
+                                            <td className="p-6 font-black text-[#1A5F7A] uppercase italic">{item.name}<br/><span className="text-slate-400 font-bold text-[9px]">{item.phone}</span></td>
+                                            <td>{item.isPortalActive ? <div className="text-green-600 font-black text-[9px] uppercase bg-green-50 px-3 py-1 rounded-full w-fit">Active</div> : <button onClick={() => handleActivatePortal(item)} className="bg-[#1A5F7A] text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase shadow-md">Unlock</button>}</td>
+                                            <td><div onClick={() => { setApprovalModal({ show: true, student: item }); setSelectedBatches(item.activeBatches || []); }} className="cursor-pointer font-black text-[9px] text-green-600 bg-green-50 px-2 py-1 rounded w-fit uppercase">{item.activeBatches?.length || 0} Synced {unsynced.length > 0 && <span className="text-red-500 animate-pulse ml-1">!</span>}</div></td>
+                                            <td><div className="space-y-1 min-w-[120px]"><div className="flex justify-between font-black text-[#1A5F7A]">₹{ledger.paid.toLocaleString()}</div><div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-green-500" style={{ width: `${Math.min((ledger.paid / ledger.totalContractValue) * 100, 100)}%` }} /></div><div className={`text-[8px] font-black uppercase italic ${ledger.due > 0 ? 'text-red-500' : 'text-green-600'}`}>{ledger.due > 0 ? `Due: ₹${ledger.due.toLocaleString()}` : "Cleared"}</div></div></td>
+                                            <td className="p-6 flex gap-2">
+                                                <button onClick={() => setPaymentModal({ show: true, student: item, amount: "" })} className="p-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white shadow-sm"><FiCreditCard/></button>
+                                                <button onClick={() => { const unsynced = getUnsyncedCourses(item); if (unsynced.length === 0) return; const matchingIds = batches.filter(b => unsynced.some(e => b.courseId?.toLowerCase().trim() === e.course.toLowerCase().trim())).map(b => b._id); setSelectedBatches([...new Set([...(item.activeBatches || []), ...matchingIds])]); setApprovalModal({ show: true, student: item }); }} className="p-2.5 bg-orange-500 text-white rounded-xl shadow-md"><FiRefreshCw/></button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}</tbody></table>
                             </div>
                         </div>
                     )}
 
-                    {/* OTHER TABS */}
-                    {activeTab === 'logs' && userRole === 'founder' && <AuditTable logs={auditLogs} title="Full System Audit Trail" />}
+                    {/* COUPON ENGINE (IMAGE UI SYNC) */}
+                    {activeTab === 'coupons' && (
+                        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+                            <div className="flex items-center justify-between border-b pb-4">
+                                <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic flex items-center gap-2"><FiTag className="text-[#F37021]"/> Deployment Wizard</h3>
+                                <div className="flex gap-2">
+                                    <div className={`w-10 h-1 rounded-full ${couponStep >= 1 ? 'bg-[#F37021]' : 'bg-slate-200'}`} />
+                                    <div className={`w-10 h-1 rounded-full ${couponStep >= 2 ? 'bg-[#F37021]' : 'bg-slate-200'}`} />
+                                </div>
+                            </div>
+                            
+                            {couponStep === 1 ? (
+                                <motion.div key="s1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-xl shadow-lg border-t-4 border-[#1A5F7A] overflow-hidden">
+                                    <div className="bg-[#1A5F7A] p-4 text-white font-bold text-sm uppercase tracking-wide">Coupon Creation (Refer Image 2)</div>
+                                    <form onSubmit={(e) => { e.preventDefault(); setCouponStep(2); }} className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Coupon Code*</label><input required className="w-full p-2.5 border rounded-md uppercase font-bold" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})} /></div>
+                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Validity from date*</label><input type="date" required className="w-full p-2.5 border rounded-md" value={couponForm.validFrom} onChange={e => setCouponForm({...couponForm, validFrom: e.target.value})} /></div>
+                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Validity to date*</label><input type="date" required className="w-full p-2.5 border rounded-md" value={couponForm.validTo} onChange={e => setCouponForm({...couponForm, validTo: e.target.value})} /></div>
+                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">No. of usable*</label><input type="number" required className="w-full p-2.5 border rounded-md" value={couponForm.maxUsage} onChange={e => setCouponForm({...couponForm, maxUsage: e.target.value})} /></div>
+                                        <div className="space-y-1 md:col-span-2"><label className="text-[11px] font-bold text-slate-500 uppercase">Coupon Description (Purpose)*</label><input required className="w-full p-2.5 border rounded-md" value={couponForm.description} onChange={e => setCouponForm({...couponForm, description: e.target.value, purpose: e.target.value})} /></div>
+                                        <div className="md:col-span-2 flex justify-center pt-6 border-t"><button type="submit" className="bg-[#1A5F7A] text-white px-10 py-2.5 rounded font-black text-xs uppercase shadow-xl hover:bg-[#F37021] transition-all flex items-center gap-2">Proceed <FiChevronRight/></button></div>
+                                    </form>
+                                </motion.div>
+                            ) : (
+                                <motion.div key="s2" initial={{ x: 20 }} animate={{ x: 0 }} className="space-y-8">
+                                    <div className="bg-white rounded-xl shadow-lg border-t-4 border-[#F37021] overflow-hidden">
+                                        <div className="bg-[#F37021] p-4 text-white font-bold text-sm uppercase flex justify-between"><span>Create Mapping (Refer Image 1)</span><button onClick={() => setCouponStep(1)}><FiX/></button></div>
+                                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Course Code*</label><select required className="w-full p-2.5 border rounded-md font-bold" value={couponForm.courseCode} onChange={e => setCouponForm({...couponForm, courseCode: e.target.value})}><option value="">-- Choose Course --</option><option value="ALL">All Programs</option>{allCourses.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}</select></div>
+                                            <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Discount (%)*</label><input required type="number" className="w-full p-2.5 border rounded-md font-black text-[#F37021] text-2xl" value={couponForm.discountValue} onChange={e => setCouponForm({...couponForm, discountValue: e.target.value})} /></div>
+                                            <div className="md:col-span-2 bg-slate-900 p-8 rounded-[2rem] text-white relative overflow-hidden flex justify-between items-center">
+                                                <div className="relative z-10"><p className="text-[9px] font-black text-[#F37021] uppercase tracking-[0.3em] mb-2">Deploy Review</p><h4 className="text-3xl font-black italic">{couponForm.code}</h4><p className="text-xs opacity-60 mt-1 uppercase font-bold tracking-tight">{couponForm.courseCode} • {couponForm.discountValue}% OFF</p></div>
+                                                <button onClick={handleFinalCouponSave} className="bg-[#F37021] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs shadow-2xl hover:bg-white hover:text-[#1A5F7A] transition-all flex items-center gap-2"><FiSave/> Deploy</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-xl shadow border overflow-hidden">
+                                        <div className="p-4 bg-slate-50 font-black text-[10px] text-slate-500 uppercase tracking-widest border-b">Active Mappings</div>
+                                        <table className="w-full text-left text-[11px]"><thead className="bg-slate-50 border-b"><tr><th className="p-4">Course Name</th><th>Code</th><th>Val</th><th>Limit</th><th>Status</th></tr></thead>
+                                        <tbody className="divide-y">{coupons.map(c => (<tr key={c._id} className="hover:bg-slate-50 transition-colors"><td className="p-4 uppercase font-bold text-[#1A5F7A]">{c.courseCode}</td><td className="font-black">{c.code}</td><td className="text-[#F37021] font-black">{c.discountValue}%</td><td>{c.usedCount || 0}/{c.maxUsage}</td><td><span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded uppercase">Active</span></td></tr>))}</tbody></table>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* OVERVIEW & LOGS (SYNCED) */}
+                    {(activeTab === 'overview' || activeTab === 'logs') && userRole === 'founder' && (
+                        <div className="space-y-10 animate-in fade-in duration-500">
+                            <FinancialCards />
+                            <AuditTable logs={auditLogs} title={activeTab === 'overview' ? "Recent Activity" : "Full Security Audit Trail"} />
+                        </div>
+                    )}
+
                     {activeTab === 'batches' && <BatchScheduler />}
                     {activeTab === 'lectures' && <AddLecture />}
                     {activeTab === 'materials' && <AddMaterial />}
                 </main>
             </div>
 
-            {/* MODALS */}
+            {/* SYNC MODAL */}
             <AnimatePresence>{approvalModal.show && (
-                <div className="fixed inset-0 z-[800] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border-t-[10px] border-[#1A5F7A]">
-                        <button onClick={() => setApprovalModal({ show: false, student: null })} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><FiX size={24} /></button>
-                        <h3 className="text-xl font-black text-[#1A5F7A] uppercase mb-1 italic">Stream Sync</h3>
-                        <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                            {batches.filter(batch => {
-                                const enrollments = approvalModal.student?.enrollments || [];
-                                const allCourses = [...techCoursesData, ...universityPrograms];
-                                return enrollments.some(e => {
-                                    const title = e.course.toLowerCase().trim();
-                                    const id = allCourses.find(c => c.title.toLowerCase().trim() === title)?.id.toLowerCase().trim();
-                                    return batch.courseId?.toLowerCase().trim() === title || batch.courseId?.toLowerCase().trim() === id;
-                                });
-                            }).map(b => (
-                                <div key={b._id} onClick={() => setSelectedBatches(prev => prev.includes(b._id) ? prev.filter(i => i !== b._id) : [...prev, b._id])} 
-                                     className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${selectedBatches.includes(b._id) ? 'border-[#F37021] bg-orange-50' : 'border-slate-50 bg-white'}`}>
-                                    <div><div className="font-black text-[#1A5F7A] text-xs uppercase italic">{b.batchCode}</div><div className="text-[8px] font-bold text-slate-400 uppercase">{b.courseId}</div></div>
-                                    {selectedBatches.includes(b._id) ? <FiCheckCircle className="text-[#F37021]" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-100" />}
-                                </div>
-                            ))}
-                        </div>
-                        <button onClick={handleBatchSync} className="w-full py-5 bg-[#F37021] text-white rounded-2xl font-black uppercase text-xs mt-6 shadow-xl">Authorize Streams</button>
-                    </motion.div>
+                <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border-t-[10px] border-[#1A5F7A]"><button onClick={() => setApprovalModal({ show: false, student: null })} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><FiX size={24} /></button><h3 className="text-xl font-black text-[#1A5F7A] uppercase mb-4 italic">Stream Sync</h3><div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">{batches.filter(batch => { const enrollments = approvalModal.student?.enrollments || []; return enrollments.some(e => { const title = e.course.toLowerCase().trim(); const id = allCourses.find(c => c.title.toLowerCase().trim() === title)?.id.toLowerCase().trim(); return batch.courseId?.toLowerCase().trim() === title || batch.courseId?.toLowerCase().trim() === id; }); }).map(b => (<div key={b._id} onClick={() => setSelectedBatches(prev => prev.includes(b._id) ? prev.filter(i => i !== b._id) : [...prev, b._id])} className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${selectedBatches.includes(b._id) ? 'border-[#F37021] bg-orange-50' : 'border-slate-50 bg-white'}`}><div><div className="font-black text-[#1A5F7A] text-xs uppercase italic">{b.batchCode}</div><div className="text-[8px] font-bold text-slate-400 uppercase">{b.courseId}</div></div>{selectedBatches.includes(b._id) ? <FiCheckCircle className="text-[#F37021]" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-100" />}</div>))}</div><button onClick={handleBatchSync} className="w-full py-5 bg-[#F37021] text-white rounded-2xl font-black uppercase text-xs mt-6 shadow-xl">Authorize Streams</button></motion.div>
                 </div>
             )}</AnimatePresence>
-
+            
+            {/* PAYMENT MODAL (FIXED) */}
             <AnimatePresence>{paymentModal.show && (
-                <div className="fixed inset-0 z-[800] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative border-t-[12px] border-green-600">
-                        <button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-8 right-8 text-slate-300 hover:text-red-500"><FiX size={24} /></button>
-                        <h3 className="text-xl font-black text-[#1A5F7A] uppercase text-center italic">Update Ledger</h3>
-                        <div className="p-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200 mt-6 mb-8 flex justify-between">
-                            <div><p className="text-[8px] font-black text-slate-400 uppercase">Paid</p><p className="text-base font-black text-[#1A5F7A]">₹{paymentModal.student?.amountPaid?.toLocaleString()}</p></div>
-                            <div className="text-right"><p className="text-[8px] font-black text-slate-400 uppercase">Total</p><p className="text-base font-black text-slate-500">₹{calculateAggregateLedger(paymentModal.student).totalContractValue.toLocaleString()}</p></div>
-                        </div>
-                        <form onSubmit={handlePaymentPush} className="space-y-6">
-                            <input autoFocus type="number" placeholder="Enter Amount (₹)" className="w-full p-5 bg-slate-50 rounded-2xl font-black text-3xl text-[#1A5F7A] outline-none text-center" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} />
-                            <button type="submit" className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest">Push Payment to Sync</button>
-                        </form>
-                    </motion.div>
+                <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative border-t-[12px] border-green-600"><button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-8 right-8 text-slate-300 hover:text-red-500"><FiX size={24} /></button><h3 className="text-xl font-black text-[#1A5F7A] uppercase text-center italic">Update Ledger</h3><div className="p-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200 mt-6 mb-8 flex justify-between"><div><p className="text-[8px] font-black text-slate-400 uppercase">Paid</p><p className="text-base font-black text-[#1A5F7A]">₹{paymentModal.student?.amountPaid?.toLocaleString()}</p></div><div className="text-right"><p className="text-[8px] font-black text-slate-400 uppercase">Total</p><p className="text-base font-black text-slate-500">₹{calculateAggregateLedger(paymentModal.student).totalContractValue?.toLocaleString()}</p></div></div><form onSubmit={handlePaymentPush} className="space-y-6"><input autoFocus type="number" placeholder="Enter Amount" className="w-full p-5 bg-slate-50 rounded-2xl font-black text-3xl text-[#1A5F7A] outline-none text-center border-2 border-transparent focus:border-green-100" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} /><button type="submit" className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest hover:bg-green-700 transition-all">Submit Sync</button></form></motion.div>
                 </div>
             )}</AnimatePresence>
 
-            {/* LOGOUT CONFIRMATION */}
+            {/* LOGOUT MODAL */}
             <AnimatePresence>{logoutModal && (
                 <div className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 text-center">
-                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl border-t-8 border-red-500">
-                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><FiLogOut size={24} /></div>
-                        <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic">Terminate Session?</h3>
-                        <div className="grid grid-cols-2 gap-4 mt-8">
-                            <button onClick={() => setLogoutModal(false)} className="py-4 bg-slate-100 rounded-2xl font-black uppercase text-[10px] text-slate-500">Cancel</button>
-                            <button onClick={handleLogout} className="py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl">Logout</button>
-                        </div>
-                    </motion.div>
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl border-t-8 border-red-500"><div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><FiLogOut size={24} /></div><h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic leading-tight">Terminate Session?</h3><div className="grid grid-cols-2 gap-4 mt-8"><button onClick={() => setLogoutModal(false)} className="py-4 bg-slate-100 rounded-2xl font-black uppercase text-[10px] text-slate-500">Cancel</button><button onClick={handleLogout} className="py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl">Logout</button></div></motion.div>
                 </div>
             )}</AnimatePresence>
         </div>
     );
 }
 
-// --- SUB-COMPONENTS ---
+// SHARED SUB-COMPONENTS
 function SidebarBtn({ active, onClick, icon, label }) {
-    return (
-        <button onClick={onClick} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${active ? 'bg-[#F37021] text-white' : 'hover:bg-white/10 text-slate-300'}`}>
-            <span className="text-lg">{icon}</span> {label}
-        </button>
-    );
+    return <button onClick={onClick} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${active ? 'bg-[#F37021] text-white shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300'}`}><span className="text-lg">{icon}</span><span className="text-[11px] uppercase tracking-tight font-black">{label}</span></button>;
 }
-
 function SourceTag({ source }) {
-    const styles = {
-        'AI Chatbot': 'bg-blue-50 text-blue-600 border-blue-100',
-        'Facebook': 'bg-indigo-50 text-indigo-600 border-indigo-100',
-        'Website': 'bg-green-50 text-green-600 border-green-100',
-    };
-    return (
-        <div className={`px-3 py-1 border rounded-xl font-black text-[9px] uppercase italic w-fit ${styles[source] || 'bg-slate-50 text-slate-400 border-slate-100'}`}>
-            {source || 'Standard'}
-        </div>
-    );
+    const styles = { 'AI Chatbot': 'bg-blue-50 text-blue-600', 'Facebook': 'bg-indigo-50 text-indigo-600', 'Website': 'bg-green-50 text-green-600' };
+    return <div className={`px-3 py-1 border rounded-xl font-black text-[9px] uppercase italic w-fit ${styles[source] || 'bg-slate-50 text-slate-400'}`}>{source || 'Standard'}</div>;
 }
-
 function AuditTable({ logs, title }) {
-    return (
-        <div className="space-y-6">
-            <h3 className="text-xl font-black text-[#1A5F7A] uppercase italic px-2 flex items-center gap-2"><FiShield className="text-[#F37021]"/> {title}</h3>
-            <div className="bg-white rounded-[2.5rem] shadow-sm border overflow-hidden overflow-x-auto">
-                <table className="w-full text-left min-w-[600px]">
-                    <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
-                        <tr><th className="p-6">Staff Member</th><th>Action</th><th>Target Identity</th><th>Time</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {logs.length > 0 ? logs.map(log => (
-                            <tr key={log._id} className="hover:bg-slate-50 text-[11px]">
-                                <td className="p-6 font-bold uppercase text-[#1A5F7A]"><span className="px-2 py-1 bg-slate-100 rounded-lg text-[9px]">{log.performedBy}</span></td>
-                                <td className="font-black text-[#1A5F7A] uppercase italic text-[10px]">{log.action}</td>
-                                <td className="font-bold text-slate-500 uppercase">{log.targetName}</td>
-                                <td className="text-slate-400 font-bold">{new Date(log.timestamp).toLocaleTimeString()}</td>
-                            </tr>
-                        )) : <tr><td colSpan="4" className="p-20 text-center font-black text-slate-300 uppercase tracking-widest text-xs">No Security events logged</td></tr>}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
+    return <div className="space-y-6"><h3 className="text-xl font-black text-[#1A5F7A] uppercase italic px-2 flex items-center gap-2"><FiShield className="text-[#F37021]"/> {title}</h3><div className="bg-white rounded-[2.5rem] shadow-sm border overflow-hidden overflow-x-auto"><table className="w-full text-left min-w-[600px]"><thead className="bg-slate-50 text-[10px] font-black uppercase border-b"><tr><th className="p-6">Staff</th><th>Action</th><th>Target</th><th>Time</th></tr></thead><tbody className="divide-y divide-slate-50">{logs && logs.length > 0 ? logs.map(log => (<tr key={log._id} className="text-[11px] hover:bg-slate-50"><td className="p-6 font-bold uppercase text-[#1A5F7A]">{log.performedBy}</td><td className="font-black text-[#1A5F7A] uppercase italic">{log.action}</td><td className="font-bold text-slate-500 uppercase">{log.targetName}</td><td className="text-slate-400 font-bold">{new Date(log.timestamp).toLocaleTimeString()}</td></tr>)) : <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic">No Activity Logs Found</td></tr>}</tbody></table></div></div>;
 }
