@@ -9,11 +9,10 @@ export const techCoursesData = [
     { id: "ms-office-2013", title: "Working with Microsoft Office 2013", fee: "3000", modules: ["Word", "Excel", "PowerPoint", "Outlook"] },
     { id: "tally-prime-l1", title: "Accounting with Tally Prime(Level-I)", fee: "5500", modules: ["Recording Transactions", "Banking", "Balance Sheets"] },
     { id: "prog-c", title: "Programming using C", fee: "3540", modules: ["Variables", "Control Flow", "Functions", "Arrays"] },
-    { id: "prog-cpp", title: "Programming using C++", fee: "3540", modules: ["OOPS Masterclass", "Inheritance", "Polymorphism"] },
+    { id: "prog-cpp", title: "Programming using C++", fee: "3540", modules: ["OOPS Concepts", "Encapsulation & Abstraction", "Constructors & Destructors", "Inheritance", "Functions", "Linked Lists", "Arrays"] },
     { id: "prog-c-cpp", title: "Programming using C & C++", fee: "6450", modules: ["Foundational Logic", "Advanced OOPS"] },
-    { id: "dsa", title: "Data structure & Algorithim", fee: "4842", modules: ["Stacks & Queues", "Linked Lists", "Sorting", "Trees"] },
-    { id: "fpit", title: "Foundation Program Information Technology", fee: "6500", modules: ["Operating Systems", "MS Office", "Internet Basics"] },
     { id: "data-analytics", title: "Professional Program in Data Analytics", fee: "22500", modules: ["SQL", "Tableau", "Power BI", "Python"] },
+    { id: "data-analytics", title: "Diploma in Computer Application(DCA)", fee: "6500", modules: ["SQL", "Tableau", "Power BI", "Python"] },
     { 
         id: "gen-ai-master", 
         title: "Advanced Diploma in Generative AI", 
@@ -27,6 +26,31 @@ export const techCoursesData = [
             "AI Ethics & Future Trends"
         ] 
     },
+    { 
+        id: "full-stack-dev", 
+        title: "Advanced Program in Full Stack Software Development", 
+        fee: "42500", 
+        modules: ["Logic Building", "OOPS using C++", "Web Designing HTML5", "Python Programming", "MySQL", "DSA", "Java Masterclass", "Spring Framework", "AI & Machine Learning"] 
+    },
+    { 
+        id: "dca-new", 
+        title: "Diploma in Computer Application (DCA)", 
+        fee: "6500", 
+        modules: ["Introduction to Computers", "Computer Fundamentals", "Microsoft Windows", "MS Office", "Email & Internet", "Web Programming (HTML5)", "Tally Prime"] 
+    },
+    { 
+        id: "dsa-master", 
+        title: "Data Structure and Algorithms (C/C++/C#/Java)", 
+        fee: "4842", 
+        modules: ["Complexity Analysis", "Arrays & Linked Lists", "Stacks & Queues", "Trees & Graphs", "Searching & Sorting Algorithms"] 
+    },
+    { 
+        id: "found-it-new", 
+        title: "Foundation in Information Technology", 
+        fee: "6500", 
+        modules: ["C++ Programming", "Logic Building", "Python with Live Project", "HTML5, CSS & JavaScript"] 
+    },
+   
 ];
 
 export const universityPrograms = [

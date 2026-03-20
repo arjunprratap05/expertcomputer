@@ -28,6 +28,11 @@ import ankitImg from "../../assets/student-ankit.jpeg";
 import tallyPoster from "../../assets/posters/Tally.jpeg";
 import genAIPoster from "../../assets/posters/GenerativeAI.jpeg"; 
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
+import AdvancedProgramFullStackPoster from '../../assets/posters/AdvancedProgramFullStack.jpeg';
+import DSAPoster from '../../assets/posters/DSA.jpeg';
+import ProgrammingusingCProgramPoster from '../../assets/posters/ProgrammingusingC++Program.jpeg';
+import DiplomainComputerApplicationPoster from '../../assets/posters/DiplomainComputerApplication.jpeg';
+import FoundationinITPoster from '../../assets/posters/FoundationinIT.jpeg';
 
 const OptimizedImage = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
@@ -128,8 +133,14 @@ export default function Home() {
         { title: "HTML5 Web", image: htmlPoster, id: "html5-web" },
         { title: "ADCA Diploma", image: adcaPoster, id: "adca-diploma" },
         { title: "Python & DS", image: pythonPoster, id: "python-ds" },
-        { title: "Tally Essential", image: tallyPoster, id: "tally-essential" }
+        { title: "Tally Essential", image: tallyPoster, id: "tally-essential" },
+        { title: "Advanced Program in Full Stack Software Development ", image: AdvancedProgramFullStackPoster, id: "full-stack-dev" },
+        { title: "Data Structure & Algorithms", image: DSAPoster, id: "dsa-master" },
+        { title: "Programming using C++", image: ProgrammingusingCProgramPoster, id: "prog-cpp" },
+        { title: "Diploma in Computer Application(DCA)", image: DiplomainComputerApplicationPoster, id: "dca-new" },
+        { title: "Foundation in Information Technology", image: FoundationinITPoster, id: "found-it-new" },
     ];
+    
     const alumniSuccess = [
         { name: "Suruchi Rai", text: "Mastered HTML5 at Expert Academy. Now a Web Dev.", image: suruchiImg },
         { name: "Harsh Raj", text: "ADCA changed my career path completely.", image: harshImg },

@@ -53,7 +53,7 @@ export default function Footer() {
                         </p>
                         <div className="flex gap-4">
                             {[
-                                { icon: <FaFacebookF />, url: "https://www.facebook.com/expertcomputeracademy/" },
+                                { icon: <FaFacebookF />, url: "https://www.facebook.com/expertcomputeracademypat/" },
                                 { icon: <FaInstagram />, url: "https://www.instagram.com/expertcomputeracademypatna/" },
                                 { icon: <FaYoutube />, url: "https://youtube.com/@expertcomputeracademy" },
                                 { icon: <FaLinkedinIn />, url: "https://linkedin.com/in/expert-computer-academy-9234363b6" }
