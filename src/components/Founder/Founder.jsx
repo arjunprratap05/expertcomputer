@@ -69,7 +69,7 @@ export default function Founder() {
         { name: "Dhananjay Kumar", role: "Faculty", exp: "20 Years", specialty: "C/C++ Specialist", image: dananjay },
         { name: "Sanchita Ghosh", role: "Faculty", exp: "25 Years", specialty: "Bussiness Head & Communication Skills Expert", image: sanchita },
         { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Bussiness Executive", image: amit },
-        { name: "Amit Singh", role: "Faculty", exp: "20 Years", specialty: "Accounnts", image: amitsingh }
+        { name: "Amit Kumar Singh", role: "Faculty", exp: "20 Years", specialty: "Accounnts", image: amitsingh }
     ];
 
     return (
