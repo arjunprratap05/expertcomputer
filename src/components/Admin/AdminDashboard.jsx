@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiUsers, FiMessageSquare, FiLogOut, FiActivity, FiX, FiMenu, FiSearch, 
     FiCheckCircle, FiCreditCard, FiPieChart, FiDollarSign, FiVideo, FiBookOpen, 
-    FiGrid, FiClock, FiShield, FiTag, FiChevronRight, FiUser, FiSave
+    FiGrid, FiClock, FiShield, FiTag, FiChevronRight, FiUser, FiSave, FiAlertCircle, 
+    FiTrendingUp, FiPhoneCall, FiEdit3 
 } from 'react-icons/fi';
 
 // DATA SOURCES
@@ -24,7 +25,6 @@ export default function AdminDashboard() {
     const userRole = localStorage.getItem("userRole")?.toLowerCase(); 
     const userName = localStorage.getItem("adminName") || "Administrator";
 
-    // --- 1. RBAC PERMISSIONS ---
     const permissions = {
         founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'coupons'],
         frontoffice: ['batches', 'lectures', 'materials', 'enquiries'],
@@ -32,7 +32,6 @@ export default function AdminDashboard() {
     };
     const hasAccess = (tab) => permissions[userRole]?.includes(tab);
 
-    // --- 2. STATES ---
     const [activeTab, setActiveTab] = useState(() => {
         if (userRole === 'frontoffice') return 'enquiries';
         if (userRole === 'accounts') return 'registrations';
@@ -48,7 +47,6 @@ export default function AdminDashboard() {
     const [toast, setToast] = useState({ show: false, message: "" });
     const [prevLeadLength, setPrevLeadLength] = useState(0);
     
-    // --- 3. COUPON ENGINE STATE ---
     const [couponStep, setCouponStep] = useState(1);
     const [coupons, setCoupons] = useState([]);
     const [couponForm, setCouponForm] = useState({
@@ -66,7 +64,6 @@ export default function AdminDashboard() {
 
     const allCourses = useMemo(() => [...techCoursesData, ...universityPrograms], []);
 
-    // --- 4. CORE LOGIC HANDLERS ---
     const triggerToast = (msg) => {
         setToast({ show: true, message: msg });
         setTimeout(() => setToast({ show: false, message: "" }), 3000);
@@ -78,10 +75,52 @@ export default function AdminDashboard() {
         window.location.reload(); 
     };
 
-    // UI Helper: Close sidebar on mobile after clicking an option
     const handleTabChange = (tab) => {
         setActiveTab(tab);
         setIsSidebarOpen(false); 
+    };
+
+    // --- UPDATED SMART ENQUIRY STATUS HANDLER ---
+    const handleEnquiryStatusUpdate = async (id, currentStatus, currentRemarks, studentName) => {
+        const newStatus = !currentStatus;
+        let finalRemarks = currentRemarks;
+
+        // Auto-Logic: If toggling TO contacted AND (remarks are empty OR were "NOT CONTACTED")
+        if (newStatus === true) {
+            if (!currentRemarks || currentRemarks.toUpperCase() === "NOT CONTACTED") {
+                finalRemarks = "CONTACTED";
+            }
+        } else {
+            // Toggling back to False: Reset remarks to Not Contacted
+            finalRemarks = "NOT CONTACTED";
+        }
+
+        const updatePayload = {
+            isContacted: newStatus,
+            remarks: finalRemarks,
+            auditAction: `Lead ${newStatus ? 'Status -> Contacted' : 'Status -> Pending'}`,
+            targetName: studentName
+        };
+
+        try {
+            await axios.patch(`${API_URL}/inquiry/${id}`, updatePayload, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            triggerToast(newStatus ? "LEAD MARKED: CONTACTED" : "LEAD MARKED: PENDING");
+            fetchData();
+        } catch (err) { alert("Failed to update status"); }
+    };
+
+    const handleRemarkUpdate = async (id, remarkValue, studentName) => {
+        try {
+            await axios.patch(`${API_URL}/inquiry/${id}`, { 
+                remarks: remarkValue,
+                auditAction: "Manual Remark Update",
+                targetName: studentName
+            }, { headers: { Authorization: `Bearer ${token}` } });
+            triggerToast("REMARKS UPDATED");
+            fetchData();
+        } catch (err) { alert("Failed to save remark"); }
     };
 
     const calculateAggregateLedger = (student) => {
@@ -181,7 +220,7 @@ export default function AdminDashboard() {
             setCouponStep(1);
             setCouponForm({ code: "", description: "", validFrom: "", validTo: "", type: "PROMOTIONAL", maxUsage: "", isActive: true, purpose: "", courseCode: "", paymentType: "ALL", discountType: "PERCENTAGE", discountValue: "", isVisibleOnForm: false });
             fetchData();
-        } catch (err) { alert("Deployment Failed: Check your Enum selections (Type/Payment)"); }
+        } catch (err) { alert("Deployment Failed"); }
     };
 
     const handleActivatePortal = async (student) => {
@@ -215,27 +254,12 @@ export default function AdminDashboard() {
     return (
         <div className="flex h-screen bg-slate-50 font-sans overflow-hidden text-left relative">
             
-            {/* TOAST SYSTEM */}
             <AnimatePresence>{toast.show && (
                 <motion.div initial={{ y: -50, x: "-50%" }} animate={{ y: 30, x: "-50%" }} exit={{ y: -50 }} className="fixed left-1/2 z-[999] bg-[#1A5F7A] text-white px-8 py-3 rounded-2xl shadow-2xl font-black border-b-4 border-[#F37021] uppercase text-[10px] italic">
                     <FiCheckCircle className="inline mr-2 text-[#F37021]"/>{toast.message}
                 </motion.div>
             )}</AnimatePresence>
 
-            {/* MOBILE OVERLAY (BACKDROP) */}
-            <AnimatePresence>
-                {isSidebarOpen && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }}
-                        onClick={() => setIsSidebarOpen(false)}
-                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] lg:hidden"
-                    />
-                )}
-            </AnimatePresence>
-
-            {/* SIDEBAR */}
             <aside className={`fixed lg:relative z-[200] h-full w-72 bg-[#1A5F7A] text-white p-6 flex flex-col shadow-2xl transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 <div className="mb-10 flex justify-between items-center">
                     <div className="font-black text-[#F37021] italic text-xl uppercase tracking-tighter leading-tight">Expert Academy<br/><span className="text-[10px] text-white/40 tracking-[0.2em] font-bold not-italic">Admin Hub</span></div>
@@ -253,12 +277,11 @@ export default function AdminDashboard() {
                 </nav>
             </aside>
 
-            {/* MAIN CONTENT AREA */}
             <div className="flex-1 flex flex-col min-w-0">
                 <header className="bg-white h-20 px-8 flex items-center justify-between border-b sticky top-0 z-[100]">
                     <div className="flex items-center gap-3">
                         <button className="lg:hidden text-[#1A5F7A] p-2 bg-slate-50 rounded-xl" onClick={() => setIsSidebarOpen(true)}><FiMenu size={22} /></button>
-                        <h2 className="lg:hidden font-black text-[#1A5F7A] text-sm uppercase italic tracking-tighter">PRD System</h2>
+                        <h2 className="lg:hidden font-black text-[#1A5F7A] text-sm uppercase italic tracking-tighter">Admin Dashboard</h2>
                     </div>
                     <div className="flex items-center gap-6">
                         <div className="hidden sm:flex flex-col text-right border-r pr-6 border-slate-100">
@@ -268,37 +291,71 @@ export default function AdminDashboard() {
                                 <div className="px-2 py-0.5 bg-orange-100 text-[#F37021] text-[8px] font-bold rounded-md uppercase tracking-tighter">{userRole}</div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-slate-50 border flex items-center justify-center text-[#1A5F7A]"><FiUser size={20} /></div>
-                            <button onClick={() => setLogoutModal(true)} className="p-3 bg-red-50 text-red-500 rounded-2xl active:scale-90"><FiLogOut size={20} /></button>
-                        </div>
+                        <button onClick={() => setLogoutModal(true)} className="p-3 bg-red-50 text-red-500 rounded-2xl active:scale-90"><FiLogOut size={20} /></button>
                     </div>
                 </header>
 
                 <main className="p-4 md:p-10 overflow-y-auto flex-1 no-scrollbar">
                     
-                    {/* ENQUIRIES SECTION (RESPONSIVE SEARCH) */}
+                    {/* ADMISSION ENQUIRIES SECTION */}
                     {activeTab === 'enquiries' && (
-                         <div className="space-y-6 animate-in fade-in duration-500">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic">Enquiries</h3>
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic">Admission Enquiries</h3>
                                 <div className="relative w-full md:w-72">
                                     <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"/>
                                     <input type="text" placeholder="Search Identity..." className="w-full pl-10 pr-4 py-2 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#1A5F7A] outline-none" onChange={e => setSearchQuery(e.target.value)}/>
                                 </div>
                             </div>
-                            <div className="bg-white rounded-3xl shadow-sm border overflow-hidden overflow-x-auto">
+                             <div className="bg-white rounded-3xl shadow-sm border overflow-hidden overflow-x-auto">
                                 <table className="w-full text-left text-[11px]">
                                     <thead className="bg-slate-50 font-black uppercase text-slate-400 border-b">
-                                        <tr><th className="p-5">Lead Identity</th><th>Contact</th><th>Source</th><th>Time</th></tr>
+                                        <tr>
+                                            <th className="p-5">Lead Identity</th>
+                                            <th>Interest</th>
+                                            <th>Message</th>
+                                            <th>Source</th>
+                                            <th>Time</th>
+                                            <th>Remarks</th>
+                                            <th className="pr-5 text-right">Action</th>
+                                        </tr>
                                     </thead>
                                     <tbody className="divide-y">
                                         {filteredData.map(item => (
-                                            <tr key={item._id} className="hover:bg-slate-50">
-                                                <td className="p-5 font-black text-[#1A5F7A] uppercase italic">{item.name}</td>
-                                                <td>{item.phone}</td>
+                                            <tr key={item._id} className={`hover:bg-slate-50 transition-colors ${item.isContacted ? 'bg-slate-50/50 opacity-60' : ''}`}>
+                                                <td className="p-5">
+                                                    <div className="font-black text-[#1A5F7A] uppercase italic">{item.name}</div>
+                                                    <div className="text-slate-400 font-bold text-[9px]">{item.phone}</div>
+                                                </td>
+                                                <td className="font-black text-slate-600 uppercase tracking-tighter truncate max-w-[120px]">{item.course || "General"}</td>
+                                                <td className="max-w-[150px] truncate text-slate-400 italic" title={item.message}>"{item.message || '-'}"</td>
                                                 <td><SourceTag source={item.source} /></td>
-                                                <td>{new Date(item.createdAt).toLocaleDateString()}</td>
+                                                <td className="font-bold text-slate-400">{new Date(item.createdAt).toLocaleDateString('en-GB')}</td>
+                                                <td>
+                                                    <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-100 focus-within:border-[#F37021] transition-all min-w-[140px]">
+                                                        <FiEdit3 className="text-slate-300 ml-1" />
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Pending..." 
+                                                            value={item.remarks || ""}
+                                                            onChange={(e) => {
+                                                                // Local state update for smooth typing if needed, 
+                                                                // but using onBlur to save for simplicity as per requirement.
+                                                            }}
+                                                            onBlur={(e) => handleRemarkUpdate(item._id, e.target.value, item.name)}
+                                                            className="bg-transparent border-none text-[10px] font-bold text-slate-600 outline-none w-full placeholder:font-normal placeholder:italic"
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="pr-5 text-right">
+                                                    <button 
+                                                        onClick={() => handleEnquiryStatusUpdate(item._id, item.isContacted, item.remarks, item.name)}
+                                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ml-auto ${item.isContacted ? 'bg-green-600 text-white shadow-lg' : 'bg-slate-100 text-slate-300 hover:bg-orange-50 hover:text-[#F37021]'}`}
+                                                        title={item.isContacted ? "Contacted" : "Mark Contacted"}
+                                                    >
+                                                        {item.isContacted ? <FiCheckCircle size={16}/> : <FiPhoneCall size={16}/>}
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -307,7 +364,6 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* REGISTRATIONS SECTION (RESPONSIVE SEARCH) */}
                     {activeTab === 'registrations' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
                              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -330,7 +386,7 @@ export default function AdminDashboard() {
                                                 <tr key={item._id} className="hover:bg-slate-50">
                                                     <td className="p-5 font-black text-[#1A5F7A] uppercase italic">{item.name}<br/><span className="text-slate-400 font-bold text-[9px] lowercase">{item.email}</span></td>
                                                     <td>{item.isPortalActive ? <div className="text-green-600 font-black text-[8px] uppercase bg-green-50 px-2 py-1 rounded w-fit italic">Active</div> : <button onClick={() => handleActivatePortal(item)} className="bg-[#1A5F7A] text-white px-3 py-1 rounded text-[8px] font-black uppercase italic">Unlock</button>}</td>
-                                                    <td><div onClick={() => { setApprovalModal({ show: true, student: item }); setSelectedBatches(item.activeBatches || []); }} className="cursor-pointer font-black text-green-600 bg-green-50 px-2 py-1 rounded w-fit uppercase">{item.activeBatches?.length || 0} Synced {unsynced.length > 0 && <span className="text-red-500 animate-pulse">!</span>}</div></td>
+                                                    <td><div onClick={() => { setApprovalModal({ show: true, student: item }); setSelectedBatches(item.activeBatches || []); }} className="cursor-pointer font-black text-green-600 bg-green-50 px-2 py-1 rounded w-fit uppercase">{item.activeBatches?.length || 0} Synced {unsynced.length > 0 && <span className="text-red-500 animate-pulse ml-1">!</span>}</div></td>
                                                     <td><div className="font-black text-[#1A5F7A]">₹{ledger.paid.toLocaleString()}<br/><span className="text-red-500 text-[8px] uppercase">Due: ₹{ledger.due.toLocaleString()}</span></div></td>
                                                     <td className="p-5 flex gap-2"><button onClick={() => setPaymentModal({ show: true, student: item, amount: "" })} className="p-2 bg-slate-50 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-all"><FiCreditCard/></button></td>
                                                 </tr>
@@ -342,7 +398,6 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* COUPON ENGINE */}
                     {activeTab === 'coupons' && (
                         <div className="space-y-8 animate-in fade-in duration-500 pb-20">
                             <div className="flex items-center justify-between border-b pb-4">
@@ -353,55 +408,82 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                             
-                            {couponStep === 1 ? (
-                                <motion.div key="s1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white rounded-xl shadow-lg border-t-4 border-[#1A5F7A] overflow-hidden">
-                                    <div className="bg-[#1A5F7A] p-4 text-white font-bold text-sm uppercase tracking-wide">Step 1: Deployment Parameters</div>
-                                    <form onSubmit={(e) => { e.preventDefault(); setCouponStep(2); }} className="p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Coupon Code*</label><input required className="w-full p-2.5 border rounded-md uppercase font-bold" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})} /></div>
-                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Validity Start*</label><input type="date" required className="w-full p-2.5 border rounded-md" value={couponForm.validFrom} onChange={e => setCouponForm({...couponForm, validFrom: e.target.value})} /></div>
-                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Validity End*</label><input type="date" required className="w-full p-2.5 border rounded-md" value={couponForm.validTo} onChange={e => setCouponForm({...couponForm, validTo: e.target.value})} /></div>
-                                        <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">No. of usable*</label><input type="number" required className="w-full p-2.5 border rounded-md" value={couponForm.maxUsage} onChange={e => setCouponForm({...couponForm, maxUsage: e.target.value})} /></div>
-                                        <div className="md:col-span-2 space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Purpose*</label><input required className="w-full p-2.5 border rounded-md" value={couponForm.description} onChange={e => setCouponForm({...couponForm, description: e.target.value, purpose: e.target.value})} /></div>
-                                        <div className="md:col-span-2 flex justify-center pt-4 border-t"><button type="submit" className="bg-[#1A5F7A] text-white px-10 py-2.5 rounded font-black text-xs uppercase shadow-xl hover:bg-[#F37021] transition-all flex items-center gap-2">Move to Mapping <FiChevronRight/></button></div>
-                                    </form>
-                                </motion.div>
-                            ) : (
-                                <motion.div key="s2" initial={{ x: 20 }} animate={{ x: 0 }} className="space-y-8">
-                                    <div className="bg-white rounded-xl shadow-lg border-t-4 border-[#F37021] overflow-hidden">
-                                        <div className="bg-[#F37021] p-4 text-white font-bold text-sm uppercase flex justify-between"><span>Step 2: Course Mapping</span><button onClick={() => setCouponStep(1)}><FiX/></button></div>
-                                        <div className="p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Target Course*</label><select required className="w-full p-2.5 border rounded-md font-bold" value={couponForm.courseCode} onChange={e => setCouponForm({...couponForm, courseCode: e.target.value})}><option value="">-- Choose Course --</option><option value="ALL">All Programs</option>{allCourses.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}</select></div>
+                            <AnimatePresence mode="wait">
+                                {couponStep === 1 ? (
+                                    <motion.div key="s1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-8">
+                                        <div className="bg-white rounded-[2rem] shadow-lg border-t-4 border-[#1A5F7A] overflow-hidden">
+                                            <div className="bg-[#1A5F7A] p-4 text-white font-black text-[10px] uppercase tracking-widest flex justify-between items-center">
+                                                <span>Step 1: Configuration</span>
+                                                {coupons.some(c => c.code === couponForm.code) && <span className="bg-orange-500 text-white px-3 py-1 rounded-full animate-pulse flex items-center gap-1 font-bold italic"><FiAlertCircle/> CODE ALREADY EXISTS</span>}
+                                            </div>
+                                            <form onSubmit={(e) => { e.preventDefault(); setCouponStep(2); }} className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Coupon Code*</label><input required className="w-full p-3 bg-slate-50 border rounded-xl font-black uppercase outline-none focus:ring-2 focus:ring-blue-100" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase().trim()})} /></div>
+                                                <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Usage Limit*</label><input type="number" required className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold" value={couponForm.maxUsage} onChange={e => setCouponForm({...couponForm, maxUsage: e.target.value})} /></div>
+                                                <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Valid From*</label><input type="date" required className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold" value={couponForm.validFrom} onChange={e => setCouponForm({...couponForm, validFrom: e.target.value})} /></div>
+                                                <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Valid To*</label><input type="date" required className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold" value={couponForm.validTo} onChange={e => setCouponForm({...couponForm, validTo: e.target.value})} /></div>
+                                                <div className="md:col-span-2 space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Description*</label><input required className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold" value={couponForm.description} onChange={e => setCouponForm({...couponForm, description: e.target.value, purpose: e.target.value})} /></div>
+                                                <div className="md:col-span-2 flex justify-end pt-4 border-t">
+                                                    <button disabled={coupons.some(c => c.code === couponForm.code) || !couponForm.code} type="submit" className="bg-[#1A5F7A] text-white px-10 py-3 rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-[#F37021] transition-all flex items-center gap-2 disabled:opacity-20">Map Course & Logic <FiChevronRight/></button>
+                                                </div>
+                                            </form>
+                                        </div>
+
+                                        <div className="bg-white rounded-[2rem] shadow-sm border overflow-hidden">
+                                            <div className="bg-slate-900 p-4 text-[10px] font-black text-[#F37021] uppercase tracking-widest">Active Registry</div>
+                                            <div className="overflow-x-auto max-h-64 no-scrollbar overflow-y-auto">
+                                                <table className="w-full text-left text-[11px]">
+                                                    <thead className="bg-slate-50 sticky top-0 border-b">
+                                                        <tr className="text-slate-400 uppercase font-black text-[9px]"><th className="p-4">Target</th><th>Code</th><th>Value</th><th>Limit</th><th>Status</th></tr>
+                                                    </thead>
+                                                    <tbody className="divide-y">
+                                                        {coupons.map(c => (
+                                                            <tr key={c._id} className={`hover:bg-slate-50 transition-colors ${couponForm.code === c.code ? 'bg-orange-50' : ''}`}>
+                                                                <td className="p-4 uppercase font-black text-[#1A5F7A]">{c.courseCode}</td>
+                                                                <td className="font-black italic text-slate-400">{c.code}</td>
+                                                                <td className="text-[#F37021] font-black">{c.discountType === 'FIXED' ? `₹${c.discountValue}` : `${c.discountValue}%`}</td>
+                                                                <td>
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                                                            <div className="h-full bg-[#1A5F7A]" style={{ width: `${(c.usedCount/c.maxUsage)*100}%` }}></div>
+                                                                        </div>
+                                                                        <span className="text-[8px] font-bold text-slate-400">{c.usedCount}/{c.maxUsage}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td><span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-md font-black text-[9px] uppercase italic">Active</span></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="bg-white rounded-[2rem] shadow-lg border-t-4 border-[#F37021] overflow-hidden p-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Target Course*</label><select required className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-black text-[#1A5F7A]" value={couponForm.courseCode} onChange={e => setCouponForm({...couponForm, courseCode: e.target.value})}><option value="">-- Choose Course --</option><option value="ALL">All Programs</option>{allCourses.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}</select></div>
                                             <div className="space-y-1">
                                                 <label className="text-[11px] font-bold text-slate-500 uppercase">Discount Logic*</label>
-                                                <div className="flex gap-2 p-1 bg-slate-50 rounded-lg">
-                                                    <button onClick={() => setCouponForm({...couponForm, discountType: 'PERCENTAGE'})} className={`flex-1 py-2 rounded-md font-black text-[10px] uppercase transition-all ${couponForm.discountType === 'PERCENTAGE' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400 hover:text-[#1A5F7A]'}`}>Percentage (%)</button>
-                                                    <button onClick={() => setCouponForm({...couponForm, discountType: 'FIXED'})} className={`flex-1 py-2 rounded-md font-black text-[10px] uppercase transition-all ${couponForm.discountType === 'FIXED' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400 hover:text-[#1A5F7A]'}`}>Fixed Amount (₹)</button>
+                                                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+                                                    <button type="button" onClick={() => setCouponForm({...couponForm, discountType: 'PERCENTAGE'})} className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase transition-all ${couponForm.discountType === 'PERCENTAGE' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400'}`}>Percentage (%)</button>
+                                                    <button type="button" onClick={() => setCouponForm({...couponForm, discountType: 'FIXED'})} className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase transition-all ${couponForm.discountType === 'FIXED' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400'}`}>Fixed (₹)</button>
                                                 </div>
                                             </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[11px] font-bold text-slate-500 uppercase">Discount Value ({couponForm.discountType === 'PERCENTAGE' ? '%' : '₹'})*</label>
-                                                <input required type="number" className="w-full p-2.5 border rounded-md font-black text-[#F37021] text-2xl" value={couponForm.discountValue} onChange={e => setCouponForm({...couponForm, discountValue: e.target.value})} />
-                                            </div>
-                                            <div className="md:col-span-2 bg-slate-900 p-6 md:p-8 rounded-[2.5rem] text-white relative overflow-hidden flex flex-col md:flex-row justify-between items-center mt-4 gap-4">
-                                                <div className="relative z-10 text-center md:text-left"><p className="text-[9px] font-black text-[#F37021] uppercase tracking-[0.3em] mb-2">Final Review</p><h4 className="text-3xl font-black italic">{couponForm.code}</h4><p className="text-xs opacity-60 mt-1 uppercase font-bold tracking-tight">{couponForm.courseCode} • {couponForm.discountType === 'PERCENTAGE' ? `${couponForm.discountValue}% OFF` : `₹${couponForm.discountValue} OFF`}</p></div>
-                                                <button onClick={handleFinalCouponSave} className="bg-[#F37021] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs shadow-2xl hover:bg-white hover:text-[#1A5F7A] transition-all flex items-center gap-2"><FiSave/> Deploy Coupon</button>
-                                                <FiTag className="absolute -right-6 -bottom-6 text-9xl opacity-10 rotate-12" />
+                                            <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Value ({couponForm.discountType === 'PERCENTAGE' ? '%' : '₹'})*</label><input required type="number" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-black text-[#F37021] text-3xl outline-none" value={couponForm.discountValue} onChange={e => setCouponForm({...couponForm, discountValue: e.target.value})} /></div>
+                                            <div className="md:col-span-2 bg-slate-900 p-8 rounded-[3.5rem] text-white relative overflow-hidden flex flex-col md:flex-row justify-between items-center mt-4">
+                                                <div className="relative z-10 text-left">
+                                                    <p className="text-[9px] font-black text-[#F37021] uppercase tracking-[0.4em] mb-2">Final Review</p>
+                                                    <h4 className="text-4xl font-black italic tracking-tighter uppercase">{couponForm.code}</h4>
+                                                    <p className="text-xs opacity-60 mt-1 uppercase font-black">{couponForm.courseCode || "N/A"} • {couponForm.discountType === 'PERCENTAGE' ? `${couponForm.discountValue}% OFF` : `₹${couponForm.discountValue} OFF`}</p>
+                                                </div>
+                                                <button onClick={handleFinalCouponSave} className="bg-[#F37021] text-white px-12 py-5 rounded-[2rem] font-black uppercase text-xs shadow-2xl hover:scale-105 transition-all flex items-center gap-2 relative z-10"><FiSave/> Activate Coupon</button>
+                                                <FiTag className="absolute -right-8 -bottom-8 text-[12rem] opacity-10 rotate-12" />
+                                                <FiTrendingUp className="absolute -left-4 top-0 text-[10rem] text-white/5 -rotate-12" />
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="bg-white rounded-xl shadow border overflow-hidden">
-                                        <div className="p-4 bg-slate-50 font-black text-[10px] text-slate-500 uppercase tracking-widest border-b">Registry</div>
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-left text-[11px]">
-                                                <thead className="bg-slate-50 border-b"><tr><th className="p-4">Course</th><th>Code</th><th>Val</th><th>Limit</th><th>Status</th></tr></thead>
-                                                <tbody className="divide-y">
-                                                    {Array.isArray(coupons) && coupons.map(c => (<tr key={c._id} className="hover:bg-slate-50"><td className="p-4 uppercase font-bold text-[#1A5F7A]">{c.courseCode}</td><td className="font-black italic">{c.code}</td><td className="text-[#F37021] font-black">{c.discountType === 'PERCENTAGE' ? `${c.discountValue}%` : `₹${c.discountValue}`}</td><td>{c.usedCount || 0}/{c.maxUsage}</td><td><span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded uppercase italic">Active</span></td></tr>))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
+                                        <button onClick={() => setCouponStep(1)} className="mt-10 text-slate-400 font-black uppercase text-[10px] flex items-center gap-2 hover:text-[#1A5F7A] transition-all"><FiChevronRight className="rotate-180 text-lg"/> Change Parameters (Step 1)</button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     )}
 
@@ -415,24 +497,54 @@ export default function AdminDashboard() {
                 </main>
             </div>
 
-            {/* MODALS (SYNC, PAYMENT, LOGOUT) */}
             <AnimatePresence>{approvalModal.show && (
                 <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border-t-[10px] border-[#1A5F7A]"><button onClick={() => setApprovalModal({ show: false, student: null })} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><FiX size={24} /></button><h3 className="text-xl font-black text-[#1A5F7A] uppercase mb-4 italic">Stream Sync</h3><div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">{batches.filter(batch => { const enrollments = approvalModal.student?.enrollments || []; return enrollments.some(e => { const title = e.course.toLowerCase().trim(); const id = allCourses.find(c => c.title.toLowerCase().trim() === title)?.id.toLowerCase().trim(); return batch.courseId?.toLowerCase().trim() === title || batch.courseId?.toLowerCase().trim() === id; }); }).map(b => (<div key={b._id} onClick={() => setSelectedBatches(prev => prev.includes(b._id) ? prev.filter(i => i !== b._id) : [...prev, b._id])} className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${selectedBatches.includes(b._id) ? 'border-[#F37021] bg-orange-50' : 'border-slate-50 bg-white'}`}><div><div className="font-black text-[#1A5F7A] text-xs uppercase italic">{b.batchCode}</div><div className="text-[8px] font-bold text-slate-400 uppercase">{b.courseId}</div></div>{selectedBatches.includes(b._id) ? <FiCheckCircle className="text-[#F37021]" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-100" />}</div>))}</div><button onClick={handleBatchSync} className="w-full py-5 bg-[#F37021] text-white rounded-2xl font-black uppercase text-xs mt-6 shadow-xl">Authorize Streams</button></motion.div>
-                </div>
-            )}</AnimatePresence>
-            
-            <AnimatePresence>{paymentModal.show && (
-                <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative border-t-[12px] border-green-600"><button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-8 right-8 text-slate-300 hover:text-red-500"><FiX size={24} /></button><h3 className="text-xl font-black text-[#1A5F7A] uppercase text-center italic">Update Ledger</h3><div className="p-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200 mt-6 mb-8 flex justify-between"><div><p className="text-[8px] font-black text-slate-400 uppercase">Paid</p><p className="text-base font-black text-[#1A5F7A]">₹{paymentModal.student?.amountPaid?.toLocaleString()}</p></div><div className="text-right"><p className="text-[8px] font-black text-slate-400 uppercase">Total</p><p className="text-base font-black text-slate-500">₹{calculateAggregateLedger(paymentModal.student).totalContractValue?.toLocaleString()}</p></div></div><form onSubmit={handlePaymentPush} className="space-y-6"><input autoFocus type="number" placeholder="Enter Amount" className="w-full p-5 bg-slate-50 rounded-2xl font-black text-3xl text-[#1A5F7A] outline-none text-center border-2 border-transparent focus:border-green-100" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} /><button type="submit" className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest hover:bg-green-700 transition-all">Submit Sync</button></form></motion.div>
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border-t-[10px] border-[#1A5F7A]">
+                        <button onClick={() => setApprovalModal({ show: false, student: null })} className="absolute top-6 right-6 text-slate-300 hover:text-red-500"><FiX size={24} /></button>
+                        <h3 className="text-xl font-black text-[#1A5F7A] uppercase mb-4 italic">Stream Sync</h3>
+                        <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                            {batches.filter(batch => { 
+                                const enrollments = approvalModal.student?.enrollments || []; 
+                                return enrollments.some(e => batch.courseId?.toLowerCase().trim() === e.course.toLowerCase().trim()); 
+                            }).map(b => (
+                                <div key={b._id} onClick={() => setSelectedBatches(prev => prev.includes(b._id) ? prev.filter(i => i !== b._id) : [...prev, b._id])} className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${selectedBatches.includes(b._id) ? 'border-[#F37021] bg-orange-50' : 'border-slate-50 bg-white'}`}>
+                                    <div><div className="font-black text-[#1A5F7A] text-xs uppercase italic">{b.batchCode}</div><div className="text-[8px] font-bold text-slate-400 uppercase">{b.courseId}</div></div>
+                                    {selectedBatches.includes(b._id) ? <FiCheckCircle className="text-[#F37021]" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-100" />}
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={handleBatchSync} className="w-full py-5 bg-[#F37021] text-white rounded-2xl font-black uppercase text-xs mt-6 shadow-xl">Authorize Streams</button>
+                    </motion.div>
                 </div>
             )}</AnimatePresence>
 
             <AnimatePresence>{logoutModal && (
                 <div className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 text-center">
-                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl border-t-8 border-red-500"><div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><FiLogOut size={24} /></div><h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic leading-tight">Terminate Session?</h3><div className="grid grid-cols-2 gap-4 mt-8"><button onClick={() => setLogoutModal(false)} className="py-4 bg-slate-100 rounded-2xl font-black uppercase text-[10px] text-slate-500">Cancel</button><button onClick={handleLogout} className="py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl">Logout</button></div></motion.div>
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl border-t-8 border-red-500">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><FiLogOut size={24} /></div>
+                        <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic leading-tight">Terminate Session?</h3>
+                        <div className="grid grid-cols-2 gap-4 mt-8">
+                            <button onClick={() => setLogoutModal(false)} className="py-4 bg-slate-100 rounded-2xl font-black uppercase text-[10px] text-slate-500">Cancel</button>
+                            <button onClick={handleLogout} className="py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl">Logout</button>
+                        </div>
+                    </motion.div>
                 </div>
             )}</AnimatePresence>
+        </div>
+    );
+}
+
+// HELPERS
+function SourceTag({ source }) {
+    const styles = { 
+        'AI Chatbot': 'bg-indigo-50 text-indigo-600 border-indigo-100', 
+        'Facebook': 'bg-blue-50 text-blue-600 border-blue-100', 
+        'Website': 'bg-green-50 text-green-600 border-green-100',
+        'Direct': 'bg-slate-50 text-slate-400 border-slate-100'
+    };
+    return (
+        <div className={`px-3 py-1 border rounded-lg font-black text-[9px] uppercase italic w-fit ${styles[source] || styles['Direct']}`}>
+            {source || 'Standard'}
         </div>
     );
 }
@@ -440,10 +552,34 @@ export default function AdminDashboard() {
 function SidebarBtn({ active, onClick, icon, label }) {
     return <button onClick={onClick} className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${active ? 'bg-[#F37021] text-white shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300'}`}><span className="text-lg">{icon}</span><span className="text-[11px] uppercase tracking-tight font-black">{label}</span></button>;
 }
-function SourceTag({ source }) {
-    const styles = { 'AI Chatbot': 'bg-blue-50 text-blue-600', 'Facebook': 'bg-indigo-50 text-indigo-600', 'Website': 'bg-green-50 text-green-600' };
-    return <div className={`px-3 py-1 border rounded-xl font-black text-[9px] uppercase italic w-fit ${styles[source] || 'bg-slate-50 text-slate-400'}`}>{source || 'Standard'}</div>;
-}
+
 function AuditTable({ logs, title }) {
-    return <div className="space-y-6"><h3 className="text-xl font-black text-[#1A5F7A] uppercase italic px-2 flex items-center gap-2"><FiShield className="text-[#F37021]"/> {title}</h3><div className="bg-white rounded-3xl shadow-sm border overflow-hidden overflow-x-auto"><table className="w-full text-left min-w-[600px]"><thead className="bg-slate-50 text-[10px] font-black uppercase border-b"><tr><th className="p-6">Staff</th><th>Action</th><th>Target</th><th>Time</th></tr></thead><tbody className="divide-y divide-slate-50">{logs && logs.length > 0 ? logs.map(log => (<tr key={log._id} className="text-[11px] hover:bg-slate-50"><td className="p-6 font-bold uppercase text-[#1A5F7A]">{log.performedBy}</td><td className="font-black text-[#1A5F7A] uppercase italic">{log.action}</td><td className="font-bold text-slate-500 uppercase">{log.targetName}</td><td className="text-slate-400 font-bold">{new Date(log.timestamp).toLocaleTimeString()}</td></tr>)) : <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic uppercase font-black text-xs tracking-widest">No Activity Pulse Detected</td></tr>}</tbody></table></div></div>;
+    return (
+        <div className="space-y-6">
+            <h3 className="text-xl font-black text-[#1A5F7A] uppercase italic px-2 flex items-center gap-2"><FiShield className="text-[#F37021]"/> {title}</h3>
+            <div className="bg-white rounded-3xl shadow-sm border overflow-hidden overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]"><thead className="bg-slate-50 text-[10px] font-black uppercase border-b"><tr><th className="p-6">Staff</th><th>Action</th><th>Target</th><th>Time</th></tr></thead><tbody className="divide-y divide-slate-50">{logs && logs.length > 0 ? logs.map(log => (<tr key={log._id} className="text-[11px] hover:bg-slate-50"><td className="p-6 font-bold uppercase text-[#1A5F7A]">{log.performedBy}</td><td className="font-black text-[#1A5F7A] uppercase italic">{log.action}</td><td className="font-bold text-slate-500 uppercase">{log.targetName}</td><td className="text-slate-400 font-bold">{new Date(log.timestamp).toLocaleTimeString()}</td></tr>)) : <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic uppercase font-black text-xs tracking-widest">No Records Found</td></tr>}</tbody></table>
+            </div>
+        </div>
+    );
+}
+
+function TableView({ title, data, setSearchQuery, columns }) {
+    // This is a generic table, but Enquiries has its own specialized view now.
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic">{title}</h3>
+                <div className="relative w-full md:w-72">
+                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"/>
+                    <input type="text" placeholder={`Search ${title}...`} className="w-full pl-10 pr-4 py-2 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#1A5F7A] outline-none" onChange={e => setSearchQuery(e.target.value)}/>
+                </div>
+            </div>
+            <div className="bg-white rounded-3xl shadow-sm border overflow-hidden overflow-x-auto">
+                <table className="w-full text-left text-[11px]"><thead className="bg-slate-50 font-black uppercase text-slate-400 border-b"><tr>{columns.map(c => <th key={c} className="p-5">{c}</th>)}</tr></thead>
+                    <tbody className="divide-y">{data.map((item) => (<tr key={item._id} className="hover:bg-slate-50 transition-colors"><td className="p-5 font-black text-[#1A5F7A] uppercase italic">{item.name}</td><td>{item.phone || item.email}</td><td><div className="px-2 py-0.5 bg-slate-100 rounded text-[9px] w-fit font-bold uppercase">{item.source || 'Direct'}</div></td><td className="p-5">{new Date(item.createdAt).toLocaleDateString()}</td></tr>))}</tbody>
+                </table>
+            </div>
+        </div>
+    );
 }
