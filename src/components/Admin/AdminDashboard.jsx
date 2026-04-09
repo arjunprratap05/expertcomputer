@@ -91,12 +91,14 @@ export default function AdminDashboard() {
         } else {
             finalRemarks = "NOT CONTACTED";
         }
+
         const updatePayload = {
             isContacted: newStatus,
             remarks: finalRemarks,
             auditAction: `Lead ${newStatus ? 'Status -> Contacted' : 'Status -> Pending'}`,
             targetName: studentName
         };
+
         try {
             await axios.patch(`${API_URL}/inquiry/${id}`, updatePayload, { 
                 headers: { Authorization: `Bearer ${token}` } 
@@ -273,7 +275,7 @@ export default function AdminDashboard() {
     return (
         <div className="flex h-screen bg-slate-50 font-sans overflow-hidden text-left relative">
             
-            {/* TOAST */}
+            {/* NOTIFICATION TOAST */}
             <AnimatePresence>
                 {toast.show && (
                     <motion.div initial={{ y: -50, x: "-50%", opacity: 0 }} animate={{ y: 30, x: "-50%", opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed left-1/2 z-[999] bg-[#1A5F7A] text-white px-8 py-4 rounded-[1.5rem] shadow-2xl font-black border-b-4 border-[#F37021] uppercase text-[11px] italic tracking-widest flex items-center gap-3">
@@ -283,7 +285,7 @@ export default function AdminDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* SIDEBAR */}
+            {/* SIDEBAR NAVIGATION */}
             <aside className={`fixed lg:relative z-[200] h-full w-80 bg-[#1A5F7A] text-white p-8 flex flex-col shadow-2xl transition-all duration-500 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 <div className="mb-12 flex justify-between items-center">
                     <div className="font-black text-[#F37021] italic text-2xl uppercase tracking-tighter leading-none">
@@ -308,17 +310,11 @@ export default function AdminDashboard() {
                     {hasAccess('coupons') && <SidebarBtn active={activeTab === 'coupons'} onClick={() => handleTabChange('coupons')} icon={<FiTag />} label="Coupon Engine" />}
                     {hasAccess('logs') && <SidebarBtn active={activeTab === 'logs'} onClick={() => handleTabChange('logs')} icon={<FiActivity />} label="Security Logs" />}
                 </nav>
-
-                <div className="mt-auto pt-8 border-t border-white/5">
-                    <button onClick={() => setLogoutModal(true)} className="flex items-center gap-4 w-full p-4 rounded-2xl font-black text-xs uppercase tracking-widest text-red-300 hover:bg-red-500/10 transition-all">
-                        <FiLogOut size={18}/>
-                        Terminate Session
-                    </button>
-                </div>
+                {/* Terminate Session button removed from here */}
             </aside>
 
+            {/* MAIN CONTENT AREA */}
             <div className="flex-1 flex flex-col min-w-0 relative">
-                {/* HEADER - LOGOUT BUTTON ON TOP RIGHT CORNER */}
                 <header className="bg-white h-24 px-10 flex items-center justify-between border-b border-slate-100 sticky top-0 z-[100] shadow-sm">
                     <div className="flex items-center gap-5">
                         <button className="lg:hidden text-[#1A5F7A] p-3 bg-slate-50 rounded-2xl active:scale-95" onClick={() => setIsSidebarOpen(true)}><FiMenu size={24} /></button>
@@ -350,7 +346,7 @@ export default function AdminDashboard() {
 
                 <main className="p-6 md:p-12 overflow-y-auto flex-1 no-scrollbar bg-[#F8FAFC]">
                     
-                    {/* ENQUIRIES */}
+                    {/* --- TAB: ADMISSION ENQUIRIES --- */}
                     {activeTab === 'enquiries' && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left">
                              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -363,6 +359,7 @@ export default function AdminDashboard() {
                                     <input type="text" placeholder="Search by Name or Phone..." className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm focus:ring-4 focus:ring-orange-50 focus:border-[#F37021] outline-none transition-all font-bold text-slate-600" onChange={e => setSearchQuery(e.target.value)}/>
                                 </div>
                             </div>
+
                              <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden overflow-x-auto">
                                 <table className="w-full text-left text-[11px] border-collapse">
                                     <thead className="bg-slate-50/80 backdrop-blur font-black uppercase text-slate-400 border-b border-slate-100 sticky top-0 z-10">
@@ -389,13 +386,14 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* REGISTRATIONS */}
+                    {/* --- TAB: STUDENT REGISTRATIONS --- */}
                     {activeTab === 'registrations' && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left">
                              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div><h3 className="text-3xl font-black text-[#1A5F7A] uppercase italic tracking-tighter">Student Registry</h3><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Enrollment & Ledger Synchronization</p></div>
                                 <div className="relative w-full md:w-96"><FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20}/><input type="text" placeholder="Search Student..." className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm focus:ring-4 focus:ring-[#1A5F7A]/10 outline-none transition-all font-bold" onChange={e => setSearchQuery(e.target.value)}/></div>
                             </div>
+
                              <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden overflow-x-auto">
                                 <table className="w-full text-left text-[11px]">
                                     <thead className="bg-slate-50 font-black uppercase text-slate-400 border-b tracking-widest">
@@ -409,7 +407,7 @@ export default function AdminDashboard() {
                                             const unsynced = getUnsyncedCourses(item);
                                             return (
                                                 <tr key={item._id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="p-7"><div className="font-black text-[#1A5F7A] uppercase italic text-[13px]">{item.name}</div><div className="text-slate-400 font-bold text-[10px] mt-0.5 lowercase italic">{item.email}</div></td>
+                                                    <td className="p-7"><div className="font-black text-[#1A5F7A] uppercase italic text-[13px]">{item.name}</div><div className="text-slate-400 font-bold text-[10px] mt-0.5 group-hover:text-[#1A5F7A] transition-colors lowercase italic">{item.email}</div></td>
                                                     <td>{item.isPortalActive ? <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-xl w-fit font-black uppercase text-[9px] italic border border-green-100"><FiCheckCircle/> Active</div> : <button onClick={() => handleActivatePortal(item)} className="bg-[#1A5F7A] text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase italic shadow-md hover:bg-[#F37021] transition-all">Unlock Access</button>}</td>
                                                     <td><motion.div whileHover={{ scale: 1.05 }} onClick={() => { setApprovalModal({ show: true, student: item }); setSelectedBatches(validSyncedBatches); }} className={`cursor-pointer group flex items-center gap-3 px-4 py-2.5 rounded-xl border-2 transition-all w-fit ${syncedCount > 0 ? 'bg-orange-50 border-orange-100 text-[#F37021]' : 'bg-slate-50 border-slate-100 text-slate-300'}`}><FiVideo className={syncedCount > 0 ? 'animate-pulse' : ''} size={16}/><div className="font-black uppercase text-[10px]">{syncedCount} Batches{unsynced.length > 0 && <span className="text-red-600 ml-2 animate-bounce inline-block">●</span>}</div></motion.div></td>
                                                     <td><div className="font-black"><div className="text-[#1A5F7A] text-[13px]">₹{item.amountPaid?.toLocaleString() || 0}</div><div className={`text-[9px] uppercase tracking-tighter mt-1 ${ledger.due > 0 ? 'text-red-500 italic' : 'text-green-500 font-black'}`}>{ledger.due > 0 ? `Balance Due: ₹${ledger.due.toLocaleString()}` : "Ledger Cleared"}</div></div></td>
@@ -423,7 +421,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* COUPONS */}
+                    {/* --- TAB: COUPON DEPLOYMENT --- */}
                     {activeTab === 'coupons' && (
                         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-28 text-left">
                             <div className="flex flex-col md:flex-row justify-between items-end border-b-2 border-slate-100 pb-8">
@@ -444,7 +442,7 @@ export default function AdminDashboard() {
                                                 <div className="md:col-span-2 flex justify-end"><button disabled={coupons.some(c => c.code === couponForm.code) || !couponForm.code} type="submit" className="bg-[#1A5F7A] text-white px-12 py-5 rounded-full font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl hover:bg-[#F37021] transition-all flex items-center gap-4 disabled:opacity-20">Logic Mapping <FiChevronRight size={20}/></button></div>
                                             </form>
                                         </div>
-                                        <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden"><div className="bg-[#1A5F7A] p-6 text-white font-black text-[10px] uppercase tracking-[0.3em] flex justify-between items-center"><span>Production Registry</span><span className="opacity-40">{coupons.length} Active</span></div><div className="overflow-x-auto max-h-[400px] overflow-y-auto no-scrollbar"><table className="w-full text-left text-[11px]"><thead className="bg-slate-50 sticky top-0 border-b border-slate-100 z-10"><tr className="text-slate-400 uppercase font-black text-[9px]"><th className="p-6">Target</th><th>Code</th><th>Benefit</th><th>Burn</th><th className="pr-6 text-right">Status</th></tr></thead><tbody className="divide-y divide-slate-50">{coupons.map(c => (<tr key={c._id} className="hover:bg-blue-50/20 group"><td className="p-6 uppercase font-black text-[#1A5F7A] opacity-80">{c.courseCode}</td><td className="font-black italic text-[#F37021] text-[13px]">{c.code}</td><td className="font-black text-slate-600">{c.discountType === 'FIXED' ? `₹${c.discountValue}` : `${c.discountValue}%`} OFF</td><td><div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-orange-400" style={{ width: `${Math.min((c.usedCount/c.maxUsage)*100, 100)}%` }}></div></div><span className="text-[9px] font-black text-slate-300 italic uppercase">{c.usedCount} burned</span></td><td className="pr-6 text-right"><span className="px-3 py-1 bg-green-50 text-green-500 rounded-lg font-black text-[9px] uppercase italic border border-green-100">Live</span></td></tr>))}</tbody></table></div></div>
+                                        <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden"><div className="bg-[#1A5F7A] p-6 text-white font-black text-[10px] uppercase tracking-[0.3em] flex justify-between items-center"><span>Production Registry</span><span className="opacity-40">{coupons.length} Active</span></div><div className="overflow-x-auto max-h-[400px] overflow-y-auto no-scrollbar"><table className="w-full text-left text-[11px] border-collapse"><thead className="bg-slate-50 sticky top-0 border-b border-slate-100 z-10"><tr className="text-slate-400 uppercase font-black text-[9px]"><th className="p-6">Target</th><th>Code</th><th>Benefit</th><th>Burn</th><th className="pr-6 text-right">Status</th></tr></thead><tbody className="divide-y divide-slate-50">{coupons.map(c => (<tr key={c._id} className="hover:bg-blue-50/20 group"><td className="p-6 uppercase font-black text-[#1A5F7A] opacity-80">{c.courseCode}</td><td className="font-black italic text-[#F37021] text-[13px]">{c.code}</td><td className="font-black text-slate-600">{c.discountType === 'FIXED' ? `₹${c.discountValue}` : `${c.discountValue}%`} OFF</td><td><div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-orange-400" style={{ width: `${Math.min((c.usedCount/c.maxUsage)*100, 100)}%` }}></div></div><span className="text-[9px] font-black text-slate-300 italic uppercase">{c.usedCount} burned</span></td><td className="pr-6 text-right"><span className="px-3 py-1 bg-green-50 text-green-500 rounded-lg font-black text-[9px] uppercase italic border border-green-100">Live</span></td></tr>))}</tbody></table></div></div>
                                     </motion.div>
                                 ) : (
                                     <motion.div key="s2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="bg-white rounded-[3rem] shadow-2xl border-t-[12px] border-[#F37021] overflow-hidden p-12 text-left">
@@ -462,9 +460,9 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {activeTab === 'batches' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 text-left"><BatchScheduler /></div>}
-                    {activeTab === 'lectures' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 text-left"><AddLecture /></div>}
-                    {activeTab === 'materials' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 text-left"><AddMaterial /></div>}
+                    {activeTab === 'batches' && <div className="animate-in fade-in duration-700 text-left"><BatchScheduler /></div>}
+                    {activeTab === 'lectures' && <div className="animate-in fade-in duration-700 text-left"><AddLecture /></div>}
+                    {activeTab === 'materials' && <div className="animate-in fade-in duration-700 text-left"><AddMaterial /></div>}
                 </main>
             </div>
 
@@ -494,7 +492,7 @@ export default function AdminDashboard() {
                 {paymentModal.show && (
                     <div className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-xl flex items-center justify-center p-4">
                         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[3.5rem] p-12 max-w-md w-full shadow-2xl relative border-t-[15px] border-green-500 text-left">
-                            <button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-10 right-10 text-slate-300 hover:text-red-500 transition-all"><FiX size={28} /></button>
+                            <button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-10 right-10 text-slate-300 hover:text-red-500"><FiX size={28} /></button>
                             <h3 className="text-3xl font-black text-[#1A5F7A] uppercase italic mb-8 tracking-tighter leading-none">Ledger Sync</h3>
                             <form onSubmit={handlePaymentPush} className="space-y-8">
                                 <div className="space-y-3"><label className="text-[11px] font-black text-slate-500 uppercase ml-4 tracking-widest italic flex items-center gap-2"><FiDollarSign className="text-green-500"/> Current Transaction</label><div className="relative group"><input required autoFocus type="number" className="w-full p-8 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] font-black text-[#1A5F7A] text-5xl outline-none focus:bg-white focus:border-green-500 transition-all text-center tracking-tighter shadow-inner" placeholder="0000" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} /><div className="absolute left-8 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-200">₹</div></div></div>
@@ -505,7 +503,7 @@ export default function AdminDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* LOGOUT MODAL - RESTORED TO SIDE-BY-SIDE GRID LAYOUT */}
+            {/* LOGOUT MODAL */}
             <AnimatePresence>
                 {logoutModal && (
                     <div className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 text-center">
@@ -526,7 +524,7 @@ export default function AdminDashboard() {
 
 // --- REUSABLE WRAPPERS ---
 function SourceTag({ source }) {
-    const styles = { 'AI Chatbot': 'bg-indigo-50 text-indigo-600 border-indigo-100', 'Facebook': 'bg-blue-50 text-blue-600 border-blue-100', 'Website': 'bg-green-50 text-green-600 border-green-100', 'Direct': 'bg-slate-50 text-slate-400 border-slate-100 shadow-sm' };
+    const styles = { 'AI Chatbot': 'bg-indigo-50 text-indigo-600 border-indigo-100 shadow-indigo-100/50', 'Facebook': 'bg-blue-50 text-blue-600 border-blue-100 shadow-blue-100/50', 'Website': 'bg-green-50 text-green-600 border-green-100 shadow-green-100/50', 'Direct': 'bg-slate-50 text-slate-400 border-slate-100 shadow-sm' };
     return ( <div className={`px-4 py-1.5 border rounded-full font-black text-[9px] uppercase italic w-fit shadow-sm flex items-center gap-2 ${styles[source] || styles['Direct']}`}> <div className={`w-1.5 h-1.5 rounded-full ${source === 'Website' ? 'bg-green-500' : 'bg-slate-300'}`}></div> {source || 'Standard'} </div> );
 }
 
