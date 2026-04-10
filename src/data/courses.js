@@ -26,7 +26,7 @@ export const techCoursesData = [
       {
         id: "adv-excel-pro",
         title: "Advance Excel Course",
-        fee: "TBD", // Update this as per academy policy
+        fee: "3777", // Update this as per academy policy
         duration: "6 weeks",
         accentColor: "border-orange-500",
         buttonColor: "bg-orange-600",

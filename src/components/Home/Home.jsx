@@ -33,7 +33,7 @@ import DSAPoster from '../../assets/posters/DSA.jpeg';
 import ProgrammingusingCProgramPoster from '../../assets/posters/ProgrammingusingC++Program.jpeg';
 import DiplomainComputerApplicationPoster from '../../assets/posters/DiplomainComputerApplication.jpeg';
 import FoundationinITPoster from '../../assets/posters/FoundationinIT.jpeg';
-import msofficePoster from '../../assets/posters/MSOffice.jpeg';
+import msofficePoster from '../../assets/posters/MS-OFFICE.jpeg';
 import AdvanceExcelPoster from '../../assets/posters/AdvanceExcel.jpeg';
 
 const OptimizedImage = ({ src, alt, className }) => {
@@ -97,7 +97,7 @@ export default function Home() {
 
     const displayCourses = useMemo(() => {
         if (activeSegment === "All") {
-            const featuredIds = ["java-pro", "html5-web", "adca-diploma", "python-ds", "tally-essential", "full-stack-dev", "dsa-master", "prog-cpp", "dca-new", "found-it-new"];
+            const featuredIds = ["java-pro", "html5-web", "adca-diploma", "python-ds", "tally-essential", "full-stack-dev", "dsa-master", "prog-cpp", "dca-new", "found-it-new", "ms-office-basic", "adv-excel-pro"];
             return techCoursesData.filter(c => featuredIds.includes(c.id));
         }
         return techCoursesData.filter(course => course.segment === activeSegment);
