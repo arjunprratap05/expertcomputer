@@ -33,6 +33,8 @@ import DSAPoster from '../../assets/posters/DSA.jpeg';
 import ProgrammingusingCProgramPoster from '../../assets/posters/ProgrammingusingC++Program.jpeg';
 import DiplomainComputerApplicationPoster from '../../assets/posters/DiplomainComputerApplication.jpeg';
 import FoundationinITPoster from '../../assets/posters/FoundationinIT.jpeg';
+import msofficePoster from '../../assets/posters/MSOffice.jpeg';
+import AdvanceExcelPoster from '../../assets/posters/AdvanceExcel.jpeg';
 
 const OptimizedImage = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
@@ -88,7 +90,9 @@ export default function Home() {
         "dsa-master": DSAPoster,
         "prog-cpp": ProgrammingusingCProgramPoster,
         "dca-new": DiplomainComputerApplicationPoster,
-        "found-it-new": FoundationinITPoster
+        "found-it-new": FoundationinITPoster,
+        "ms-office-basic": msofficePoster,
+        "adv-excel-pro": AdvanceExcelPoster,
     }), []);
 
     const displayCourses = useMemo(() => {

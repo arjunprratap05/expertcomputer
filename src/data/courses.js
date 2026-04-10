@@ -8,7 +8,35 @@ export const techCoursesData = [
     { id: "dca-new", title: "Diploma in Computer Application (DCA)", fee: "6500", segment: "Home Makers", modules: ["Introduction to Computers", "Computer Fundamentals", "Microsoft Windows", "MS Office", "Email & Internet", "Web Programming (HTML5)", "Tally Prime"] },
     { id: "dsa-master", title: "Data Structure and Algorithms (C/C++/C#/Java)", fee: "4842", segment: "College Students", modules: ["Complexity Analysis", "Arrays & Linked Lists", "Stacks & Queues", "Trees & Graphs", "Searching & Sorting Algorithms"] },
     { id: "found-it-new", title: "Foundation in Information Technology", fee: "6500", segment: "Retired Persons", modules: ["C++ Programming", "Logic Building", "Python with Live Project", "HTML5, CSS & JavaScript"] },
-    { id: "gen-ai-master", title: "Advanced Diploma in Generative AI", fee: "42500", segment: "Working Professionals", modules: ["Foundations of LLMs", "Prompt Engineering", "Fine-tuning", "RAG Apps"] }
+    { id: "gen-ai-master", title: "Advanced Diploma in Generative AI", fee: "42500", segment: "Working Professionals", modules: ["Foundations of LLMs", "Prompt Engineering", "Fine-tuning", "RAG Apps"] },
+    {
+        id: "ms-office-basic",
+        title: "Contents of MS-Office",
+        fee: "3000",
+        duration: "6 weeks",
+        accentColor: "border-blue-600",
+        buttonColor: "bg-blue-800",
+        modules: [
+          "Professional documents with MS-Word",
+          "Data management with MS-Excel",
+          "Presentations with MS-PowerPoint",
+          "Emails & Tasks with MS-Outlook"
+        ]
+      },
+      {
+        id: "adv-excel-pro",
+        title: "Advance Excel Course",
+        fee: "TBD", // Update this as per academy policy
+        duration: "6 weeks",
+        accentColor: "border-orange-500",
+        buttonColor: "bg-orange-600",
+        modules: [
+          "VLOOKUP, HLOOKUP, INDEX-MATCH",
+          "Pivot Tables & Pivot Charts",
+          "MIS Reporting & Projects",
+          "Data Validation & Automation"
+        ]
+      }
 ];
 
 export const universityPrograms = [
