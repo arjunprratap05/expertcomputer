@@ -26,23 +26,20 @@ export default function Contact() {
     const handleChange = (e) => {
         const { name, value } = e.target;
 
-        // Name Validation
         if (name === "name") {
             const nameRegex = /^[a-zA-Z\s]{2,50}$/;
             setFieldErrors(prev => ({ ...prev, name: !nameRegex.test(value) && value.length > 0 }));
         }
 
-        // Phone Validation
         if (name === "phone") {
             const numericValue = value.replace(/\D/g, "");
             if (numericValue.length <= 10) {
                 setFormData(prev => ({ ...prev, [name]: numericValue }));
-                setFieldErrors(prev => ({ ...prev, phone: numericValue.length !== 10 }));
+                setFieldErrors(prev => ({ ...prev, phone: numericValue.length !== 10 && numericValue.length > 0 }));
             }
             return;
         }
 
-        // Email Validation
         if (name === "email") {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             setFieldErrors(prev => ({ ...prev, email: !emailRegex.test(value) && value.length > 0 }));
@@ -54,15 +51,14 @@ export default function Contact() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Final Validation Check
-        if (formData.name.trim().length < 2) {
-            setFieldErrors(prev => ({ ...prev, name: true }));
-            setStatus(prev => ({ ...prev, error: "Please enter a valid full name." }));
-            return;
-        }
-        if (formData.phone.length !== 10) {
-            setFieldErrors(prev => ({ ...prev, phone: true }));
-            setStatus(prev => ({ ...prev, error: "Please enter a valid 10-digit number." }));
+        // Final Validation
+        const isNameInvalid = formData.name.trim().length < 2;
+        const isPhoneInvalid = formData.phone.length !== 10;
+        const isEmailInvalid = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+
+        if (isNameInvalid || isPhoneInvalid || isEmailInvalid) {
+            setFieldErrors({ name: isNameInvalid, phone: isPhoneInvalid, email: isEmailInvalid });
+            setStatus(prev => ({ ...prev, error: "Please fix the errors in the form." }));
             return;
         }
 
@@ -128,7 +124,7 @@ export default function Contact() {
 
                         {/* RIGHT FORM PANEL */}
                         <div className="lg:col-span-3 p-8 md:p-16">
-                            <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
+                            <form onSubmit={handleSubmit} className="space-y-8 md:space-y-10">
                                 <AnimatePresence mode="wait">
                                     {status.success && (
                                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -144,15 +140,17 @@ export default function Contact() {
                                     )}
                                 </AnimatePresence>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-6">
                                     <InputField 
-                                        label="Full Name" name="name" placeholder="Enter Full Name" 
-                                        value={formData.name} onChange={handleChange} error={fieldErrors.name} 
+                                        label="Full Name" name="name" placeholder="Name" 
+                                        value={formData.name} onChange={handleChange} 
+                                        error={fieldErrors.name} errorMsg="Use only letters (min 2)"
                                     />
                                     <InputField 
                                         label="Phone Number" name="phone" type="tel"
                                         placeholder="10-Digit Mobile" value={formData.phone} 
                                         onChange={handleChange} error={fieldErrors.phone}
+                                        errorMsg="Enter valid 10 digits"
                                     />
                                 </div>
 
@@ -160,6 +158,7 @@ export default function Contact() {
                                     label="Email Address" name="email" type="email"
                                     placeholder="your@email.com" value={formData.email} 
                                     onChange={handleChange} error={fieldErrors.email}
+                                    errorMsg="Enter a valid email"
                                 />
 
                                 <div className="flex flex-col">
@@ -208,9 +207,9 @@ function ContactItem({ icon, title, detail, isLink }) {
     );
 }
 
-function InputField({ label, name, type = "text", placeholder, value, onChange, error }) {
+function InputField({ label, name, type = "text", placeholder, value, onChange, error, errorMsg }) {
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col relative">
             <label className="text-[10px] font-black text-[#1A5F7A] mb-2 uppercase tracking-widest ml-1">{label}</label>
             <div className="relative">
                 <input 
@@ -219,7 +218,18 @@ function InputField({ label, name, type = "text", placeholder, value, onChange, 
                         error ? 'border-red-500 bg-red-50 text-red-900' : 'border-slate-100 focus:border-[#F37021]'
                     }`}
                 />
-                {error && <FiAlertCircle className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" />}
+                <AnimatePresence>
+                    {error && (
+                        <motion.span 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute -bottom-5 left-2 text-[9px] font-bold text-red-500 uppercase tracking-tighter flex items-center gap-1"
+                        >
+                            <FiAlertCircle size={10} /> {errorMsg}
+                        </motion.span>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );
