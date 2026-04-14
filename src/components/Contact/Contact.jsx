@@ -20,11 +20,19 @@ export default function Contact() {
     });
 
     const [fieldErrors, setFieldErrors] = useState({
-        phone: false, email: false
+        phone: false, email: false, name: false
     });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+
+        // Name Validation
+        if (name === "name") {
+            const nameRegex = /^[a-zA-Z\s]{2,50}$/;
+            setFieldErrors(prev => ({ ...prev, name: !nameRegex.test(value) && value.length > 0 }));
+        }
+
+        // Phone Validation
         if (name === "phone") {
             const numericValue = value.replace(/\D/g, "");
             if (numericValue.length <= 10) {
@@ -33,20 +41,31 @@ export default function Contact() {
             }
             return;
         }
+
+        // Email Validation
         if (name === "email") {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             setFieldErrors(prev => ({ ...prev, email: !emailRegex.test(value) && value.length > 0 }));
         }
+
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Final Validation Check
+        if (formData.name.trim().length < 2) {
+            setFieldErrors(prev => ({ ...prev, name: true }));
+            setStatus(prev => ({ ...prev, error: "Please enter a valid full name." }));
+            return;
+        }
         if (formData.phone.length !== 10) {
             setFieldErrors(prev => ({ ...prev, phone: true }));
             setStatus(prev => ({ ...prev, error: "Please enter a valid 10-digit number." }));
             return;
         }
+
         setStatus({ loading: true, success: false, error: "" });
         try {
             const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -88,15 +107,14 @@ export default function Contact() {
                         </h2>
                     </motion.div>
 
-                    {/* MAIN BOX: Changed rounded corners and grid behavior for mobile */}
                     <div className="grid grid-cols-1 lg:grid-cols-5 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 bg-white">
                         
-                        {/* LEFT INFO PANEL: Reduced padding on mobile (p-8 vs p-12) */}
+                        {/* LEFT INFO PANEL */}
                         <div className="lg:col-span-2 bg-[#1A5F7A] p-8 md:p-12 text-white flex flex-col justify-between">
                             <div>
                                 <h3 className="text-2xl md:text-3xl font-bold mb-6 italic">Academy Hub</h3>
                                 <div className="space-y-6 md:space-y-8">
-                                    <ContactItem icon={<FiMapPin />} title="Campus" detail="Kumar Tower, 2nd Floor, Boring Road crossing, Patna -800001" />
+                                    <ContactItem icon={<FiMapPin />} title="Campus" detail="Kumar Tower, 2nd Floor, Boring Road crossing, Patna - 800001" />
                                     <ContactItem icon={<FiPhone />} title="Support" detail="+91 7282983335" isLink="tel:+917282983335" />
                                     <ContactItem icon={<FiMail />} title="Email" detail="expertcomputeracademy@gmail.com" isLink="mailto:expertcomputeracademy@gmail.com" />
                                     <ContactItem icon={<FiClock />} title="Hours" detail="Mon - Sat: 8:00 AM - 8:00 PM" />
@@ -108,7 +126,7 @@ export default function Contact() {
                             </div>
                         </div>
 
-                        {/* RIGHT FORM PANEL: Responsive padding (p-8 vs p-16) */}
+                        {/* RIGHT FORM PANEL */}
                         <div className="lg:col-span-3 p-8 md:p-16">
                             <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
                                 <AnimatePresence mode="wait">
@@ -127,7 +145,10 @@ export default function Contact() {
                                 </AnimatePresence>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                                    <InputField label="Full Name" name="name" placeholder="Name" value={formData.name} onChange={handleChange} />
+                                    <InputField 
+                                        label="Full Name" name="name" placeholder="Enter Full Name" 
+                                        value={formData.name} onChange={handleChange} error={fieldErrors.name} 
+                                    />
                                     <InputField 
                                         label="Phone Number" name="phone" type="tel"
                                         placeholder="10-Digit Mobile" value={formData.phone} 
