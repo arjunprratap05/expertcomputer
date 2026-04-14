@@ -81,6 +81,31 @@ export default function AdminDashboard() {
         setIsSidebarOpen(false); 
     };
 
+    // --- FINANCIAL CALCULATION LOGIC ---
+    const calculateAggregateLedger = useCallback((student) => {
+        if (!student) return { totalContractValue: 0, paid: 0, due: 0 };
+    
+        // PRIORITY 1: Use the totalFee directly from MongoDB if it exists
+        // PRIORITY 2: Fallback to manual calculation if totalFee is missing/zero
+        let totalContractValue = Number(student.totalFee) || 0;
+    
+        if (totalContractValue === 0) {
+            totalContractValue = (student.enrollments || []).reduce((acc, curr) => {
+                const courseInfo = allCourses.find(c => 
+                    c.title.toLowerCase().trim() === curr.course.toLowerCase().trim()
+                );
+                const feeAmount = parseInt(courseInfo?.fee?.toString().replace(/[^0-9]/g, "")) || 0;
+                return acc + feeAmount;
+            }, 0);
+        }
+    
+        const paid = Number(student.amountPaid) || 0;
+        
+        const due = Math.max(0, totalContractValue - paid);
+    
+        return { totalContractValue, paid, due };
+    }, [allCourses]);
+
     const handleEnquiryStatusUpdate = async (id, currentStatus, currentRemarks, studentName) => {
         const newStatus = !currentStatus;
         let finalRemarks = currentRemarks;
@@ -118,17 +143,6 @@ export default function AdminDashboard() {
             triggerToast("REMARKS UPDATED");
             fetchData();
         } catch (err) { alert("Failed to save remark"); }
-    };
-
-    const calculateAggregateLedger = (student) => {
-        if (!student) return { totalContractValue: 0, paid: 0, due: 0 };
-        const totalContractValue = (student.enrollments || []).reduce((acc, curr) => {
-            const courseInfo = allCourses.find(c => c.title.toLowerCase().trim() === curr.course.toLowerCase().trim());
-            const feeAmount = parseInt(courseInfo?.fee?.toString().replace(/[^0-9]/g, "")) || 0;
-            return acc + feeAmount;
-        }, 0);
-        const paid = student.amountPaid || 0;
-        return { totalContractValue, paid, due: totalContractValue - paid };
     };
 
     const getUnsyncedCourses = (student) => {
@@ -310,7 +324,6 @@ export default function AdminDashboard() {
                     {hasAccess('coupons') && <SidebarBtn active={activeTab === 'coupons'} onClick={() => handleTabChange('coupons')} icon={<FiTag />} label="Coupon Engine" />}
                     {hasAccess('logs') && <SidebarBtn active={activeTab === 'logs'} onClick={() => handleTabChange('logs')} icon={<FiActivity />} label="Security Logs" />}
                 </nav>
-                {/* Terminate Session button removed from here */}
             </aside>
 
             {/* MAIN CONTENT AREA */}
@@ -337,7 +350,6 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                         </div>
-                        {/* RIGHT TOP LOGOUT ICON */}
                         <button onClick={() => setLogoutModal(true)} className="p-4 bg-red-50 text-red-500 rounded-2xl active:scale-90 hover:bg-red-500 hover:text-white transition-all shadow-sm">
                             <FiLogOut size={22} />
                         </button>
@@ -410,7 +422,7 @@ export default function AdminDashboard() {
                                                     <td className="p-7"><div className="font-black text-[#1A5F7A] uppercase italic text-[13px]">{item.name}</div><div className="text-slate-400 font-bold text-[10px] mt-0.5 group-hover:text-[#1A5F7A] transition-colors lowercase italic">{item.email}</div></td>
                                                     <td>{item.isPortalActive ? <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-xl w-fit font-black uppercase text-[9px] italic border border-green-100"><FiCheckCircle/> Active</div> : <button onClick={() => handleActivatePortal(item)} className="bg-[#1A5F7A] text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase italic shadow-md hover:bg-[#F37021] transition-all">Unlock Access</button>}</td>
                                                     <td><motion.div whileHover={{ scale: 1.05 }} onClick={() => { setApprovalModal({ show: true, student: item }); setSelectedBatches(validSyncedBatches); }} className={`cursor-pointer group flex items-center gap-3 px-4 py-2.5 rounded-xl border-2 transition-all w-fit ${syncedCount > 0 ? 'bg-orange-50 border-orange-100 text-[#F37021]' : 'bg-slate-50 border-slate-100 text-slate-300'}`}><FiVideo className={syncedCount > 0 ? 'animate-pulse' : ''} size={16}/><div className="font-black uppercase text-[10px]">{syncedCount} Batches{unsynced.length > 0 && <span className="text-red-600 ml-2 animate-bounce inline-block">●</span>}</div></motion.div></td>
-                                                    <td><div className="font-black"><div className="text-[#1A5F7A] text-[13px]">₹{item.amountPaid?.toLocaleString() || 0}</div><div className={`text-[9px] uppercase tracking-tighter mt-1 ${ledger.due > 0 ? 'text-red-500 italic' : 'text-green-500 font-black'}`}>{ledger.due > 0 ? `Balance Due: ₹${ledger.due.toLocaleString()}` : "Ledger Cleared"}</div></div></td>
+                                                    <td><div className="font-black"><div className="text-[#1A5F7A] text-[13px]">₹{item.amountPaid?.toLocaleString() || 0} / <span className="text-slate-300">₹{ledger.totalContractValue.toLocaleString()}</span></div><div className={`text-[9px] uppercase tracking-tighter mt-1 ${ledger.due > 0 ? 'text-red-500 italic' : 'text-green-500 font-black'}`}>{ledger.due > 0 ? `Balance Due: ₹${ledger.due.toLocaleString()}` : "Ledger Cleared"}</div></div></td>
                                                     <td className="pr-7 text-right"><button onClick={() => setPaymentModal({ show: true, student: item, amount: "" })} className="w-11 h-11 bg-[#F37021]/10 text-[#F37021] rounded-2xl flex items-center justify-center hover:bg-[#F37021] hover:text-white hover:shadow-lg hover:shadow-orange-200 transition-all ml-auto border border-orange-100/50"><FiCreditCard size={18}/></button></td>
                                                 </tr>
                                             );
@@ -487,20 +499,37 @@ export default function AdminDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* LEDGER MODAL */}
+            {/* LEDGER MODAL - UPDATED TO SHOW NET PAYABLE */}
             <AnimatePresence>
-                {paymentModal.show && (
-                    <div className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-xl flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[3.5rem] p-12 max-w-md w-full shadow-2xl relative border-t-[15px] border-green-500 text-left">
-                            <button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-10 right-10 text-slate-300 hover:text-red-500"><FiX size={28} /></button>
-                            <h3 className="text-3xl font-black text-[#1A5F7A] uppercase italic mb-8 tracking-tighter leading-none">Ledger Sync</h3>
-                            <form onSubmit={handlePaymentPush} className="space-y-8">
-                                <div className="space-y-3"><label className="text-[11px] font-black text-slate-500 uppercase ml-4 tracking-widest italic flex items-center gap-2"><FiDollarSign className="text-green-500"/> Current Transaction</label><div className="relative group"><input required autoFocus type="number" className="w-full p-8 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] font-black text-[#1A5F7A] text-5xl outline-none focus:bg-white focus:border-green-500 transition-all text-center tracking-tighter shadow-inner" placeholder="0000" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} /><div className="absolute left-8 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-200">₹</div></div></div>
-                                <button type="submit" className="w-full py-7 bg-green-600 text-white rounded-full font-black uppercase text-xs tracking-[0.3em] shadow-[0_20px_50px_rgba(22,163,74,0.3)] flex items-center justify-center gap-4 hover:bg-green-700 transition-all active:scale-95">Push To Ledger</button>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
+                {paymentModal.show && paymentModal.student && (() => {
+                    const ledger = calculateAggregateLedger(paymentModal.student);
+                    return (
+                        <div className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-xl flex items-center justify-center p-4">
+                            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[3.5rem] p-12 max-w-md w-full shadow-2xl relative border-t-[15px] border-green-500 text-left">
+                                <button onClick={() => setPaymentModal({ show: false, student: null, amount: "" })} className="absolute top-10 right-10 text-slate-300 hover:text-red-500"><FiX size={28} /></button>
+                                <h3 className="text-3xl font-black text-[#1A5F7A] uppercase italic mb-2 tracking-tighter leading-none">Ledger Sync</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Update records for {paymentModal.student.name}</p>
+
+                                {/* DYNAMIC FINANCIAL SUMMARY BOX */}
+                                <div className="bg-slate-50 rounded-[2rem] p-6 mb-8 border border-slate-100 flex justify-between items-center">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Fees</p>
+                                        <div className="text-lg font-black text-slate-600">₹{ledger.totalContractValue.toLocaleString()}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-1">Net Payable (Due)</p>
+                                        <div className="text-2xl font-black text-red-600 italic">₹{ledger.due.toLocaleString()}</div>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handlePaymentPush} className="space-y-8">
+                                    <div className="space-y-3"><label className="text-[11px] font-black text-slate-500 uppercase ml-4 tracking-widest italic flex items-center gap-2"><FiDollarSign className="text-green-500"/> Current Transaction</label><div className="relative group"><input required autoFocus type="number" className="w-full p-8 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] font-black text-[#1A5F7A] text-5xl outline-none focus:bg-white focus:border-green-500 transition-all text-center tracking-tighter shadow-inner" placeholder="0000" value={paymentModal.amount} onChange={(e) => setPaymentModal({...paymentModal, amount: e.target.value})} /><div className="absolute left-8 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-200">₹</div></div></div>
+                                    <button type="submit" disabled={!paymentModal.amount || Number(paymentModal.amount) <= 0} className="w-full py-7 bg-green-600 text-white rounded-full font-black uppercase text-xs tracking-[0.3em] shadow-[0_20px_50px_rgba(22,163,74,0.3)] flex items-center justify-center gap-4 hover:bg-green-700 transition-all active:scale-95 disabled:opacity-40">Push To Ledger</button>
+                                </form>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
             </AnimatePresence>
 
             {/* LOGOUT MODAL */}
