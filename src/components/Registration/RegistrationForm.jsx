@@ -7,11 +7,11 @@ import {
     FiUser, FiMail, FiCheckCircle, FiFileText, 
     FiCamera, FiCalendar, FiX, FiRefreshCw, 
     FiAward, FiDollarSign, FiShield, FiArrowRight, FiLock,
-    FiPhone, FiUpload, FiAlertTriangle, FiCheck, FiLoader, FiTag
+    FiPhone, FiUpload, FiAlertTriangle, FiCheck, FiLoader, FiTag, FiCreditCard, FiSmartphone
 } from 'react-icons/fi';
 import { techCoursesData, universityPrograms } from '../../data/courses';
 
-// --- AADHAAR VERIFICATION ALGORITHM (Luhn-based variant) ---
+// --- AADHAAR VERIFICATION ALGORITHM ---
 const validateAadhaar = (aadhaarString) => {
     if (!aadhaarString || aadhaarString.length !== 12 || !/^\d+$/.test(aadhaarString)) return false;
     const d = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 3, 4, 0, 6, 7, 8, 9, 5], [2, 3, 4, 0, 1, 7, 8, 9, 5, 6], [3, 4, 0, 1, 2, 8, 9, 5, 6, 7], [4, 0, 1, 2, 3, 9, 5, 6, 7, 8], [5, 9, 8, 7, 6, 0, 4, 3, 2, 1], [6, 5, 9, 8, 7, 1, 0, 4, 3, 2], [7, 6, 5, 9, 8, 2, 1, 0, 4, 3], [8, 7, 6, 5, 9, 3, 2, 1, 0, 4], [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]];
@@ -41,6 +41,11 @@ export default function RegistrationForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [regSuccessData, setRegSuccessData] = useState(null);
 
+    // --- PAYMENT STATES ---
+    const [showPayment, setShowPayment] = useState(false);
+    const [transactionId, setTransactionId] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('UPI');
+
     // --- COUPON STATES ---
     const [couponCode, setCouponCode] = useState('');
     const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
@@ -48,8 +53,9 @@ export default function RegistrationForm() {
 
     const [formData, setFormData] = useState({
         name: '', fatherName: '', dob: '', email: '', phone: '', aadhaarNo: '', address: '',
-        highSchoolBoard: '', highSchoolYear: '', highSchoolPercent: '',
-        interBoard: '', interYear: '', interPercent: '', course: '', studentImage: null
+        highSchoolBoard: '', highSchoolYear: '', highSchoolPercent: '', highSchoolStatus: 'COMPLETED',
+        interBoard: '', interYear: '', interPercent: '', interStatus: 'COMPLETED',
+        course: '', studentImage: null
     });
     const [previewImage, setPreviewImage] = useState(null);
 
@@ -62,8 +68,6 @@ export default function RegistrationForm() {
             const allCourses = [...(techCoursesData || []), ...(universityPrograms || [])];
             const match = allCourses.find(c => c.title === courseTitle || c.id === courseTitle);
             setFormData(prev => ({ ...prev, course: match ? match.title : courseTitle }));
-            
-            // Clean currency strings to Pure Numbers for math
             const rawPrice = match ? (match.price || match.fee) : (coursePrice || 0);
             setSelectedPrice(Number(rawPrice.toString().replace(/[^0-9]/g, "")));
         }
@@ -83,7 +87,6 @@ export default function RegistrationForm() {
         setTimeout(() => setToast({ show: false, msg: "", type: "error" }), 5000);
     };
 
-    // --- DYNAMIC DISCOUNT CALCULATOR (CASE 1 & CASE 2) ---
     const handleApplyCoupon = async () => {
         if (!couponCode) return;
         setIsValidatingCoupon(true);
@@ -92,32 +95,16 @@ export default function RegistrationForm() {
                 code: couponCode.toUpperCase(),
                 courseTitle: formData.course
             });
-
             if (res.data.success) {
                 const { discountType, discountValue } = res.data;
-                let finalDiscount = 0;
-
-                // Handle Logic for Percentage vs Fixed Amount
-                if (discountType === 'PERCENTAGE') {
-                    finalDiscount = (selectedPrice * Number(discountValue)) / 100;
-                } else {
-                    finalDiscount = Number(discountValue);
-                }
-
-                setDiscountInfo({
-                    applied: true,
-                    amount: finalDiscount,
-                    code: couponCode.toUpperCase(),
-                    type: discountType
-                });
+                let finalDiscount = discountType === 'PERCENTAGE' ? (selectedPrice * Number(discountValue)) / 100 : Number(discountValue);
+                setDiscountInfo({ applied: true, amount: finalDiscount, code: couponCode.toUpperCase(), type: discountType });
                 triggerToast("Promo Code Applied Successfully!", "success");
             }
         } catch (err) {
             setDiscountInfo({ applied: false, amount: 0, code: '', type: '' });
             triggerToast(err.response?.data?.message || "Invalid or Expired Code");
-        } finally {
-            setIsValidatingCoupon(false);
-        }
+        } finally { setIsValidatingCoupon(false); }
     };
 
     const finalPayable = selectedPrice - discountInfo.amount;
@@ -135,11 +122,13 @@ export default function RegistrationForm() {
     };
 
     const handlePercent = (prefix, val) => {
-        if (parseFloat(val) > 100) return triggerToast("Percentage cannot exceed 100");
+        const num = parseFloat(val);
+        if (num > 100) return triggerToast("Percentage cannot exceed 100%");
         setFormData({ ...formData, [`${prefix}Percent`]: val });
     };
 
     const handleSendOtp = async () => {
+        if (!formData.email) return triggerToast("Please enter Email Id");
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return triggerToast("Invalid Email Format");
         setIsVerifying(true);
         try {
@@ -173,10 +162,8 @@ export default function RegistrationForm() {
                 setPreviewImage(URL.createObjectURL(file));
                 triggerToast("Biometric Scan Verified", "success");
             }
-        } catch (err) {
-            triggerToast("Scanning Error. Use JPG/PNG.");
-            e.target.value = "";
-        } finally { setIsValidatingImage(false); }
+        } catch (err) { triggerToast("Scanning Error. Use JPG/PNG."); e.target.value = ""; } 
+        finally { setIsValidatingImage(false); }
     };
 
     const validateForm = () => {
@@ -190,39 +177,27 @@ export default function RegistrationForm() {
     };
 
     const handleFinalSubmit = async () => {
+        if (!transactionId && paymentMethod === 'UPI') return triggerToast("Please enter Transaction ID to continue");
         setIsSubmitting(true);
         const data = new FormData();
-        
-        // Append Basic Data
-        Object.keys(formData).forEach(key => {
-            if (key !== 'studentImage') data.append(key, formData[key]);
-        });
+        Object.keys(formData).forEach(key => { if (key !== 'studentImage') data.append(key, formData[key]); });
         if (formData.studentImage) data.append('studentImage', formData.studentImage);
-        
-        // Append Computed totalFee (Discounted or Full)
         data.append('totalFee', finalPayable);
+        data.append('transactionId', transactionId);
+        data.append('paymentMethod', paymentMethod);
 
-        // Sync Coupon Metadata for Backend Atomic Increments
         if (discountInfo.applied) {
-            data.append('appliedCoupon', JSON.stringify({
-                code: discountInfo.code,
-                discountValue: discountInfo.amount
-            }));
+            data.append('appliedCoupon', JSON.stringify({ code: discountInfo.code, discountValue: discountInfo.amount }));
         }
 
         try {
             const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/registration/submit`, data);
             if (res.data.success) {
-                setRegSuccessData({ 
-                    regId: res.data.registrationId, 
-                    pass: res.data.rawPassword,
-                    isReturning: res.data.isReturning 
-                });
-                setShowReview(false);
+                setRegSuccessData({ regId: res.data.registrationId, pass: res.data.rawPassword, isReturning: res.data.isReturning });
+                setShowPayment(false);
             }
-        } catch (err) { 
-            triggerToast(err.response?.data?.message || "Internal Server Failure"); 
-        } finally { setIsSubmitting(false); }
+        } catch (err) { triggerToast(err.response?.data?.message || "Internal Server Failure"); } 
+        finally { setIsSubmitting(false); }
     };
 
     return (
@@ -232,6 +207,45 @@ export default function RegistrationForm() {
                     <motion.div initial={{ y: -100, x: '-50%' }} animate={{ y: 20, x: '-50%' }} exit={{ y: -100, x: '-50%' }}
                         className={`fixed top-0 left-1/2 z-[3000] px-6 py-4 rounded-2xl shadow-2xl font-black text-white flex items-center gap-3 ${toast.type === 'success' ? 'bg-[#1A5F7A]' : 'bg-red-600'}`}>
                         {toast.type === 'success' ? <FiCheckCircle /> : <FiAlertTriangle />} {toast.msg}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* PAYMENT POPUP MODAL */}
+            <AnimatePresence>
+                {showPayment && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[2500] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-[3rem] p-8 max-w-lg w-full shadow-2xl overflow-hidden border-t-[12px] border-[#1A5F7A]">
+                            <div className="flex justify-between items-center mb-8">
+                                <h2 className="text-2xl font-black text-slate-800 uppercase italic leading-none">Complete Payment</h2>
+                                <button onClick={() => setShowPayment(false)} className="text-slate-400 hover:text-red-500"><FiX size={24}/></button>
+                            </div>
+                            
+                            <div className="bg-slate-50 p-6 rounded-3xl mb-8 border border-dashed border-slate-300 flex flex-col items-center">
+                                <p className="text-[10px] font-black text-[#1A5F7A] uppercase tracking-widest mb-4">EXPERT COMPUTER ACADEMY</p>
+                                <div className="w-48 h-48 bg-white p-2 rounded-2xl shadow-inner mb-4 relative">
+                                    {/* GENERATING QR FOR: 318334639811970@cnrb */}
+                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=318334639811970@cnrb%26pn=EXPERT%20COMPUTER%20ACADEMY%26am=${finalPayable}%26cu=INR`} alt="Expert Academy QR" className="w-full h-full" />
+                                </div>
+                                <p className="text-[9px] font-bold text-slate-400 mt-2">UPI ID: 318334639811970@cnrb</p>
+                                <div className="mt-4 flex gap-2">
+                                    <span className="px-3 py-1 bg-blue-100 text-blue-600 text-[10px] font-bold rounded-full">GPay</span>
+                                    <span className="px-3 py-1 bg-purple-100 text-purple-600 text-[10px] font-bold rounded-full">PhonePe</span>
+                                    <span className="px-3 py-1 bg-cyan-100 text-cyan-600 text-[10px] font-bold rounded-full">Paytm</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <InputField label="Transaction ID / UTR" icon={<FiSmartphone />} value={transactionId} onChange={setTransactionId} placeholder="Enter 12-digit UTR number" />
+                                <div className="flex gap-4">
+                                    <button onClick={() => setPaymentMethod('UPI')} className={`flex-1 py-4 rounded-2xl border-2 font-bold transition-all ${paymentMethod === 'UPI' ? 'border-[#1A5F7A] bg-blue-50 text-[#1A5F7A]' : 'border-slate-100 text-slate-400'}`}>UPI Scan</button>
+                                    <button onClick={() => setPaymentMethod('CASH')} className={`flex-1 py-4 rounded-2xl border-2 font-bold transition-all ${paymentMethod === 'CASH' ? 'border-[#1A5F7A] bg-blue-50 text-[#1A5F7A]' : 'border-slate-100 text-slate-400'}`}>Cash</button>
+                                </div>
+                                <button onClick={handleFinalSubmit} disabled={isSubmitting} className="w-full py-5 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3">
+                                    {isSubmitting ? <FiRefreshCw className="animate-spin" /> : "Deploy Enrollment Profile"}
+                                </button>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -280,7 +294,6 @@ export default function RegistrationForm() {
                             </div>
 
                             <div className="p-8 md:p-16 space-y-16">
-                                {/* BIOMETRIC PASSPORT UPLOAD */}
                                 <div className="flex flex-col items-center">
                                     <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileSelect} />
                                     <div className="relative cursor-pointer group" onClick={() => !isValidatingImage && fileInputRef.current.click()}>
@@ -313,7 +326,6 @@ export default function RegistrationForm() {
                                         </div>
                                     </section>
 
-                                    {/* DYNAMIC LEDGER & PROMO CONSOLE */}
                                     <section className="pt-6">
                                         <div className="bg-slate-900 rounded-[3rem] text-white shadow-3xl relative overflow-hidden flex flex-col">
                                             <div className="p-10 flex flex-col md:flex-row justify-between items-center gap-10">
@@ -381,7 +393,6 @@ export default function RegistrationForm() {
                                     <ReviewItem label="Mobile" value={formData.phone} />
                                     <ReviewItem label="Father" value={formData.fatherName} />
                                 </div>
-                                
                                 <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white border-b-[6px] border-orange-600">
                                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Financial Overview</p>
                                     <div className="flex justify-between items-center text-sm font-bold opacity-60"><span>Original Fee</span><span>₹{selectedPrice.toLocaleString()}</span></div>
@@ -391,8 +402,8 @@ export default function RegistrationForm() {
                                 </div>
                             </div>
                             <div className="p-10 bg-slate-50 border-t">
-                                <button onClick={handleFinalSubmit} disabled={isSubmitting} className="w-full py-6 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-2xl flex items-center justify-center gap-3 active:scale-[0.98] transition-transform">
-                                    {isSubmitting ? <FiRefreshCw className="animate-spin"/> : "Deploy Enrollment Profile"}
+                                <button onClick={() => { setShowReview(false); setShowPayment(true); }} className="w-full py-6 bg-[#1A5F7A] text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-2xl flex items-center justify-center gap-3 active:scale-[0.98] transition-transform">
+                                    Proceed to Payment <FiCreditCard />
                                 </button>
                             </div>
                         </motion.div>
@@ -423,13 +434,21 @@ function InputField({ label, icon, type = "text", value, onChange, maxLength, er
 }
 
 function AcademicBox({ title, prefix, formData, setFormData, onYear, onPercent }) {
+    const isPursuing = formData[`${prefix}Status`] === 'PURSUING';
+    
     return (
         <div className="p-8 bg-slate-50/50 rounded-[3rem] border-2 border-slate-100 space-y-6 shadow-sm">
-            <p className="text-[11px] font-black text-[#1A5F7A] uppercase tracking-widest flex items-center gap-3"><FiAward className="text-orange-500" /> {title}</p>
+            <div className="flex justify-between items-center">
+                <p className="text-[11px] font-black text-[#1A5F7A] uppercase tracking-widest flex items-center gap-3"><FiAward className="text-orange-500" /> {title}</p>
+                <select value={formData[`${prefix}Status`]} onChange={(e) => setFormData({...formData, [`${prefix}Status`]: e.target.value})} className="text-[10px] font-black uppercase bg-white border-2 border-slate-100 rounded-full px-3 py-1 outline-none text-[#1A5F7A]">
+                    <option value="COMPLETED">Completed</option>
+                    <option value="PURSUING">Pursuing</option>
+                </select>
+            </div>
             <InputField label="Board / University" value={formData[`${prefix}Board`]} onChange={(v) => setFormData({...formData, [`${prefix}Board`]: v})} />
             <div className="grid grid-cols-2 gap-5">
-                <InputField label="Pass Year" maxLength={4} value={formData[`${prefix}Year`]} onChange={(v) => onYear(prefix, v)} />
-                <InputField label="Score (%)" value={formData[`${prefix}Percent`]} onChange={(v) => onPercent(prefix, v)} />
+                <InputField label={isPursuing ? "Target Year" : "Pass Year"} maxLength={4} value={formData[`${prefix}Year`]} onChange={(v) => onYear(prefix, v)} />
+                <InputField label="Score (%)" value={isPursuing ? '0' : formData[`${prefix}Percent`]} onChange={(v) => !isPursuing && onPercent(prefix, v)} placeholder={isPursuing ? "N/A" : "00.00"} />
             </div>
         </div>
     );
