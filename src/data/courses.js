@@ -9,6 +9,7 @@ export const techCoursesData = [
     { id: "dsa-master", title: "Data Structure and Algorithms (C/C++/C#/Java)", fee: "4842", segment: "College Students", modules: ["Complexity Analysis", "Arrays & Linked Lists", "Stacks & Queues", "Trees & Graphs", "Searching & Sorting Algorithms"] },
     { id: "found-it-new", title: "Foundation in Information Technology", fee: "6500", segment: "Retired Persons", modules: ["C++ Programming", "Logic Building", "Python with Live Project", "HTML5, CSS & JavaScript"] },
     { id: "gen-ai-master", title: "Advanced Diploma in Generative AI", fee: "42500", segment: "Working Professionals", modules: ["Foundations of LLMs", "Prompt Engineering", "Fine-tuning", "RAG Apps"] },
+    { id: "prog-cpp", title: "Programming using C++", fee: "3540", modules: ["OOPS Concepts", "Encapsulation & Abstraction", "Constructors & Destructors", "Inheritance", "Functions", "Linked Lists", "Arrays"] },
     {
         id: "ms-office-basic",
         title: "Contents of MS-Office",
