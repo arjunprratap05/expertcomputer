@@ -217,7 +217,7 @@ export default function Home() {
                                         <FiBookOpen /> Course Details
                                     </button>
                                     <button 
-                                        onClick={() => window.open('https://forms.gle/YOUR_GOOGLE_FORM_ID', '_blank')}
+                                        onClick={() => window.open('https://forms.gle/jPd53cxWSjje4Ssc7', '_blank')}
                                         className="bg-[#F37021] text-white px-10 py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest flex items-center gap-3 hover:bg-[#1A5F7A] transition-all shadow-2xl"
                                     >
                                         Register Now <FiExternalLink />
