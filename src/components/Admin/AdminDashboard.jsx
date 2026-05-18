@@ -4,10 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiUsers, FiMessageSquare, FiLogOut, FiActivity, FiX, FiMenu, FiSearch, 
-    FiCheckCircle, FiCreditCard, FiPieChart, FiDollarSign, FiVideo, FiBookOpen, 
-    FiGrid, FiClock, FiShield, FiTag, FiCalendar, FiTarget, FiCopy, FiChevronDown,
-    FiZap, FiCheck, FiTrendingDown, FiPhoneCall, FiAlertCircle, FiPlus, FiCpu, FiUserCheck,
-    FiMessageCircle, FiFacebook, FiChrome, FiGlobe
+    FiCheckCircle, FiCreditCard, FiDollarSign, FiVideo, FiBookOpen, 
+    FiGrid, FiClock, FiShield, FiTag, FiChevronDown, FiZap, FiPhoneCall, 
+    FiAlertCircle, FiCpu, FiUserCheck, FiMessageCircle, FiFacebook, FiGlobe
 } from 'react-icons/fi';
 
 // Internal Assets & Admin Modules
@@ -182,7 +181,6 @@ export default function AdminDashboard() {
         const headers = { Authorization: `Bearer ${token}` };
         const latencyStart = performance.now();
 
-        // Safe data acquisition isolation wrapper to block single promise crashes
         const safeFetch = async (url) => {
             try {
                 const res = await axios.get(url, { headers });
@@ -287,10 +285,8 @@ export default function AdminDashboard() {
         } catch (err) { triggerToast("FAILED"); }
     };
 
-    // --- LEAD SOURCE BADGE MAPPER GENERATOR ---
     const renderSourceBadge = (sourceString) => {
         const normalizedSource = sourceString?.toLowerCase().trim() || "website";
-        
         if (normalizedSource.includes("bot") || normalizedSource.includes("chatbot") || normalizedSource.includes("ai")) {
             return (
                 <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full font-black text-[8px] w-fit border border-blue-100 uppercase italic flex items-center gap-1">
@@ -302,13 +298,6 @@ export default function AdminDashboard() {
             return (
                 <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full font-black text-[8px] w-fit border border-indigo-100 uppercase italic flex items-center gap-1">
                     <FiFacebook size={10} /> Facebook Ads
-                </div>
-            );
-        }
-        if (normalizedSource.includes("google") || normalizedSource.includes("seo") || normalizedSource.includes("search")) {
-            return (
-                <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full font-black text-[8px] w-fit border border-emerald-100 uppercase italic flex items-center gap-1">
-                    <FiTheme size={10} /> Google Search
                 </div>
             );
         }
@@ -357,7 +346,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="bg-white p-8 rounded-[2.5rem] border border-red-100 flex items-center gap-5 border-dashed shadow-sm">
-                    <div className="p-4 bg-red-50 text-red-500 rounded-2xl animate-pulse"><FiTrendingDown size={30}/></div>
+                    <div className="p-4 bg-red-50 text-red-500 rounded-2xl animate-pulse"><FiActivity size={30}/></div>
                     <div><p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">Queue</p><div className="text-xl font-black text-[#1A5F7A] italic">{finances.pendingAdjustments} Alerts</div></div>
                 </div>
             </div>
@@ -434,11 +423,27 @@ export default function AdminDashboard() {
                                             <div className="font-black text-[#1A5F7A] text-[15px]">₹{student.amountPaid?.toLocaleString()} <span className="text-slate-300 text-[11px] font-normal">/ ₹{student.totalFee?.toLocaleString() || ledger.total.toLocaleString()}</span></div>
                                             <div className={`text-[10px] uppercase font-black italic mt-1.5 ${ledger.due > 0 ? 'text-red-500' : 'text-green-600'}`}>{ledger.due > 0 ? `DUE: ₹${ledger.due.toLocaleString()}` : 'CLEARED'}</div>
                                         </td>
+                                        {/* PRD UPGRADE: INTEGRATED MASTER PORTAL VITAL STATES WITH SUITE STREAM TRACKS */}
                                         <td>
-                                            <div className="flex flex-col gap-1">
-                                                {student.activeBatches?.length > 0 ? student.activeBatches.map(b => (
-                                                    <div key={b._id} className="bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-100 text-[8px] font-black w-fit uppercase flex items-center gap-1"><FiZap size={10}/>{b.batchCode}</div>
-                                                )) : <div className="text-slate-300 text-[9px] font-black uppercase italic tracking-wider">Unallocated</div>}
+                                            <div className="flex flex-col gap-2">
+                                                {student.isApproved ? (
+                                                    <div className="bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-200 text-[9px] font-black w-fit uppercase flex items-center gap-1.5 shadow-sm">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                                        Portal Active
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-red-50 text-red-500 px-2 py-1 rounded-lg border border-red-200 text-[9px] font-black w-fit uppercase flex items-center gap-1.5 shadow-sm">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                                        Portal Inactive
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                                    {student.activeBatches?.length > 0 ? student.activeBatches.map(b => (
+                                                        <div key={b._id} className="bg-slate-100 text-[#1A5F7A] px-2 py-0.5 rounded-md border border-slate-200 text-[8px] font-black uppercase flex items-center gap-1">
+                                                            <FiZap size={9} className="text-[#F37021]"/> {b.batchCode}
+                                                        </div>
+                                                    )) : <div className="text-slate-300 text-[9px] font-bold uppercase italic tracking-wider ml-1">No Batches Assigned</div>}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="pr-7 text-right">
@@ -464,7 +469,7 @@ export default function AdminDashboard() {
                                                                         <div>
                                                                             <div className="text-[14px] font-black text-[#1A5F7A] uppercase italic leading-none">{en.course}</div>
                                                                             <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-wider">
-                                                                                <FiCopy className="cursor-pointer hover:text-[#F37021]" onClick={() => {navigator.clipboard.writeText(en.transactionId); triggerToast("COPIED UTR")}}/>
+                                                                                <FiTag className="cursor-pointer hover:text-[#F37021]" onClick={() => {navigator.clipboard.writeText(en.transactionId); triggerToast("COPIED UTR")}}/>
                                                                                 UTR: <span className="text-slate-600 font-black">{en.transactionId}</span>
                                                                             </div>
                                                                         </div>
@@ -649,11 +654,9 @@ export default function AdminDashboard() {
                                             <td className="p-7">
                                                 <div className="font-black text-[#1A5F7A] uppercase italic text-[15px] group-hover:text-[#F37021]">{item.name}</div>
                                                 <div className="text-slate-400 font-bold text-[11px] mt-1">{item.phone}</div>
-                                                {/* FIXED: Outputting the Lead Email Node directly under the profile identity block */}
                                                 <div className="text-slate-400 text-[10px] tracking-tight truncate max-w-xs lowercase font-medium mt-0.5">{item.email || "no-email@registered.com"}</div>
                                             </td>
                                             <td className="font-black text-[#1A5F7A] uppercase opacity-80 text-[13px]">{item.course || "GENERAL"}</td>
-                                            {/* FIXED: Dynamic source badge evaluation logic render layer */}
                                             <td>{renderSourceBadge(item.source)}</td>
                                             <td className="pr-7 text-right">
                                                 <button onClick={() => handleEnquiryStatusUpdate(item._id, item.isContacted, item.name)} className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ml-auto ${item.isContacted ? 'bg-green-500 text-white shadow-lg' : 'bg-white border-2 text-slate-200 hover:border-[#F37021] hover:text-[#F37021]'}`}>
@@ -752,7 +755,7 @@ export default function AdminDashboard() {
                         <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic mb-8 leading-tight">Terminate Current<br/>Session?</h3>
                         <div className="grid grid-cols-2 gap-4">
                             <button onClick={() => setLogoutModal(false)} className="py-4 bg-slate-100 rounded-2xl font-black uppercase text-[10px] text-slate-500 hover:bg-slate-200 transition-colors">Stay Signed In</button>
-                            <button onClick={handleLogout} className="py-4 bg-red-50 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 hover:bg-red-600 transition-all">Logout Engine</button>
+                            <button onClick={handleLogout} className="py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all">Logout Engine</button>
                         </div>
                     </motion.div>
                 </div>
