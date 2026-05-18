@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiArrowLeft, FiAward, FiShield, FiMaximize2, FiX, FiDownload } from 'react-icons/fi';
+import { FiArrowLeft, FiAward, FiShield, FiExternalLink, FiX, FiDownload, FiLayers } from 'react-icons/fi';
 
 // Assets
 import founder1Img from '../../assets/founder1.png'; 
@@ -12,7 +12,7 @@ import dananjay from '../../assets/dananjay.jpeg';
 import amit from '../../assets/amit.jpeg';
 import sanchita from '../../assets/sanchita.jpeg';
 import pawan from '../../assets/pawan.jpeg';
-import amitsingh from '../../assets/AmitSingh.jpeg'
+import amitsingh from '../../assets/AmitSingh.jpeg';
 
 // Certificate Imports
 import sudiptcertificate from '../../assets/certificates/Sudipt-Sengupta TCT Certificate.pdf';
@@ -21,9 +21,15 @@ import pawanMSCertificateSQL from '../../assets/certificates/MS Certificate SQL.
 
 export default function Founder() {
     const [activeCert, setActiveCert] = useState(null);
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        handleResize(); // run on mount
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const founders = [
@@ -32,188 +38,268 @@ export default function Founder() {
             role: "Founder & Director",
             image: founder1Img,
             expertise: ["Strategic Planning", "38+ Years Exp"],
-            bio: "A visionary leader who laid the foundation of Expert Computer Academy in 1987.",
+            bio: "A visionary leader who laid the foundation of Expert Computer Academy in 1987, pioneering technical excellence in the region.",
         },
         {
             name: "Sima Choudhary",
             role: "Co-Founder & Technical Head",
             image: founder2Img,
             expertise: ["Full Stack", "Curriculum Design"],
-            bio: "Ensuring every student learns technologies the industry actually demands.",
+            bio: "Driving the academy's technological edge, ensuring every student learns modern frameworks demanded by top-tier industries.",
         }
     ];
 
     const faculty = [
-        { name: "Madhu Chanda Ghosh", role: "Java Expert", exp: "34 Years", specialty: "Center Head/Java Expert", image: madhu },
+        { name: "Madhu Chanda Ghosh", role: "Java Expert", exp: "34 Years", specialty: "Center Head / Java Expert", image: madhu },
         { 
             name: "Sudipt Sengupta", 
-            role: "Faculty", 
+            role: "Senior Faculty", 
             exp: "34 Years", 
-            specialty: "Tally, Python", 
+            specialty: "Tally, Python Systems", 
             image: sudip,
-            certificates: [
-                { name: "Tally Certified Trainer", link: sudiptcertificate }
-            ]
+            certificates: [{ name: "Tally Certified Trainer", link: sudiptcertificate }]
         },
         { 
             name: "Pawan Kumar Jha", 
-            role: "Networking", 
+            role: "Networking Head", 
             exp: "26 Years", 
-            specialty: "Networking Specialist", 
+            specialty: "Infrastructure Specialist", 
             image: pawan,
             certificates: [
                 { name: "MS Certified: .NET", link: pawanMSCertificate },
                 { name: "MS Certified: SQL", link: pawanMSCertificateSQL }
             ]
         },
-        { name: "Dhananjay Kumar", role: "Faculty", exp: "20 Years", specialty: "C/C++ Specialist", image: dananjay },
-        { name: "Sanchita Ghosh", role: "Faculty", exp: "25 Years", specialty: "Bussiness Head & Communication Skills Expert", image: sanchita },
-        { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Bussiness Executive", image: amit },
-        { name: "Amit Kumar Singh", role: "Faculty", exp: "20 Years", specialty: "Accounnts", image: amitsingh }
+        { name: "Dhananjay Kumar", role: "Faculty", exp: "20 Years", specialty: "C/C++ Architecture", image: dananjay },
+        { name: "Sanchita Ghosh", role: "Business Lead", exp: "25 Years", specialty: "Communication Skills Expert", image: sanchita },
+        { name: "Amit", role: "Faculty", exp: "20 Years", specialty: "Business Executive Operations", image: amit },
+        { name: "Amit Kumar Singh", role: "Faculty", exp: "20 Years", specialty: "Corporate Accounts", image: amitsingh }
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 py-12 md:py-20 px-4 md:px-6 font-sans overflow-x-hidden relative">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 text-slate-100 py-12 md:py-24 px-4 sm:px-6 lg:px-8 font-sans overflow-x-hidden relative">
+            
+            {/* Ambient Background Glows */}
+            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-orange-500/5 rounded-full blur-[150px] pointer-events-none" />
+
+            <div className="max-w-7xl mx-auto relative z-10">
                 
-                {/* NAVIGATION */}
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <Link to="/" className="inline-flex items-center gap-2 text-[#1A5F7A] font-bold mb-8 md:mb-12 hover:underline group">
-                        <FiArrowLeft className="group-hover:-translate-x-2 transition-transform" /> 
-                        <span className="text-xs md:text-sm uppercase tracking-widest">Back to Academy</span>
+                {/* BACK NAVIGATION */}
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                    <Link to="/" className="inline-flex items-center gap-3 text-slate-400 hover:text-orange-400 font-semibold mb-12 group transition-colors">
+                        <span className="p-2 bg-slate-800/80 border border-slate-700/50 rounded-xl group-hover:-translate-x-1.5 transition-transform">
+                            <FiArrowLeft size={16} />
+                        </span>
+                        <span className="text-xs uppercase tracking-widest font-bold">Back to Academy</span>
                     </Link>
                 </motion.div>
 
-                {/* HEADER */}
-                <div className="mb-12 md:mb-20 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-full mb-6">
-                        <FiShield className="text-[#1A5F7A]" />
-                        <span className="text-[#1A5F7A] text-[9px] md:text-[10px] font-black uppercase tracking-widest">The Pillars of ECA Patna</span>
+                {/* HERO TITLE SECTION */}
+                <div className="mb-16 md:mb-28 text-left max-w-4xl">
+                    <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full mb-6 backdrop-blur-sm">
+                        <FiShield className="text-blue-400" size={14} />
+                        <span className="text-blue-300 text-[10px] md:text-xs font-bold uppercase tracking-widest">The Pillars of ECA Patna</span>
                     </div>
-                    <h1 className="text-4xl md:text-7xl font-black text-[#1A5F7A] leading-[1.1] md:leading-[0.9] tracking-tighter mb-6">
-                        Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F37021] to-[#ff9f67]">Leadership</span> & Faculty
+                    <h1 className="text-4xl sm:text-5xl md:text-8xl font-extrabold tracking-tight text-white mb-6 leading-none">
+                        Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-orange-500 to-amber-300">Leadership</span> <br className="hidden md:inline"/>& Elite Faculty
                     </h1>
+                    <p className="text-slate-400 text-base md:text-xl font-medium max-w-2xl leading-relaxed">
+                        Meet the visionaries and industry veterans shaping the tech leaders of tomorrow since 1987.
+                    </p>
                 </div>
 
-                {/* FOUNDERS GRID */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 mb-20 md:mb-32">
-                    {founders.map((founder, index) => (
-                        <motion.div 
-                            key={index}
-                            whileHover={{ y: -10 }}
-                            className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 shadow-xl border border-slate-100 flex flex-col md:flex-row items-center gap-6 md:gap-10 relative overflow-hidden"
-                        >
-                            <div className="w-40 h-48 md:w-48 md:h-56 flex-shrink-0 relative z-10 bg-slate-100 rounded-[1.5rem] md:rounded-[2.5rem]">
-                                <img 
-                                    src={founder.image} 
-                                    alt={founder.name} 
-                                    className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-4 border-white"
-                                    fetchpriority="high" // Prioritize main founders
-                                />
-                            </div>
-                            <div className="relative z-10 space-y-3 md:space-y-4 text-center md:text-left">
-                                <h2 className="text-2xl md:text-3xl font-black text-[#1A5F7A] uppercase tracking-tighter">{founder.name}</h2>
-                                <p className="text-[#F37021] font-black text-[10px] md:text-xs uppercase tracking-widest">{founder.role}</p>
-                                <p className="text-slate-600 text-sm md:text-base font-medium italic leading-relaxed">"{founder.bio}"</p>
-                            </div>
-                        </motion.div>
-                    ))}
+                {/* FOUNDERS SECTION */}
+                <div className="space-y-12 md:space-y-20 mb-24 md:mb-40">
+                    <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
+                        <FiLayers className="text-orange-500" size={24} />
+                        <h2 className="text-2xl font-bold tracking-wider uppercase text-slate-300">Founding Board</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
+                        {founders.map((founder, index) => (
+                            <motion.div 
+                                key={index}
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.6, delay: index * 0.1 }}
+                                className="bg-gradient-to-br from-slate-900 to-slate-800/60 rounded-3xl border border-slate-800 hover:border-slate-700/80 p-6 md:p-8 shadow-2xl flex flex-col sm:flex-row items-center sm:items-stretch gap-6 md:gap-8 relative overflow-hidden group"
+                            >
+                                <div className="w-full sm:w-48 md:w-56 h-64 sm:h-auto flex-shrink-0 relative overflow-hidden rounded-2xl bg-slate-950">
+                                    <img 
+                                        src={founder.image} 
+                                        alt={founder.name} 
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        fetchpriority="high"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60 sm:opacity-40" />
+                                </div>
+                                
+                                <div className="flex flex-col justify-between py-2 text-center sm:text-left flex-1">
+                                    <div>
+                                        <span className="text-orange-400 font-bold text-[10px] md:text-xs uppercase tracking-widest block mb-2">
+                                            {founder.role}
+                                        </span>
+                                        <h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight mb-4">
+                                            {founder.name}
+                                        </h3>
+                                        <p className="text-slate-400 text-sm md:text-base leading-relaxed font-normal mb-6">
+                                            "{founder.bio}"
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-auto">
+                                        {founder.expertise.map((exp, i) => (
+                                            <span key={i} className="bg-slate-800 text-slate-300 border border-slate-700 text-xs px-3 py-1 rounded-lg font-medium">
+                                                {exp}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
 
-                {/* FACULTY GRID */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                    {faculty.map((member, index) => (
-                        <motion.div key={index} className="group flex items-center gap-5 md:gap-6 p-5 md:p-6 bg-white rounded-[2rem] border border-slate-100 hover:border-[#F37021]/30 transition-all shadow-sm">
-                            <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 relative bg-slate-50 rounded-xl md:rounded-2xl">
-                                <img 
-                                    src={member.image} 
-                                    alt={member.name} 
-                                    className="w-full h-full object-cover rounded-xl md:rounded-2xl shadow-md border-2 border-white"
-                                    loading="lazy" // Optimized for faster page load
-                                />
+                {/* FACULTY SECTION */}
+                <div className="space-y-12">
+                    <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
+                        <FiAward className="text-orange-500" size={24} />
+                        <h2 className="text-2xl font-bold tracking-wider uppercase text-slate-300">Expert Core Faculty</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                        {faculty.map((member, index) => (
+                            <motion.div 
+                                key={index}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: index * 0.05 }}
+                                className="group bg-slate-900/40 backdrop-blur-sm border border-slate-800/80 hover:border-orange-500/40 rounded-2xl p-5 md:p-6 transition-all duration-300 flex flex-col justify-between hover:shadow-xl hover:shadow-orange-500/[0.02]"
+                            >
+                                <div>
+                                    {/* Card Top Avatar/Meta */}
+                                    <div className="flex items-center gap-4 md:gap-5 mb-5">
+                                        <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 relative bg-slate-800 rounded-xl overflow-hidden border border-slate-700">
+                                            <img 
+                                                src={member.image} 
+                                                alt={member.name} 
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                loading="lazy"
+                                            />
+                                            {member.certificates && (
+                                                <div className="absolute top-1 right-1 bg-amber-500 text-slate-950 p-1 rounded-md shadow-md">
+                                                    <FiAward size={10} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest block mb-0.5">
+                                                {member.exp} EXP
+                                            </span>
+                                            <h4 className="font-bold text-base md:text-lg text-white tracking-tight leading-snug truncate">
+                                                {member.name}
+                                            </h4>
+                                            <p className="text-xs text-slate-400 truncate mt-0.5 font-medium">
+                                                {member.role}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Specialty Badge */}
+                                    <div className="bg-slate-950/60 border border-slate-800/60 rounded-xl px-4 py-2.5 mb-4">
+                                        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block mb-0.5">Core Mastery</span>
+                                        <span className="text-xs text-slate-300 font-semibold">{member.specialty}</span>
+                                    </div>
+                                </div>
+
+                                {/* Certification Documents CTA */}
                                 {member.certificates && (
-                                    <div className="absolute -top-1 -right-1 bg-yellow-400 text-white p-1 rounded-full shadow-lg">
-                                        <FiAward size={12} />
+                                    <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-slate-800/60">
+                                        {member.certificates.map((cert, idx) => (
+                                            <button 
+                                                key={idx}
+                                                onClick={() => setActiveCert(cert)}
+                                                className="inline-flex items-center justify-between gap-2 text-xs font-medium text-blue-400 hover:text-orange-400 transition-colors bg-blue-500/5 hover:bg-orange-500/5 border border-blue-500/10 hover:border-orange-500/20 rounded-lg px-3 py-2 w-full text-left group/btn"
+                                            >
+                                                <span className="truncate">{cert.name}</span>
+                                                <FiExternalLink size={12} className="shrink-0 transition-transform group-hover/btn:translate-x-0.5" />
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-black text-base md:text-lg text-[#1A5F7A] uppercase tracking-tighter leading-tight truncate">{member.name}</h3>
-                                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{member.specialty}</p>
-                                <p className="text-[#F37021] text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-2">{member.exp} Experience</p>
-                                
-                                <div className="flex flex-col gap-1.5 mt-2">
-                                    {member.certificates?.map((cert, idx) => (
-                                        <button 
-                                            key={idx}
-                                            onClick={() => setActiveCert(cert)}
-                                            className="inline-flex items-center gap-1.5 text-[8px] md:text-[9px] font-black text-[#1A5F7A] uppercase tracking-tighter hover:text-[#F37021] transition-colors border-b border-[#1A5F7A]/10 w-fit pb-0.5 text-left"
-                                        >
-                                            <FiMaximize2 size={10} className="shrink-0" /> <span className="truncate max-w-[120px] md:max-w-full">{cert.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* CERTIFICATE POP-UP MODAL */}
+            {/* EXPANDED CERTIFICATE VIEWPORT MODAL */}
             <AnimatePresence>
                 {activeCert && (
-                    <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-10">
-                        {/* Overlay */}
+                    <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-6 lg:p-12">
+                        
+                        {/* Dim Backdrop Layer */}
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setActiveCert(null)}
-                            className="absolute inset-0 bg-[#0A192F]/90 backdrop-blur-md"
+                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
                         />
                         
-                        {/* Modal Content */}
+                        {/* Interactive Window Layer */}
                         <motion.div 
-                            initial={window.innerWidth < 768 ? { y: "100%" } : { scale: 0.95, opacity: 0 }}
-                            animate={window.innerWidth < 768 ? { y: 0 } : { scale: 1, opacity: 1 }}
-                            exit={window.innerWidth < 768 ? { y: "100%" } : { scale: 0.95, opacity: 0 }}
-                            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                            className="relative w-full md:max-w-4xl h-[92vh] md:h-[80vh] bg-white rounded-t-[2rem] md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+                            initial={isMobile ? { y: "100%" } : { scale: 0.95, opacity: 0 }}
+                            animate={isMobile ? { y: 0 } : { scale: 1, opacity: 1 }}
+                            exit={isMobile ? { y: "100%" } : { scale: 0.95, opacity: 0 }}
+                            transition={{ type: "spring", damping: 28, stiffness: 260 }}
+                            className="relative w-full md:max-w-4xl h-[90vh] md:h-[85vh] bg-slate-900 border border-slate-800 md:rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10"
                         >
-                            {/* Modal Header */}
-                            <div className="flex items-center justify-between px-6 md:px-8 py-4 border-b bg-white">
-                                <div className="flex items-center gap-2 md:gap-3">
-                                    <FiAward className="text-[#F37021] text-lg md:text-xl" />
-                                    <h3 className="font-black text-[#1A5F7A] uppercase tracking-widest text-[10px] md:text-sm truncate max-w-[200px] md:max-w-full">
+                            {/* Window Controller Bar */}
+                            <div className="flex items-center justify-between px-5 md:px-6 py-4 border-b border-slate-800 bg-slate-900/90 backdrop-blur-sm">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="p-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg shrink-0">
+                                        <FiAward size={16} />
+                                    </div>
+                                    <h3 className="font-bold text-slate-200 text-sm md:text-base truncate pr-4">
                                         {activeCert.name}
                                     </h3>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <a href={activeCert.link} download className="p-2 text-slate-400 hover:text-[#F37021] md:hidden">
-                                        <FiDownload size={20} />
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <a 
+                                        href={activeCert.link} 
+                                        download 
+                                        className="p-2 bg-slate-800 text-slate-400 hover:text-white border border-slate-700 rounded-lg transition-colors"
+                                        title="Download Certificate"
+                                    >
+                                        <FiDownload size={16} />
                                     </a>
                                     <button 
                                         onClick={() => setActiveCert(null)}
-                                        className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-red-500"
+                                        className="p-2 bg-slate-800 text-slate-400 hover:text-rose-400 border border-slate-700 rounded-lg transition-colors"
                                     >
-                                        <FiX size={24} />
+                                        <FiX size={16} />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* PDF Viewer Body */}
-                            <div className="flex-1 bg-slate-50 relative overflow-hidden">
+                            {/* Embed Embedded PDF View */}
+                            <div className="flex-1 bg-slate-950 relative">
                                 <iframe 
-                                    src={`${activeCert.link}#view=FitH&toolbar=0`} 
-                                    className="w-full h-full border-none"
-                                    title="Certificate Preview"
+                                    src={`${activeCert.link}#view=FitH&toolbar=1`} 
+                                    className="w-full h-full border-none opacity-90 inverted-colors-filter"
+                                    title="Verification Panel Preview"
                                 />
-                                
-                                <div className="absolute top-2 left-1/2 -translate-x-1/2 md:hidden pointer-events-none">
-                                    <div className="bg-black/60 text-white px-3 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest">
-                                        Pinch to zoom
+                                {isMobile && (
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none">
+                                        <div className="bg-slate-900/90 text-slate-400 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-slate-800 shadow-xl backdrop-blur-sm">
+                                            Pinch viewport to zoom
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>

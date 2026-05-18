@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
 import ChatBot from './components/chatbot'; 
-import expertcomputerlogo from './assets/expertcomputerlogo.png';
+import expertcomputerlogo from './assets/expertcomputerlogo.jpeg';
 
 // Text Animation Variants
 const textContainerVariants = {

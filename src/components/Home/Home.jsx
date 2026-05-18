@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, useScroll, useTransform, AnimatePresence, useSpring } from "framer-motion";
 import {
     FiArrowRight, FiShield, FiBookOpen, FiAward, FiStar, 
-    FiCode, FiCpu, FiLayers, FiZap, FiChevronUp, FiLoader, FiCalendar, FiClock, FiCheckCircle, FiExternalLink, FiGrid
+    FiCode, FiCpu, FiLayers, FiZap, FiChevronUp, FiLoader, FiCalendar, FiClock, FiCheckCircle, FiExternalLink, FiGrid, FiUser, FiSmartphone
 } from "react-icons/fi";
 
 // --- DATA & MODAL IMPORTS ---
@@ -37,30 +37,87 @@ import msofficePoster from '../../assets/posters/MS-OFFICE.jpeg';
 import AdvanceExcelPoster from '../../assets/posters/AdvanceExcel.jpeg';
 import tallyBootcampPoster from "../../assets/posters/TallyBootcampWebinar.jpeg";
 
-// --- UI HELPERS ---
-const TiltCard = ({ children, className }) => {
-    const x = useSpring(0, { stiffness: 150, damping: 20 });
-    const y = useSpring(0, { stiffness: 150, damping: 20 });
+// --- NEW COMPONENT: INFINITE RUNNING TICKER ---
+const RunningTicker = () => {
+    const tickerItems = [
+        "GENERATIVE AI INTEGRATED", "100% PRACTICAL LABS", "ISO 9001:2015 CERTIFIED", 
+        "PYTHON DATA SCIENCE", "ADVANCED TALLY PRIME", "FULL STACK WEB DEVELOPMENT", 
+        "MSME RECOGNIZED INSTITUTE", "38+ YEARS OF EXCELLENCE", "DSA IN C++"
+    ];
+
+    // Duplicate list to create seamless looping illusion
+    const duplicatedItems = [...tickerItems, ...tickerItems];
+
+    return (
+        <div className="w-full bg-[#0F2C59] text-white py-4 overflow-hidden relative flex items-center shadow-inner select-none">
+            {/* Ambient edge masking for smooth fade-in/fade-out */}
+            <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0F2C59] to-transparent z-10 pointer-events-none hidden sm:block" />
+            <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0F2C59] to-transparent z-10 pointer-events-none hidden sm:block" />
+
+            <motion.div 
+                className="flex whitespace-nowrap gap-12 text-xs md:text-sm font-extrabold tracking-[0.15em] uppercase items-center"
+                animate={{ x: [0, -1000] }}
+                transition={{
+                    ease: "linear",
+                    duration: 25,
+                    repeat: Infinity,
+                }}
+            >
+                {duplicatedItems.map((item, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                        <span>{item}</span>
+                        <span className="w-2 h-2 rounded-full bg-[#F37021]" />
+                    </div>
+                ))}
+            </motion.div>
+        </div>
+    );
+};
+
+// --- PREMIUM TILT CARD ---
+const PremiumTiltCard = ({ children, className }) => {
+    const x = useSpring(0, { stiffness: 120, damping: 25 });
+    const y = useSpring(0, { stiffness: 120, damping: 25 });
+    
     const handleMouse = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const mouseX = (e.clientX - rect.left) / rect.width - 0.5;
         const mouseY = (e.clientY - rect.top) / rect.height - 0.5;
-        x.set(mouseX * 15); y.set(mouseY * -15);
+        x.set(mouseX * 10); 
+        y.set(mouseY * -10);
     };
+    
     const handleLeave = () => { x.set(0); y.set(0); };
+    
     return (
-        <motion.div onMouseMove={handleMouse} onMouseLeave={handleLeave}
+        <motion.div 
+            onMouseMove={handleMouse} 
+            onMouseLeave={handleLeave}
             style={{ rotateY: x, rotateX: y, transformStyle: "preserve-3d" }}
-            className={className}>{children}</motion.div>
+            className={`transition-shadow duration-300 ${className}`}
+        >
+            {children}
+        </motion.div>
     );
 };
 
+// --- OPTIMIZED IMAGE LOADER ---
 const OptimizedImage = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     return (
-        <div className={`relative overflow-hidden bg-slate-100 ${className}`}>
-            {!isLoaded && <div className="absolute inset-0 flex items-center justify-center bg-slate-200 animate-pulse"><FiLoader className="text-[#F37021] animate-spin" /></div>}
-            <img src={src} alt={alt} onLoad={() => setIsLoaded(true)} className={`transition-opacity duration-700 ${className} ${isLoaded ? "opacity-100" : "opacity-0"}`} loading="lazy" />
+        <div className={`relative overflow-hidden bg-slate-900/5 ${className}`}>
+            {!isLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-100 animate-pulse">
+                    <FiLoader className="text-[#F37021] animate-spin text-xl" />
+                </div>
+            )}
+            <img 
+                src={src} 
+                alt={alt} 
+                onLoad={() => setIsLoaded(true)} 
+                className={`transition-all duration-700 object-cover ${className} ${isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"}`} 
+                loading="lazy" 
+            />
         </div>
     );
 };
@@ -74,7 +131,6 @@ export default function Home() {
     const [activeSegment, setActiveSegment] = useState("All"); 
     const targetRef = useRef(null);
 
-    // Webinar Auto-Expiry
     const isWebinarActive = useMemo(() => {
         const expiryDate = new Date("2026-04-24T16:00:00"); 
         const now = new Date();
@@ -89,18 +145,18 @@ export default function Home() {
     }), []);
 
     const categories = useMemo(() => [
-        { title: "School Students", segment: "School Students", desc: "Foundation coding", image: schoolImg },
-        { title: "College Students", segment: "College Students", desc: "Advanced tech skills", image: collegeImg },
-        { title: "Graduates", segment: "Graduates", desc: "Career-ready Master's", image: graduatesImg },
-        { title: "Working Professionals", segment: "Working Professionals", desc: "Upskill with AI", image: workingImg },
-        { title: "Home Makers", segment: "Home Makers", desc: "Digital literacy", image: homemakerImg },
-        { title: "Retired Persons", segment: "Retired Persons", desc: "Stay tech-savvy", image: retiredImg },
+        { title: "School Students", segment: "School Students", desc: "Logic & foundational coding structures.", image: schoolImg, icon: <FiCode /> },
+        { title: "College Students", segment: "College Students", desc: "Core engineering tech stacks & systems.", image: collegeImg, icon: <FiCpu /> },
+        { title: "Graduates", segment: "Graduates", desc: "Career-ready production systems.", image: graduatesImg, icon: <FiLayers /> },
+        { title: "Working Professionals", segment: "Working Professionals", desc: "Modernize pipelines with AI tools.", image: workingImg, icon: <FiZap /> },
+        { title: "Home Makers", segment: "Home Makers", desc: "Essential computer financial tools.", image: homemakerImg, icon: <FiSmartphone /> },
+        { title: "Retired Persons", segment: "Retired Persons", desc: "Secure web navigation & networks.", image: retiredImg, icon: <FiShield /> },
     ], []);
 
     const alumniData = useMemo(() => [
-        { name: "Suruchi Rai", text: "Mastered HTML5 at Expert Academy. Now a successful Web Developer.", image: suruchiImg },
-        { name: "Harsh Raj", text: "The ADCA program changed my career path completely. Highly recommended!", image: harshImg },
-        { name: "Ankit Shubham", text: "The Gen-AI curriculum is world-class and perfectly aligned with 2026 trends.", image: ankitImg }
+        { name: "Suruchi Rai", role: "Web Developer", text: "Mastered HTML5 at Expert Academy. The hyper-practical labs mirror real-world developer setups.", image: suruchiImg },
+        { name: "Harsh Raj", role: "Systems Engineer", text: "The ADCA architecture track changed my trajectory completely. Instructors understand production scaling.", image: harshImg },
+        { name: "Ankit Shubham", role: "AI Engineer", text: "The production application models are world-class and deeply configured for 2026 tech standard shifts.", image: ankitImg }
     ], []);
 
     const displayCourses = useMemo(() => {
@@ -112,7 +168,7 @@ export default function Home() {
 
     useEffect(() => {
         if (pageLoading) {
-            const timer = setTimeout(() => { setPageLoading(false); sessionStorage.setItem("hasSeenHomeLoader", "true"); }, 1500);
+            const timer = setTimeout(() => { setPageLoading(false); sessionStorage.setItem("hasSeenHomeLoader", "true"); }, 1200);
             return () => clearTimeout(timer);
         }
     }, [pageLoading]);
@@ -121,7 +177,7 @@ export default function Home() {
     const handleCloseModal = () => setSearchParams({});
 
     useEffect(() => {
-        const handleScroll = () => setShowBackToTop(window.scrollY > 600);
+        const handleScroll = () => setShowBackToTop(window.scrollY > 500);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
@@ -135,190 +191,288 @@ export default function Home() {
     }, [courseIdFromUrl, searchParams]);
 
     if (pageLoading) return (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="w-32 h-32 border-2 border-slate-100 border-t-[#F37021] border-r-[#1A5F7A] rounded-full" />
-            <motion.img src={expertcomputerlogo} className="absolute w-24 h-auto" />
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0B132B]">
+            <div className="relative flex items-center justify-center">
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="w-24 h-24 border-4 border-slate-800 border-t-[#F37021] border-r-[#1A5F7A] rounded-full" />
+                <img src={expertcomputerlogo} className="absolute w-12 h-auto object-contain" alt="Logo Loading" />
+            </div>
         </div>
     );
 
     return (
-        <div ref={targetRef} className="relative min-h-screen bg-slate-50/20 selection:bg-[#F37021] selection:text-white font-sans overflow-x-hidden">
-            <div className="mx-auto w-full max-w-7xl px-4 md:px-8">
+        <div ref={targetRef} className="relative min-h-screen bg-[#FAF9F6] text-slate-900 antialiased font-sans overflow-x-hidden selection:bg-[#F37021]/20 selection:text-[#F37021]">
+            
+            {/* BACKGROUND BLUR DECORATIONS */}
+            <div className="hidden md:block absolute top-0 left-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-orange-200/20 to-teal-100/30 rounded-full blur-3xl pointer-events-none -z-10" />
+            <div className="hidden md:block absolute top-[40%] right-0 w-[400px] h-[600px] bg-blue-100/30 rounded-full blur-3xl pointer-events-none -z-10" />
+
+            <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
                 
+                {/* BACK TO TOP BUTTON */}
                 <AnimatePresence>
                     {showBackToTop && (
-                        <motion.button initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }}
+                        <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
                             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                            className="fixed bottom-10 right-10 z-50 bg-[#F37021] text-white p-5 rounded-full shadow-2xl hover:bg-[#1A5F7A] transition-all">
-                            <FiChevronUp size={28} />
+                            className="fixed bottom-6 right-6 z-50 bg-[#1A5F7A] text-white p-3.5 rounded-full shadow-xl hover:bg-[#F37021] transition-colors focus:outline-none">
+                            <FiChevronUp size={24} />
                         </motion.button>
                     )}
                 </AnimatePresence>
 
                 {/* 1. HERO SECTION */}
-                <section className="py-16 md:py-28 relative">
-                    <div className="flex flex-col lg:flex-row items-center gap-16">
-                        <div className="w-full lg:w-1/2 space-y-10 text-center lg:text-left order-2 lg:order-1">
-                            <div className="inline-flex items-center gap-4 bg-orange-50 text-[#F37021] px-8 py-3 rounded-2xl text-[14px] font-black uppercase tracking-[0.2em] border border-orange-100 shadow-sm">
-                                <FiShield className="text-2xl" /> ISO 9001:2015 & MSME Certified
+                <section className="pt-8 pb-12 md:pt-20 md:pb-16 lg:pt-24">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+                        <div className="lg:col-span-7 space-y-6 md:space-y-8 text-center lg:text-left order-2 lg:order-1">
+                            <div className="inline-flex items-center gap-2 bg-[#1A5F7A]/5 border border-[#1A5F7A]/10 text-[#1A5F7A] px-4 py-2 rounded-full text-xs md:text-sm font-semibold tracking-wide">
+                                <FiShield className="text-base text-[#F37021]" /> ISO 9001:2015 & MSME Certified Group
                             </div>
-                            <h1 className="text-7xl md:text-9xl font-black text-[#1A5F7A] leading-[0.82] tracking-tighter">
-                                BUILD YOUR <span className="text-[#F37021] italic">FUTURE</span> <br /> IN TECH.
+                            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#0F2C59] tracking-tight leading-[1.1]">
+                                Build your <span className="text-[#F37021] relative inline-block">tech future<span className="absolute bottom-1 left-0 w-full h-[6px] bg-orange-200 -z-10 rounded-full" /></span> with clarity.
                             </h1>
-                            <p className="text-xl md:text-2xl text-slate-500/80 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
-                                Patna's most trusted computer academy since 1987. Mastering 100% practical learning for the AI-driven world.
+                            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                                Patna's premier destination for computing proficiency since 1987. Transition safely from zero engineering literacy to industry-ready deployment.
                             </p>
-                            <div className="flex justify-center lg:justify-start pt-6">
-                                <button onClick={() => navigate('/about')} className="bg-[#1A5F7A] text-white px-14 py-7 rounded-[2rem] font-black hover:bg-[#F37021] transition-all duration-500 shadow-2xl uppercase text-[14px] tracking-[0.3em] group flex items-center gap-5">
-                                    Launch Journey <FiArrowRight className="group-hover:translate-x-3 transition-transform text-2xl" />
+                            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+                                <button onClick={() => navigate('/about')} className="w-full sm:w-auto px-8 py-4 bg-[#1A5F7A] hover:bg-[#154F66] text-white font-bold rounded-xl shadow-lg shadow-teal-900/10 transition-all flex items-center justify-center gap-3 group">
+                                    Explore Academy Path <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
                                 </button>
+                                <a href="#signature-courses" className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-xl border border-slate-200 shadow-sm text-center transition-colors">
+                                    View Courses
+                                </a>
                             </div>
                         </div>
-                        <div className="w-full lg:w-1/2 order-1 lg:order-2">
-                            <TiltCard className="relative p-4 md:p-8">
-                                <div className="rounded-[4.5rem] overflow-hidden shadow-3xl border-[15px] border-white relative z-10 bg-white">
-                                    <OptimizedImage src={expertcomuteroffice} alt="Campus" className="w-full aspect-square object-cover" />
+                        <div className="lg:col-span-5 order-1 lg:order-2 w-full max-w-md lg:max-w-none mx-auto">
+                            <PremiumTiltCard className="relative p-2">
+                                <div className="rounded-3xl md:rounded-[2.5rem] overflow-hidden shadow-2xl border-4 md:border-8 border-white bg-white aspect-square md:aspect-[4/3] lg:aspect-square">
+                                    <OptimizedImage src={expertcomuteroffice} alt="Expert Academy Hub Front Office" className="w-full h-full object-cover" />
                                 </div>
-                                <div className="absolute -bottom-4 -right-4 md:-bottom-10 md:-right-10 z-20 bg-[#1A5F7A] text-white p-10 md:p-14 rounded-[4rem] shadow-3xl border-[8px] border-white text-center">
-                                    <span className="block font-black text-6xl md:text-8xl italic leading-none text-[#F37021]">38+</span>
-                                    <span className="text-[12px] uppercase font-black tracking-[0.3em] text-white/80 mt-4">Years Hub</span>
+                                <div className="absolute -bottom-4 -left-4 md:-bottom-6 md:-left-6 bg-[#0F2C59] text-white p-5 md:p-6 rounded-2xl shadow-xl border-4 border-white flex flex-col items-center min-w-[110px] md:min-w-[130px]">
+                                    <span className="text-3xl md:text-4xl font-extrabold text-[#F37021] leading-none">1987</span>
+                                    <span className="text-[10px] uppercase tracking-wider text-slate-300 font-bold mt-1">Established</span>
                                 </div>
-                            </TiltCard>
+                            </PremiumTiltCard>
                         </div>
                     </div>
                 </section>
+            </div>
 
-                {/* 2. WEBINAR BANNER (CONDITIONAL) */}
+            {/* --- INTEGRATED RUNNING TICKER BANNER --- */}
+            {/* This spans full viewport width breaking container grid intentionally for dynamic premium aesthetic */}
+            <div className="my-10 md:my-14">
+                <RunningTicker />
+            </div>
+
+            <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+                {/* 2. LIVE WEBINAR NOTIFICATION (CONDITIONAL) */}
                 {isWebinarActive && (
-                    <section className="py-12 mb-20">
-                        <motion.div initial={{ y: 80, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }}
-                            className="bg-slate-900 rounded-[5rem] p-10 md:p-16 flex flex-col lg:flex-row items-center gap-14 relative overflow-hidden border border-white/10 shadow-2xl group"
+                    <section className="mb-16 md:mb-24">
+                        <motion.div initial={{ y: 20, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }}
+                            className="bg-gradient-to-br from-[#0F2C59] to-[#0A1D3A] rounded-2xl md:rounded-[2rem] p-6 md:p-10 lg:p-12 text-white relative overflow-hidden shadow-xl"
                         >
-                            <div className="absolute top-0 right-0 w-96 h-96 bg-[#F37021] blur-[160px] opacity-20" />
-                            <div className="w-full lg:w-1/4 rounded-[3rem] overflow-hidden shadow-3xl border-[6px] border-white/20 transform rotate-[-3deg] group-hover:rotate-0 transition-transform duration-700">
-                                <OptimizedImage src={tallyBootcampPoster} className="w-full h-auto" />
-                            </div>
-                            <div className="flex-1 text-center lg:text-left space-y-8 relative z-10">
-                                <div className="inline-flex items-center gap-3 bg-red-600 text-white px-6 py-2 rounded-full text-[12px] font-black uppercase tracking-[0.1em] animate-pulse">
-                                    <FiZap /> Live Exclusive Webinar
+                            <div className="absolute top-0 right-0 w-80 h-80 bg-[#F37021] blur-[120px] opacity-20 pointer-events-none" />
+                            <div className="flex flex-col lg:flex-row items-center gap-8 relative z-10">
+                                <div className="w-32 sm:w-40 lg:w-48 shrink-0 rounded-xl overflow-hidden shadow-md border-2 border-white/10 hidden sm:block">
+                                    <OptimizedImage src={tallyBootcampPoster} alt="Tally Bootcamp Event Poster" className="w-full h-auto" />
                                 </div>
-                                <h2 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter leading-[0.85] italic">
-                                    TALLY <span className="text-[#F37021]">BOOTCAMP</span> <br /> 24 APRIL 2026
-                                </h2>
-                                <div className="flex flex-wrap justify-center lg:justify-start gap-10 text-blue-100/70 font-black uppercase text-[14px] tracking-widest">
-                                    <div className="flex items-center gap-4"><FiCalendar className="text-[#F37021] text-3xl"/> April 24 (Fri)</div>
-                                    <div className="flex items-center gap-4"><FiClock className="text-[#F37021] text-3xl"/> 3:00 PM IST</div>
-                                </div>
-                                <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-                                    <button 
-                                        onClick={() => handleOpenModal(techCoursesData.find(c => c.id === 'tally-essential'))}
-                                        className="bg-white/10 border border-white/20 text-white px-10 py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest flex items-center gap-3 hover:bg-white hover:text-slate-900 transition-all shadow-xl"
-                                    >
-                                        <FiBookOpen /> Course Details
-                                    </button>
-                                    <button 
-                                        onClick={() => window.open('https://forms.gle/jPd53cxWSjje4Ssc7', '_blank')}
-                                        className="bg-[#F37021] text-white px-10 py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest flex items-center gap-3 hover:bg-[#1A5F7A] transition-all shadow-2xl"
-                                    >
-                                        Register Now <FiExternalLink />
-                                    </button>
+                                <div className="flex-1 text-center lg:text-left space-y-4">
+                                    <div className="inline-flex items-center gap-1.5 bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                                        <FiZap className="animate-pulse text-[#F37021]" /> Live Skills Bootcamp
+                                    </div>
+                                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                                        Accelerated Tally Masterclass Webinar
+                                    </h2>
+                                    <div className="flex flex-wrap justify-center lg:justify-start gap-6 text-sm text-slate-300 font-medium">
+                                        <span className="flex items-center gap-2"><FiCalendar className="text-[#F37021]" /> April 24, 2026</span>
+                                        <span className="flex items-center gap-2"><FiClock className="text-[#F37021]" /> 03:00 PM IST Onwards</span>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
+                                        <button onClick={() => handleOpenModal(techCoursesData.find(c => c.id === 'tally-essential'))} className="w-full sm:w-auto px-5 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
+                                            <FiBookOpen /> Track Curriculums
+                                        </button>
+                                        <button onClick={() => window.open('https://forms.gle/jPd53cxWSjje4Ssc7', '_blank')} className="w-full sm:w-auto px-5 py-3 bg-[#F37021] hover:bg-orange-600 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-md transition-colors flex items-center justify-center gap-2">
+                                            Claim Secure Spot <FiExternalLink />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
                     </section>
                 )}
 
-                {/* 3. SIGNATURE COURSES CATALOG (FIXED: Reset Button added) */}
-                <section id="signature-courses" className="py-24 scroll-mt-20">
-                    <div className="mb-20 flex flex-col md:flex-row justify-between items-end gap-8">
-                        <div>
-                            <p className="text-[#F37021] font-black uppercase text-[12px] tracking-[0.5em] mb-6 underline decoration-[6px] underline-offset-[12px]">
-                                {activeSegment === "All" ? "Elite Tracks" : `${activeSegment} Specialties`}
-                            </p>
-                            <h2 className="text-6xl md:text-8xl font-black text-[#1A5F7A] tracking-tighter uppercase italic leading-none">Signature <span className="text-slate-300">Courses.</span></h2>
-                        </div>
-                        
-                        {/* --- THE FIX: VIEW ALL BUTTON --- */}
-                        {activeSegment !== "All" && (
-                            <motion.button 
-                                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                                onClick={() => setActiveSegment("All")}
-                                className="flex items-center gap-3 bg-white border-2 border-slate-100 px-8 py-4 rounded-2xl text-[11px] font-black text-[#1A5F7A] uppercase tracking-widest hover:border-[#F37021] hover:text-[#F37021] transition-all shadow-sm active:scale-95"
+                {/* 3. SEGMENT SELECTION FILTER */}
+                <section className="mb-12 md:mb-16">
+                    <div className="text-center max-w-3xl mx-auto mb-8">
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-[#0F2C59] tracking-tight">
+                            Personalized Program Segments
+                        </h2>
+                        <p className="text-slate-600 mt-2 text-sm md:text-base">
+                            Select an ecosystem track tailored specifically to your current professional or academic standing.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center lg:justify-center gap-2 overflow-x-auto pb-4 pt-2 mask-linear-right lg:overflow-visible no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                        <button 
+                            onClick={() => setActiveSegment("All")}
+                            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all shrink-0 border ${
+                                activeSegment === "All" 
+                                ? "bg-[#1A5F7A] text-white border-[#1A5F7A] shadow-md" 
+                                : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                            }`}
+                        >
+                            All Specialized Tracks
+                        </button>
+                        {categories.map((cat, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setActiveSegment(cat.segment)}
+                                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all shrink-0 border flex items-center gap-2 ${
+                                    activeSegment === cat.segment 
+                                    ? "bg-[#1A5F7A] text-white border-[#1A5F7A] shadow-md" 
+                                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                                }`}
                             >
-                                <FiGrid /> View All Courses
-                            </motion.button>
+                                <span className={activeSegment === cat.segment ? "text-[#F37021]" : "text-slate-400"}>{cat.icon}</span>
+                                {cat.title}
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
+                {/* 4. SIGNATURE COURSES CATALOG GRID */}
+                <section id="signature-courses" className="pb-20 md:pb-28 scroll-mt-6">
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-4 mb-8">
+                        <h3 className="text-lg md:text-xl font-bold text-[#0F2C59] uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#F37021]" />
+                            {activeSegment === "All" ? "Core Featured Programs" : `${activeSegment} Modules`}
+                        </h3>
+                        {activeSegment !== "All" && (
+                            <button onClick={() => setActiveSegment("All")} className="text-xs md:text-sm font-bold text-[#1A5F7A] hover:text-[#F37021] flex items-center gap-1.5 transition-colors">
+                                <FiGrid /> Reset Filters
+                            </button>
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
-                        {displayCourses.map((course) => (
-                            <TiltCard key={course.id} className="relative aspect-[3/4] rounded-[3.5rem] overflow-hidden group cursor-pointer shadow-2xl bg-white border border-slate-100">
-                                <div onClick={() => handleOpenModal(course)} className="w-full h-full relative">
-                                    <OptimizedImage src={posterMap[course.id] || javaPoster} className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-1000" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#1A5F7A] via-[#1A5F7A]/20 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
-                                    <div className="absolute bottom-0 left-0 p-10 space-y-4">
-                                        <h3 className="text-white text-2xl font-black leading-tight uppercase italic">{course.title}</h3>
-                                        <div className="flex items-center gap-4 text-orange-400 text-[11px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
-                                            <FiBookOpen className="text-xl"/> Full Details
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                        <AnimatePresence mode="popLayout">
+                            {displayCourses.map((course) => (
+                                <motion.div
+                                    layout
+                                    key={course.id}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.3 }}
+                                    onClick={() => handleOpenModal(course)}
+                                    className="group bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all cursor-pointer flex flex-col h-full"
+                                >
+                                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+                                        <OptimizedImage src={posterMap[course.id] || javaPoster} alt={`${course.title} Syllabus Catalog Cover`} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <div className="p-5 flex flex-col flex-1 justify-between bg-white">
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] uppercase font-bold tracking-widest text-[#F37021]">
+                                                {course.duration || "Certified Module"}
+                                            </span>
+                                            <h4 className="text-base md:text-lg font-bold text-slate-900 group-hover:text-[#1A5F7A] transition-colors leading-snug line-clamp-2">
+                                                {course.title}
+                                            </h4>
+                                        </div>
+                                        <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500 group-hover:text-[#F37021] transition-colors">
+                                            <span>View Full Syllabus</span>
+                                            <FiArrowRight className="transform -rotate-45 group-hover:rotate-0 group-hover:translate-x-0.5 transition-transform" />
                                         </div>
                                     </div>
-                                </div>
-                            </TiltCard>
-                        ))}
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </div>
                 </section>
 
-                {/* 4. ACADEMIC ECOSYSTEM SEGMENTS */}
-                <section className="py-28 bg-[#0A192F] mx-[-1rem] md:mx-[-2rem] px-10 md:px-20 rounded-[5rem] text-white shadow-3xl relative overflow-hidden">
-                    <div className="text-center mb-24 relative z-10">
-                        <h2 className="text-6xl md:text-9xl font-black uppercase italic tracking-tighter mb-6 leading-none">Learning <span className="text-[#F37021]">Segments</span></h2>
+                {/* 5. SEGMENT INFRASTRUCTURE SUMMARY CARDS */}
+                <section className="py-16 bg-[#0F2C59] mx-[-1rem] sm:mx-[-1.5rem] md:mx-0 px-6 sm:px-10 md:px-12 lg:px-16 rounded-2xl md:rounded-[2.5rem] text-white shadow-xl mb-24 relative overflow-hidden">
+                    <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-[#1A5F7A]/20 rounded-full blur-3xl pointer-events-none" />
+                    <div className="max-w-2xl mb-12">
+                        <span className="text-xs uppercase font-bold tracking-widest text-[#F37021] block mb-2">Structure Matrix</span>
+                        <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Structured Learning Ecosystem</h2>
+                        <p className="text-slate-300 mt-2 text-sm md:text-base">
+                            Click individual track profiles to auto-filter and reveal active certifications matching that category above.
+                        </p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative z-10">
-                        {categories.map((cat, i) => (
-                            <motion.div key={i} whileHover={{ y: -15 }} 
-                                onClick={() => { setActiveSegment(cat.segment); document.getElementById('signature-courses').scrollIntoView({ behavior: 'smooth' }); }}
-                                className={`bg-white/5 backdrop-blur-3xl border border-white/10 p-12 rounded-[4rem] group cursor-pointer transition-all hover:bg-white/10 ${activeSegment === cat.segment ? 'ring-4 ring-[#F37021]' : ''}`}>
-                                <div className="flex items-center gap-8 mb-10">
-                                    <div className="w-20 h-20 rounded-3xl overflow-hidden border-2 border-[#F37021]"><OptimizedImage src={cat.image} className="w-full h-full object-cover" /></div>
-                                    <h3 className="text-3xl font-black uppercase italic tracking-tighter">{cat.title}</h3>
-                                </div>
-                                <p className="text-blue-100/60 text-xl leading-relaxed mb-12 font-medium">"{cat.desc}"</p>
-                                <div className="py-6 text-center bg-[#F37021] rounded-[2rem] text-[12px] font-black uppercase tracking-[0.2em] group-hover:bg-white group-hover:text-slate-900 transition-all shadow-lg">Explore Track</div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
 
-                {/* 5. ALUMNI VOICES */}
-                <section className="py-32 bg-white">
-                    <div className="text-center mb-24">
-                        <p className="text-[#F37021] font-black uppercase text-[12px] tracking-[0.5em] mb-4 underline decoration-[6px] underline-offset-[12px]">Proven Success</p>
-                        <h2 className="text-6xl md:text-8xl font-black text-[#1A5F7A] uppercase tracking-tighter italic">Alumni <span className="text-slate-300">Voices.</span></h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        {alumniData.map((student, i) => (
-                            <motion.div key={i} whileHover={{ scale: 1.05 }} className="bg-slate-50/50 p-14 rounded-[4rem] border border-slate-100 flex flex-col justify-between shadow-sm">
-                                <p className="text-slate-600 text-xl italic mb-12 leading-relaxed font-medium">"{student.text}"</p>
-                                <div className="flex items-center gap-6 border-t border-slate-200 pt-10">
-                                    <img src={student.image} className="w-20 h-20 rounded-full shadow-2xl border-4 border-white" alt={student.name} />
-                                    <div className="text-left">
-                                        <span className="block font-black text-[#1A5F7A] uppercase text-xl italic">{student.name}</span>
-                                        <span className="text-[10px] font-black text-[#F37021] uppercase tracking-[0.3em] flex items-center gap-2"><FiCheckCircle /> Verified Alumnus</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {categories.map((cat, idx) => (
+                            <div 
+                                key={idx}
+                                onClick={() => { 
+                                    setActiveSegment(cat.segment); 
+                                    document.getElementById('signature-courses')?.scrollIntoView({ behavior: 'smooth' }); 
+                                }}
+                                className={`bg-white/5 border rounded-xl p-6 hover:bg-white/10 transition-all cursor-pointer group flex flex-col justify-between ${
+                                    activeSegment === cat.segment ? "border-[#F37021] bg-white/10" : "border-white/10"
+                                }`}
+                            >
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-2xl text-[#F37021] bg-white/10 p-3 rounded-lg group-hover:scale-105 transition-transform">
+                                            {cat.icon}
+                                        </div>
+                                        <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20">
+                                            <img src={cat.image} className="w-full h-full object-cover" alt="" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold tracking-wide">{cat.title}</h3>
+                                        <p className="text-sm text-slate-300 mt-1 leading-relaxed font-normal">{cat.desc}</p>
                                     </div>
                                 </div>
-                            </motion.div>
+                                <div className="mt-6 pt-4 border-t border-white/5 text-xs font-bold text-[#F37021] flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                                    Browse Active Modules <FiArrowRight />
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </section>
 
-                {/* 6. LEGACY FOOTER */}
-                <footer className="py-32 text-center">
-                    <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="text-slate-300 font-black italic uppercase tracking-[1em] text-2xl">
-                        ESTD 1987 <span className="text-[#F37021] mx-6">•</span> PATNA HQ
-                    </motion.p>
+                {/* 6. ALUMNI PLACEMENT REVIEWS */}
+                <section className="pb-20 md:pb-28">
+                    <div className="text-center max-w-3xl mx-auto mb-12">
+                        <span className="text-xs uppercase font-bold tracking-widest text-[#F37021] block mb-2">Verified Feedback</span>
+                        <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0F2C59]">Alumni Placement Verification</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                        {alumniData.map((student, idx) => (
+                            <div key={idx} className="bg-white border border-slate-200/80 p-6 md:p-8 rounded-2xl shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                                <div className="space-y-4">
+                                    <div className="flex text-amber-500 gap-0.5">
+                                        {[...Array(5)].map((_, i) => <FiStar key={i} className="fill-current text-xs" />)}
+                                    </div>
+                                    <p className="text-slate-600 text-sm md:text-base leading-relaxed italic">
+                                        "{student.text}"
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-4 border-t border-slate-100 pt-6 mt-6">
+                                    <img src={student.image} className="w-11 h-11 rounded-full object-cover bg-slate-50 border border-slate-200 shadow-sm" alt={student.name} />
+                                    <div>
+                                        <span className="block font-bold text-slate-900 text-sm">{student.name}</span>
+                                        <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                                            {student.role} • <FiCheckCircle className="text-teal-600 inline" /> Verified Track
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* 7. MINIMAL SYSTEM FOOTER */}
+                <footer className="border-t border-slate-200/60 py-12 text-center text-xs md:text-sm font-semibold tracking-widest text-slate-400 uppercase">
+                    ESTD 1987 <span className="text-[#F37021] mx-2">•</span> PATNA HQ CORE CAMPUS DEVELOPMENT SYSTEMS
                 </footer>
             </div>
 
+            {/* SYLLABUS DISCLOSURE MODAL INTERFACE */}
             {selectedSyllabus && <SyllabusModal course={selectedSyllabus} onClose={handleCloseModal} />}
         </div>
     );

@@ -6,7 +6,7 @@ import {
     FiLock, FiUser, FiShield, FiArrowRight, 
     FiAlertCircle, FiEye, FiEyeOff, FiLoader 
 } from "react-icons/fi";
-import expertcomputerlogo from "../../assets/expertcomputerlogo.png";
+import expertcomputerlogo from "../../assets/expertcomputerlogo.jpeg";
 
 export default function StudentLogin() {
     // State management
