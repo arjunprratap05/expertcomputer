@@ -12,17 +12,33 @@ export default function LiveLectures() {
     // Real-time calculation loop matching student dashboard parameters
     const getStatus = useCallback((lectureTime) => {
         if (!lectureTime) return "UPCOMING";
-        const [hours, minutes] = lectureTime.split(':').map(Number);
-        const now = new Date();
-        const lectureDate = new Date();
-        lectureDate.setHours(hours, minutes, 0);
         
-        const diffInMinutes = (now - lectureDate) / (1000 * 60);
+        try {
+            // Regex handles "14:30", "2:30 PM", "02:30AM" seamlessly
+            const timeMatch = lectureTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+            if (!timeMatch) return "UPCOMING";
 
-        // Window logic: Active classrooms remain live for 2 hours (120 minutes)
-        if (diffInMinutes >= 0 && diffInMinutes <= 120) return "LIVE";
-        if (diffInMinutes < 0) return "UPCOMING";
-        return "FINISHED";
+            let hours = parseInt(timeMatch[1], 10);
+            const minutes = parseInt(timeMatch[2], 10);
+            const period = timeMatch[3]?.toUpperCase();
+
+            // Normalize to 24-hour clock for accurate JS Date manipulation
+            if (period === 'PM' && hours < 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+
+            const now = new Date();
+            const lectureDate = new Date();
+            lectureDate.setHours(hours, minutes, 0, 0);
+            
+            const diffInMinutes = (now - lectureDate) / (1000 * 60);
+
+            // Window logic: Active classrooms remain live for 2 hours (120 minutes)
+            if (diffInMinutes >= 0 && diffInMinutes <= 120) return "LIVE";
+            if (diffInMinutes < 0) return "UPCOMING";
+            return "FINISHED";
+        } catch (error) {
+            return "UPCOMING"; // Fallback to safe state instead of crashing
+        }
     }, []);
 
     const fetchLectures = useCallback(async (showLoader = true) => {
@@ -78,7 +94,7 @@ export default function LiveLectures() {
             console.error("LMS Sync Error:", err);
             setError("Network error: Learning portal is unreachable.");
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
     }, [API_BASE]);
 

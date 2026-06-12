@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { motion, useInView, useMotionValue, useTransform, animate } from "framer-motion";
-import { FiCheckCircle, FiTarget, FiEye, FiUsers, FiBriefcase, FiCalendar, FiArrowRight } from "react-icons/fi";
+import { FiCheckCircle, FiTarget, FiEye, FiUsers, FiBriefcase, FiCalendar } from "react-icons/fi";
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
 
 // --- Animated Counter Sub-Component ---
@@ -19,25 +19,44 @@ const Counter = ({ value, duration = 2 }) => {
     return <motion.span ref={ref}>{rounded}</motion.span>;
 };
 
+// --- AUTOMATED YEARS CALCULATION ---
+const calculateYearsOfExperience = () => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth(); // 0 = Jan, 1 = Feb, 2 = Mar...
+    
+    // Base subtraction from establishment year (1987)
+    let years = currentYear - 1987;
+    
+    // If we are in January (0) or February (1), the milestone in March hasn't hit yet
+    if (currentMonth < 2) {
+        years--;
+    }
+    
+    return years;
+};
+
 export default function About() {
-    // --- 1. FORCE SCROLL TO TOP ON MOUNT ---
+    // Force scroll to top on mount
     useEffect(() => {
         window.scrollTo({
             top: 0,
             left: 0,
-            behavior: "instant" // Use "smooth" if you prefer a sliding effect
+            behavior: "instant"
         });
     }, []);
 
+    const yearsOfExperience = calculateYearsOfExperience();
+
     const advantages = [
-        "38+ Years of Experience", "2 Lac Alumni", "1,00,000+ Placements",
+        `${yearsOfExperience}+ Years of Experience`, "2 Lac Alumni", "1,00,000+ Placements",
         "100% Placement Assistance", "100% Practical Classes", "Certified Faculty / 28 Years of Experience",
-        "Internship Available", "Premiun Quality Classrooms", "Personality Development & Interview Success Training",
+        "Internship Available", "Premium Quality Classrooms", "Personality Development & Interview Success Training",
         "Customized Flexible Batches", "Recognized Certificates", "Authorized Partner of Tally LTD"
     ];
 
     const stats = [
-        { label: "Years Experience", value: 38 , suffix: "+", icon: <FiCalendar /> },
+        { label: "Years Experience", value: yearsOfExperience, suffix: "+", icon: <FiCalendar /> },
         { label: "Total Alumni", value: 2, suffix: " Lac", icon: <FiUsers /> },
         { label: "Placements", value: 1, suffix: " Lac+", icon: <FiBriefcase /> },
     ];
@@ -100,17 +119,8 @@ export default function About() {
                                 transition={{ delay: 0.2 }}
                                 className="text-gray-600 text-xl leading-relaxed font-light"
                             >
-                                For over <span className="font-bold text-gray-800">38+ years</span>, we've bridged the gap between raw potential and professional mastery. As a premier partner with NIIT Ltd, we've shaped the tech skyline of Patna.
+                                For over <span className="font-bold text-gray-800">{yearsOfExperience}+ years</span>, we've bridged the gap between raw potential and professional mastery. As a premier partner with NIIT Ltd, we've shaped the tech skyline of Patna.
                             </motion.p>
-
-                            {/* <motion.div 
-                                initial={{ opacity: 0, x: -20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                className="flex items-center gap-4 text-[#F37021] font-bold group cursor-pointer"
-                            >
-                                <span>Learn our full story</span>
-                                <FiArrowRight className="group-hover:translate-x-2 transition-transform" />
-                            </motion.div> */}
                         </div>
                     </div>
                 </div>
@@ -120,7 +130,6 @@ export default function About() {
             <section className="py-12 relative z-10">
                 <div className="container mx-auto px-6">
                     <div className="bg-[#1A5F7A] rounded-[3rem] p-10 md:p-16 shadow-2xl relative overflow-hidden">
-                        {/* Glassmorphic overlay */}
                         <div className="absolute inset-0 bg-white/5 backdrop-blur-sm"></div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">

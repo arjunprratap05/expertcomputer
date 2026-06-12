@@ -3,7 +3,8 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { 
     FiUser, FiBookOpen, FiAward, FiVideo, FiDollarSign, 
-    FiLogOut, FiMenu, FiX, FiActivity, FiAlertCircle, FiBell, FiClock 
+    FiLogOut, FiMenu, FiX, FiActivity, FiAlertCircle, FiBell, FiClock,
+    FiEdit3 // <-- Added icon for Examinations
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -103,6 +104,7 @@ export default function ERPSidebar() {
     { path: '/erp/certificates', icon: <FiAward />, label: 'Certificates' },
     { path: '/erp/live-lectures', icon: <FiVideo />, label: 'Live Lectures' },
     { path: '/erp/fee-ledger', icon: <FiDollarSign />, label: 'Fee Ledger' },
+    { path: '/erp/exams', icon: <FiEdit3 />, label: 'Examinations' }, // <-- Added Exam Route
   ];
 
   return (

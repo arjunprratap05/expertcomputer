@@ -42,7 +42,7 @@ const RunningTicker = () => {
     const tickerItems = [
         "GENERATIVE AI INTEGRATED", "100% PRACTICAL LABS", "ISO 9001:2015 CERTIFIED", 
         "PYTHON DATA SCIENCE", "ADVANCED TALLY PRIME", "FULL STACK WEB DEVELOPMENT", 
-        "MSME RECOGNIZED INSTITUTE", "38+ YEARS OF EXCELLENCE", "DSA IN C++"
+        "MSME RECOGNIZED INSTITUTE", "39+ YEARS OF EXCELLENCE", "DSA IN C++"
     ];
 
     // Duplicate list to create seamless looping illusion
@@ -138,7 +138,7 @@ export default function Home() {
     }, []);
 
     const posterMap = useMemo(() => ({
-        "java-pro": javaPoster, "html5-web": htmlPoster, "adca-diploma": adcaPoster, "python-ds": pythonPoster,
+        "gen-ai-master": genAIPoster,"java-pro": javaPoster, "html5-web": htmlPoster, "adca-diploma": adcaPoster, "python-ds": pythonPoster,
         "tally-essential": tallyPoster, "full-stack-dev": AdvancedProgramFullStackPoster, "dsa-master": DSAPoster,
         "prog-cpp": ProgrammingusingCProgramPoster, "dca-new": DiplomainComputerApplicationPoster,
         "found-it-new": FoundationinITPoster, "ms-office-basic": msofficePoster, "adv-excel-pro": AdvanceExcelPoster,
@@ -160,7 +160,7 @@ export default function Home() {
     ], []);
 
     const displayCourses = useMemo(() => {
-        const featuredIds = ["java-pro", "html5-web", "adca-diploma", "python-ds", "tally-essential", "full-stack-dev", "dsa-master", "prog-cpp", "dca-new", "found-it-new", "ms-office-basic", "adv-excel-pro"];
+        const featuredIds = ["gen-ai-master","java-pro", "html5-web", "adca-diploma", "python-ds", "tally-essential", "full-stack-dev", "dsa-master", "prog-cpp", "dca-new", "found-it-new", "ms-office-basic", "adv-excel-pro"];
         return activeSegment === "All" 
             ? techCoursesData.filter(c => featuredIds.includes(c.id))
             : techCoursesData.filter(course => course.segment === activeSegment);

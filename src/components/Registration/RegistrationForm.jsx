@@ -28,7 +28,7 @@ export default function RegistrationForm() {
     const navigate = useNavigate();
     const location = useLocation();
     const fileInputRef = useRef(null);
-    const currentYear = new Date().getFullYear();
+    const currentYear = 2026;
     const today = new Date().toISOString().split('T')[0];
 
     // --- STATES ---
@@ -49,6 +49,7 @@ export default function RegistrationForm() {
     const [isConfirming, setIsConfirming] = useState(false);
     const [timeLeft, setTimeLeft] = useState(300);
     const [transactionId, setTransactionId] = useState('');
+    const [cashPaidAmount, setCashPaidAmount] = useState('');
 
     const [couponCode, setCouponCode] = useState('');
     const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
@@ -172,13 +173,11 @@ export default function RegistrationForm() {
 
     const validateForm = () => {
         let tmp = {};
-        // 1. Identity Check
         if (!formData.name || formData.name.length < 3) tmp.name = "Full name required";
         if (!/^[6-9]\d{9}$/.test(formData.phone)) tmp.phone = "Invalid Mobile Number";
         if (!validateAadhaar(formData.aadhaarNo)) tmp.aadhaarNo = "Invalid 12-digit Aadhaar";
         if (!formData.studentImage) tmp.image = "Identity photo required";
 
-        // 2. Academic Pulse Validation (Checking for System Year and Percentage)
         if (formData.highSchoolStatus === 'COMPLETED') {
             if (!formData.highSchoolYear || parseInt(formData.highSchoolYear) > currentYear) tmp.highSchoolYear = "Invalid Year";
             if (!formData.highSchoolPercent || parseFloat(formData.highSchoolPercent) > 100) tmp.highSchoolPercent = "Invalid %";
@@ -195,16 +194,24 @@ export default function RegistrationForm() {
     const handleFinalSubmit = async () => {
         const cleanUTR = transactionId.trim();
         
-        // UTR is mandatory for Digital payments, not for Cash
+        if (paymentOption === 'CASH') {
+            const cashAmt = Number(cashPaidAmount);
+            if (!cashPaidAmount || cashAmt <= 0) {
+                return triggerToast("Please enter a valid cash amount");
+            }
+            if (cashAmt > finalPayable) {
+                return triggerToast(`Cash receipt cannot exceed the course net payable of ₹${finalPayable.toLocaleString()}`);
+            }
+        }
+
         if (paymentOption !== 'CASH' && cleanUTR.length !== 12) {
             return triggerToast("UTR must be exactly 12 digits");
         }
     
         setIsConfirming(true);
     
-        // FIX: If Cash or Full, we record the total payable. 
-        // If Partial, we record the first installment amount.
         const finalAmt = paymentOption === 'PARTIAL' ? partialPayable : finalPayable;
+        const actualAmountPaid = paymentOption === 'CASH' ? Number(cashPaidAmount) : finalAmt;
     
         const data = new FormData();
         const cleanForm = { ...formData };
@@ -226,9 +233,8 @@ export default function RegistrationForm() {
         
         if (formData.studentImage) data.append('studentImage', formData.studentImage);
         
-        // Now data.append('totalFee', finalPayable) will be sent even for CASH
-        data.append('amountPaid', paymentOption === 'CASH' ? 0 : finalAmt); 
-        data.append('totalFee', finalPayable); // The total cost of the course
+        data.append('amountPaid', actualAmountPaid); 
+        data.append('totalFee', finalPayable); // Total Fee is mapped to Net Payable (with discounts deducted)
         data.append('paymentOption', paymentOption);
         data.append('transactionId', paymentOption === 'CASH' ? 'CASH-PAYMENT' : cleanUTR);
         data.append('emiInterval', emiInterval);
@@ -313,15 +319,40 @@ export default function RegistrationForm() {
                                         />
                                     </div>
                                 ) : (
-                                    <div className="text-center py-12 px-8 bg-orange-50 rounded-[3rem] border border-orange-100">
-                                        <FiUser size={48} className="mx-auto text-orange-500 mb-4" />
-                                        <h3 className="text-2xl font-black italic uppercase text-orange-700">Walk-in Payment</h3>
-                                        <p className="text-orange-600/70 font-bold mt-2 text-sm uppercase tracking-tighter">Pay at Center to activate your profile.</p>
+                                    <div className="space-y-6">
+                                        <div className="text-center py-8 px-8 bg-orange-50 rounded-[3rem] border border-orange-100">
+                                            <FiUser size={40} className="mx-auto text-orange-500 mb-4" />
+                                            <h3 className="text-xl font-black italic uppercase text-orange-700">Walk-in Payment</h3>
+                                            <p className="text-orange-600/70 font-bold mt-1 text-[10px] uppercase tracking-tighter">Enter collection amount received at front desk</p>
+                                        </div>
+
+                                        <InputField 
+                                            label="Cash Amount Received (₹)" 
+                                            icon={<FiCheckCircle />} 
+                                            placeholder="e.g. 5000"
+                                            value={cashPaidAmount}
+                                            onChange={(v) => {
+                                                const cleanVal = v.replace(/\D/g, '');
+                                                if (Number(cleanVal) > finalPayable) {
+                                                    setCashPaidAmount(finalPayable.toString());
+                                                    triggerToast(`Maximum balance allowable is ₹${finalPayable.toLocaleString()}`);
+                                                } else {
+                                                    setCashPaidAmount(cleanVal);
+                                                }
+                                            }}
+                                        />
+
+                                        <div className="bg-slate-900 p-6 rounded-3xl text-white flex justify-between items-center">
+                                            <span className="text-[10px] font-black uppercase text-slate-400">Balance Remaining</span>
+                                            <span className={`text-xl font-black ${Number(cashPaidAmount) === finalPayable ? 'text-green-400' : 'text-orange-500'}`}>
+                                                ₹{(finalPayable - (Number(cashPaidAmount) || 0)).toLocaleString()}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                                 <button onClick={handleFinalSubmit} disabled={isConfirming || (paymentOption !== 'CASH' && timeLeft <= 0)} 
-                                    className="w-full mt-10 py-8 bg-[#1A5F7A] text-white rounded-[2.5rem] font-black uppercase text-sm tracking-widest shadow-2xl active:scale-95 transition-all">
-                                    {paymentOption === 'CASH' ? 'Confirm Walk-in' : 'Validate Transaction'} <FiArrowRight />
+                                    className="w-full mt-10 py-8 bg-[#1A5F7A] text-white rounded-[2.5rem] font-black uppercase text-sm tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                                    {paymentOption === 'CASH' ? 'Confirm Walk-in Receipt' : 'Validate Transaction'} <FiArrowRight />
                                 </button>
                             </div>
                         </motion.div>
@@ -337,7 +368,7 @@ export default function RegistrationForm() {
                     ) : (
                         <motion.div key="form" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[4rem] shadow-4xl overflow-hidden border border-slate-100">
                             <div className="bg-[#1A5F7A] p-12 text-white relative">
-                                <span className="bg-orange-500 text-[10px] font-black px-6 py-2 rounded-full uppercase tracking-widest mb-6 inline-block">Session 2026</span>
+                                <span className="bg-orange-500 text-[10px] font-black px-6 py-2 rounded-full uppercase tracking-widest mb-6 inline-block">Session {currentYear}</span>
                                 <h2 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">Admission Profile</h2>
                             </div>
 
@@ -503,6 +534,7 @@ function AcademicBox({ title, prefix, formData, setFormData, onYear, onPercent }
     );
 }
 
+// Subcomponent formatting references
 function ReviewItem({ label, value }) {
     return <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100"><p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">{label}</p><p className="font-bold text-[#1A5F7A] truncate text-sm">{value || 'N/A'}</p></div>;
 }

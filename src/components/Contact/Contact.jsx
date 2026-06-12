@@ -51,36 +51,58 @@ export default function Contact() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Final Validation
+        // 1. FRONTEND SPAM CHECK (Saves unnecessary API calls)
+        const lastSubmission = localStorage.getItem("last_inquiry_submission");
+        if (lastSubmission) {
+            const { phone, email, timestamp } = JSON.parse(lastSubmission);
+            const timePassed = new Date().getTime() - timestamp;
+            
+            // Block if the same phone or email is submitted within 24 hours locally
+            if ((phone === formData.phone || email === formData.email) && timePassed < 86400000) {
+                setStatus({ loading: false, success: false, error: "Our system shows you have already submitted an inquiry recently." });
+                return;
+            }
+        }
+
+        // 2. INPUT VALIDATION
         const isNameInvalid = formData.name.trim().length < 2;
         const isPhoneInvalid = formData.phone.length !== 10;
         const isEmailInvalid = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
 
         if (isNameInvalid || isPhoneInvalid || isEmailInvalid) {
             setFieldErrors({ name: isNameInvalid, phone: isPhoneInvalid, email: isEmailInvalid });
-            setStatus(prev => ({ ...prev, error: "Please fix the errors in the form." }));
+            setStatus(prev => ({ ...prev, error: "Please fix the highlighted errors in the form." }));
             return;
         }
 
         setStatus({ loading: true, success: false, error: "" });
+        
         try {
             const API_URL = import.meta.env.VITE_API_BASE_URL;
+            // 3. SEND TO BACKEND (Where the real Database Check happens)
             const response = await axios.post(`${API_URL}/inquiry/submit`, {
                 ...formData,
                 course: "General Inquiry",
                 university: "Expert Academy Patna",
                 type: "inquiry"
             });
+            
             if (response.data.success) {
+                // Cache success to prevent rapid re-clicks
+                localStorage.setItem("last_inquiry_submission", JSON.stringify({
+                    phone: formData.phone,
+                    email: formData.email,
+                    timestamp: new Date().getTime()
+                }));
+
                 setStatus({ loading: false, success: true, error: "" });
                 setFormData({ name: "", email: "", phone: "", message: "" });
                 setTimeout(() => setStatus(prev => ({ ...prev, success: false })), 5000);
             }
         } catch (error) {
-            setStatus({ 
-                loading: false, success: false, 
-                error: error.response?.data?.msg || "Submission failed. Please try again." 
-            });
+            // CATCHES DATABASE DUPLICATE REJECTIONS
+            const errorMessage = error.response?.data?.message || error.response?.data?.msg || "Submission failed. Please try again later.";
+            setStatus({ loading: false, success: false, error: errorMessage });
         }
     };
 
@@ -188,7 +210,6 @@ export default function Contact() {
 }
 
 // --- SUB-COMPONENTS ---
-
 function ContactItem({ icon, title, detail, isLink }) {
     return (
         <div className="flex items-start gap-4">

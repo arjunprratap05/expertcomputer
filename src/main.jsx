@@ -31,6 +31,8 @@ import { FaCertificate } from 'react-icons/fa'
 import AddLecture from './components/Admin/AddLecture.jsx'
 import Certificates from './components/StudentPortal/Certificates.jsx';
 import BatchScheduler from './components/Admin/BatchScheduler.jsx';
+import StudentQuizHub from './components/StudentPortal/StudentQuizHub';
+
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -57,6 +59,7 @@ const router = createBrowserRouter(
         <Route path="certificates" element={<Certificates />} />
         <Route path="live-lectures" element={<LiveLectures />} />
         <Route path="fee-ledger" element={<FeeLedger />} />
+        <Route path="/erp/exams" element={<StudentQuizHub />} />
       </Route>
 
       {/* Admin and Other Routes */}

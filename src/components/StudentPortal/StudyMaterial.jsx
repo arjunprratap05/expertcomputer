@@ -47,23 +47,27 @@ export default function StudyMaterial() {
                 return; 
             }
 
-            const res = await axios.post(`${API_BASE}/lms/sync-multi`, { batchIds }, {
+            // Aggregates literal naming permutations to avoid casing mismatch errors
+            const studentAssignedCourses = [];
+            if (student.course) studentAssignedCourses.push(student.course.toLowerCase().trim());
+            
+            if (Array.isArray(student.enrollments)) {
+                student.enrollments.forEach(e => {
+                    if (e.course) studentAssignedCourses.push(e.course.toLowerCase().trim());
+                });
+            }
+
+            // Pass explicit courses array to Backend Aggregator
+            const res = await axios.post(`${API_BASE}/lms/sync-multi`, { 
+                batchIds, 
+                explicitCourses: studentAssignedCourses 
+            }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             if (res.data.success) {
                 const serverMaterials = res.data.data?.materials || [];
                 
-                // Aggregates literal naming permutations to avoid casing mismatch errors
-                const studentAssignedCourses = [];
-                if (student.course) studentAssignedCourses.push(student.course.toLowerCase().trim());
-                
-                if (Array.isArray(student.enrollments)) {
-                    student.enrollments.forEach(e => {
-                        if (e.course) studentAssignedCourses.push(e.course.toLowerCase().trim());
-                    });
-                }
-
                 // Reverse filtering fallback catch to map course slugs seamlessly
                 const flexibleFilteredList = serverMaterials.filter(material => {
                     const matCourseName = material.course?.toLowerCase().trim() || "";

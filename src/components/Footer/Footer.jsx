@@ -5,6 +5,23 @@ import { FaFacebookF, FaYoutube, FaLinkedinIn, FaInstagram, FaArrowRight } from 
 import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker } from 'react-icons/hi';
 import expertcomputerlogo from '../../assets/expertcomputerlogo.jpeg'; 
 
+// --- AUTOMATED YEARS CALCULATION ---
+const calculateYearsOfExperience = () => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth(); // 0 = Jan, 1 = Feb, 2 = Mar...
+    
+    // Base subtraction from establishment year (1987)
+    let years = currentYear - 1987;
+    
+    // If we are in January (0) or February (1), the milestone in March hasn't hit yet
+    if (currentMonth < 2) {
+        years--;
+    }
+    
+    return years;
+};
+
 export default function Footer() {
     const navigate = useNavigate();
     const mapUrl = "https://maps.google.com/?q=Expert+Computer+Academy+Patna";
@@ -17,6 +34,8 @@ export default function Footer() {
             navigate(item.link);
         }
     };
+
+    const yearsOfExperience = calculateYearsOfExperience();
 
     const footerLinks = {
         programs: [
@@ -44,8 +63,7 @@ export default function Footer() {
             <div className="absolute bottom-0 left-0 -z-10 h-72 w-72 rounded-full bg-orange-500/10 blur-[120px] pointer-events-none" />
 
             <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
-                {/* 
-                  Responsive Grid Architecture:
+                {/* Responsive Grid Architecture:
                   - Mobile: 1 Column
                   - iPads/Tablets (md): 2 Columns (Clean layout split)
                   - Desktop (lg): 12-Column Grid for precise proportioning
@@ -66,7 +84,7 @@ export default function Footer() {
                         </button>
                         <p className="max-w-sm text-sm font-normal leading-relaxed text-slate-400">
                             Empowering students in Patna with IT excellence since 1987. 
-                            Our <span className="font-semibold text-white">38+ years legacy</span> is built entirely on hands-on, practical learning.
+                            Our <span className="font-semibold text-white">{yearsOfExperience}+ years legacy</span> is built entirely on hands-on, practical learning.
                         </p>
                         {/* Social Media Links with glassmorphism style */}
                         <div className="flex flex-wrap gap-3">
