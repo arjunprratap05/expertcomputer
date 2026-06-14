@@ -41,7 +41,7 @@ export default function WhatsAppLeads() {
         setSelectedLead(lead);
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/admin/whatsapp/messages/${lead.phone}`, {
+            const res = await axios.get(`${API_URL}/whatsapp/messages/${lead.phone}`,{
                 headers: { Authorization: `Bearer ${token}` }
             });
             setMessages(res.data.messages || []);
@@ -75,7 +75,7 @@ export default function WhatsAppLeads() {
         setMessages(prev => [...prev, optimisticMsg]);
 
         try {
-            await axios.post(`${API_URL}/admin/whatsapp/send`, {
+            await axios.post(`${API_URL}/whatsapp/send`, {
                 phone: selectedLead.phone,
                 text: currentText
             }, {
@@ -94,7 +94,7 @@ export default function WhatsAppLeads() {
         if (!selectedLead) return;
         try {
             const newStatus = !selectedLead.isAiControlled;
-            await axios.patch(`${API_URL}/admin/whatsapp/toggle-ai/${selectedLead._id}`, 
+            await axios.patch(`${API_URL}/whatsapp/toggle-ai/${selectedLead._id}`, 
                 { isAiControlled: newStatus },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -140,7 +140,7 @@ export default function WhatsAppLeads() {
                                 <div className="flex items-center justify-between">
                                     <p className="text-slate-400 font-bold text-[11px]">{lead.phone}</p>
                                     {lead.isAiControlled ? (
-                                        <FiBot className="text-blue-500" title="AI Handling" />
+                                        <FiCpu className="text-blue-500" title="AI Handling" />
                                     ) : (
                                         <FiUserCheck className="text-green-500" title="Human Handling" />
                                     )}
@@ -181,7 +181,7 @@ export default function WhatsAppLeads() {
                                 }`}
                             >
                                 {selectedLead.isAiControlled ? (
-                                    <><FiBot size={14}/> AI is Active (Click to Take Over)</>
+                                    <><FiCpu size={14}/> AI is Active (Click to Take Over)</>
                                 ) : (
                                     <><FiShield size={14}/> Human Active (Click to Return to AI)</>
                                 )}
@@ -226,7 +226,7 @@ export default function WhatsAppLeads() {
                             {selectedLead.isAiControlled ? (
                                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-center">
                                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center justify-center gap-2">
-                                        <FiBot /> AI is currently handling this conversation. Take over to reply.
+                                        <FiCpu /> AI is currently handling this conversation. Take over to reply.
                                     </p>
                                 </div>
                             ) : (
