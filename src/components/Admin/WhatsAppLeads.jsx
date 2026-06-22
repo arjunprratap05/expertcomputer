@@ -31,17 +31,16 @@ export default function WhatsAppLeads() {
 
     useEffect(() => {
         fetchLeads();
-        // Optional: Set an interval to refresh leads every minute
         const interval = setInterval(fetchLeads, 60000);
         return () => clearInterval(interval);
     }, []);
 
-    // 2. Fetch Chat History for a specific lead
+    // 2. Fetch Chat History
     const loadChatHistory = async (lead) => {
         setSelectedLead(lead);
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/whatsapp/messages/${lead.phone}`,{
+            const res = await axios.get(`${API_URL}/whatsapp/messages/${lead.phone}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setMessages(res.data.messages || []);
@@ -52,7 +51,6 @@ export default function WhatsAppLeads() {
         }
     };
 
-    // Auto-scroll to bottom of chat
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
@@ -63,14 +61,14 @@ export default function WhatsAppLeads() {
         if (!replyText.trim() || !selectedLead) return;
 
         const currentText = replyText;
-        setReplyText(""); // Clear input immediately for UX
+        setReplyText("");
 
-        // Optimistically add to UI
+        // OPTIMISTIC UI FIX: Perfectly matches your DB schema and is safely inside the function!
         const optimisticMsg = {
             _id: Date.now(),
-            sender: 'admin',
+            sender: 'agent', 
             text: currentText,
-            createdAt: new Date().toISOString()
+            timestamp: new Date().toISOString() 
         };
         setMessages(prev => [...prev, optimisticMsg]);
 
@@ -81,7 +79,6 @@ export default function WhatsAppLeads() {
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            // Re-fetch to ensure sync
             loadChatHistory(selectedLead);
         } catch (error) {
             console.error("Failed to send message", error);
@@ -89,7 +86,7 @@ export default function WhatsAppLeads() {
         }
     };
 
-    // 4. Toggle AI Control (Human Takeover)
+    // 4. Toggle AI Control
     const toggleAiControl = async () => {
         if (!selectedLead) return;
         try {
@@ -99,7 +96,6 @@ export default function WhatsAppLeads() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             
-            // Update local state
             setSelectedLead({ ...selectedLead, isAiControlled: newStatus });
             setLeads(leads.map(l => l._id === selectedLead._id ? { ...l, isAiControlled: newStatus } : l));
         } catch (error) {
@@ -109,7 +105,6 @@ export default function WhatsAppLeads() {
 
     return (
         <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 flex h-[700px] overflow-hidden text-left">
-            
             {/* LEFT SIDEBAR: LEAD LIST */}
             <div className="w-1/3 border-r border-slate-100 flex flex-col bg-slate-50/30">
                 <div className="p-6 border-b border-slate-100 flex items-center gap-3">
@@ -171,7 +166,6 @@ export default function WhatsAppLeads() {
                                 </p>
                             </div>
                             
-                            {/* AI / HUMAN TOGGLE */}
                             <button 
                                 onClick={toggleAiControl}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm ${
@@ -210,7 +204,8 @@ export default function WhatsAppLeads() {
                                                 <p className="text-[13px] font-medium leading-relaxed">{msg.text}</p>
                                                 <div className={`text-[9px] font-bold mt-2 flex items-center gap-1 ${isStudent ? 'text-slate-400' : 'text-blue-200/70'}`}>
                                                     <FiClock size={10} />
-                                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {/* TIMING FIX: Using msg.timestamp to match your DB Schema */}
+                                                    {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     {!isStudent && msg.sender === 'ai' && <span className="ml-2 uppercase tracking-widest text-[8px] bg-white/10 px-1.5 rounded">Sent by AI</span>}
                                                 </div>
                                             </div>
