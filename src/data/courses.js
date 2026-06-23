@@ -1,5 +1,5 @@
 export const techCoursesData = [
-    { id: "java-pro", title: "Programming in Java", fee: "8460", segment: "School Students", modules: ["Introduction to Java", "OOPS Masterclass", "Multithreading", "Project Work"] },
+    { id: "java-pro", title: "Programming in Java", fee: "8260", segment: "School Students", modules: ["Introduction to Java", "OOPS Masterclass", "Multithreading", "Project Work"] },
     { id: "html5-web", title: "HTML5 Programming", fee: "9440", segment: "School Students", modules: ["Semantic HTML", "CSS3 Flexbox", "Responsive Web", "Deployment"] },
     { id: "adca-diploma", title: "Advanced Diploma in Computer Application+", fee: "8500", segment: "Graduates", modules: ["MS Office", "Tally Prime", "C Programming", "DBMS MySQL"] },
     { id: "python-ds", title: "Python Programming & Data Exploration in Python", fee: "9440", segment: "College Students", modules: ["Python Core", "NumPy & Pandas", "Data Visualization", "Machine Learning"] },
@@ -42,7 +42,7 @@ export const techCoursesData = [
         id: "c-programming-intro",
         title: "Introduction to C Programming",
         fee: "3540", 
-        duration: "4 weeks", // Not specified on the flyer
+        duration: "4 weeks",
         accentColor: "border-orange-600",
         buttonColor: "bg-orange-600",
         modules: [
