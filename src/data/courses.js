@@ -37,6 +37,23 @@ export const techCoursesData = [
           "MIS Reporting & Projects",
           "Data Validation & Automation"
         ]
+      },
+      {
+        id: "c-programming-intro",
+        title: "Introduction to C Programming",
+        fee: "3540", 
+        duration: "4 weeks", // Not specified on the flyer
+        accentColor: "border-orange-600",
+        buttonColor: "bg-orange-600",
+        modules: [
+          "Overview of C programming language",
+          "Setting up a C development environment (IDEs, compilers)",
+          "Writing and running a simple C program",
+          "Basic structure of a C program (comments, directives, functions)",
+          "Data Types and Variables",
+          "Operators and Expressions",
+          "Control Flow Statements"
+        ]
       }
 ];
 

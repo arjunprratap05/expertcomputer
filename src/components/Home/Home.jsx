@@ -36,6 +36,7 @@ import FoundationinITPoster from '../../assets/posters/FoundationinIT.jpeg';
 import msofficePoster from '../../assets/posters/MS-OFFICE.jpeg';
 import AdvanceExcelPoster from '../../assets/posters/AdvanceExcel.jpeg';
 import tallyBootcampPoster from "../../assets/posters/TallyBootcampWebinar.jpeg";
+import CProgrammingPoster from "../../assets/posters/ProgramminginC.jpeg";
 
 // --- NEW COMPONENT: INFINITE RUNNING TICKER ---
 const RunningTicker = () => {
@@ -141,7 +142,7 @@ export default function Home() {
         "gen-ai-master": genAIPoster,"java-pro": javaPoster, "html5-web": htmlPoster, "adca-diploma": adcaPoster, "python-ds": pythonPoster,
         "tally-essential": tallyPoster, "full-stack-dev": AdvancedProgramFullStackPoster, "dsa-master": DSAPoster,
         "prog-cpp": ProgrammingusingCProgramPoster, "dca-new": DiplomainComputerApplicationPoster,
-        "found-it-new": FoundationinITPoster, "ms-office-basic": msofficePoster, "adv-excel-pro": AdvanceExcelPoster,
+        "found-it-new": FoundationinITPoster, "ms-office-basic": msofficePoster, "adv-excel-pro": AdvanceExcelPoster,"c-programming-intro" : CProgrammingPoster
     }), []);
 
     const categories = useMemo(() => [
@@ -160,7 +161,7 @@ export default function Home() {
     ], []);
 
     const displayCourses = useMemo(() => {
-        const featuredIds = ["gen-ai-master","java-pro", "html5-web", "adca-diploma", "python-ds", "tally-essential", "full-stack-dev", "dsa-master", "prog-cpp", "dca-new", "found-it-new", "ms-office-basic", "adv-excel-pro"];
+        const featuredIds = ["gen-ai-master","java-pro", "html5-web", "adca-diploma", "python-ds", "tally-essential", "full-stack-dev", "dsa-master", "prog-cpp", "dca-new", "found-it-new", "ms-office-basic", "adv-excel-pro","c-programming-intro"];
         return activeSegment === "All" 
             ? techCoursesData.filter(c => featuredIds.includes(c.id))
             : techCoursesData.filter(course => course.segment === activeSegment);

@@ -41,8 +41,8 @@ export default function AdminDashboard() {
     const permissions = {
         founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
         admin: ['overview', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
-        frontoffice: ['batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'quizzes'], 
-        accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons','whatsapp', 'quizzes']
+        frontoffice: ['batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'quizzes','coupons'], 
+        accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons','whatsapp', 'quizzes','coupons']
     };
     
     const hasAccess = (tab) => !permissions[userRole] || permissions[userRole].includes(tab);
