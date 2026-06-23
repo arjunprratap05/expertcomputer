@@ -7,7 +7,7 @@ export const techCoursesData = [
     { id: "full-stack-dev", title: "Advanced Program in Full Stack Software Development", fee: "42500", segment: "Graduates", modules: ["Logic Building", "OOPS using C++", "Web Designing HTML5", "Python Programming", "MySQL", "DSA", "Java Masterclass", "Spring Framework", "AI & Machine Learning"] },
     { id: "dca-new", title: "Diploma in Computer Application (DCA)", fee: "6500", segment: "Home Makers", modules: ["Introduction to Computers", "Computer Fundamentals", "Microsoft Windows", "MS Office", "Email & Internet", "Web Programming (HTML5)", "Tally Prime"] },
     { id: "dsa-master", title: "Data Structure and Algorithms (C/C++/C#/Java)", fee: "4842", segment: "College Students", modules: ["Complexity Analysis", "Arrays & Linked Lists", "Stacks & Queues", "Trees & Graphs", "Searching & Sorting Algorithms"] },
-    { id: "found-it-new", title: "Foundation in Information Technology", fee: "6500", segment: "Retired Persons", modules: ["C++ Programming", "Logic Building", "Python with Live Project", "HTML5, CSS & JavaScript"] },
+    { id: "found-it-new", title: "Foundation in Information Technology", fee: "15500", segment: "Retired Persons", modules: ["C++ Programming", "Logic Building", "Python with Live Project", "HTML5, CSS & JavaScript"] },
     { id: "gen-ai-master", title: "Advanced Diploma in Generative AI", fee: "42500", segment: "Working Professionals", modules: ["Foundations of LLMs", "Prompt Engineering", "Fine-tuning", "RAG Apps"] },
     { id: "prog-cpp", title: "Programming using C++", fee: "3540", modules: ["OOPS Concepts", "Encapsulation & Abstraction", "Constructors & Destructors", "Inheritance", "Functions", "Linked Lists", "Arrays"] },
     {
