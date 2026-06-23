@@ -42,7 +42,7 @@ export default function AdminDashboard() {
         founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
         admin: ['overview', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
         frontoffice: ['batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'quizzes','coupons'], 
-        accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons','whatsapp', 'quizzes','coupons']
+        accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons','whatsapp', 'quizzes']
     };
     
     const hasAccess = (tab) => !permissions[userRole] || permissions[userRole].includes(tab);
@@ -331,7 +331,7 @@ export default function AdminDashboard() {
         return (
             <div className="space-y-10 text-left">
                 {/* 1. TOP METRICS ROW */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <div className="bg-[#1A5F7A] text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group border-b-4 border-[#F37021]">
                         <FiDollarSign className="absolute -right-4 -bottom-4 text-9xl opacity-10" />
                         <p className="text-[10px] uppercase font-black opacity-60 mb-1">Gross Collection (All Time)</p>
@@ -371,7 +371,7 @@ export default function AdminDashboard() {
                         </h4>
                         <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Production network compilation delays and browser layout speeds.</p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                         {webPerformanceMetrics.map((item, idx) => (
                             <div key={idx} className="p-6 bg-white rounded-2xl border border-slate-100 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
                                 <span className="text-[9px] font-black text-slate-400 uppercase leading-normal">{item.label}</span>
@@ -395,7 +395,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="bg-orange-50 text-[#F37021] px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-orange-100 shrink-0">{availableBatches.length} Live Operations</div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                         {availableBatches.length > 0 ? availableBatches.map(batch => (
                             <div key={batch._id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl hover:border-orange-200 hover:shadow-md transition-all group flex flex-col justify-between h-full">
                                 <div>
