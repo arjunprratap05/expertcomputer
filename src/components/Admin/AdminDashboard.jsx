@@ -7,7 +7,7 @@ import {
     FiCheckCircle, FiCreditCard, FiDollarSign, FiVideo, FiBookOpen, 
     FiGrid, FiClock, FiShield, FiTag, FiChevronDown, FiZap, FiPhoneCall, 
     FiAlertCircle, FiCpu, FiUserCheck, FiMessageCircle, FiFacebook, FiGlobe,
-    FiEdit3, FiPlusCircle, FiCheck
+    FiEdit3, FiPlusCircle, FiCheck, FiUnlock
 } from 'react-icons/fi';
 
 import { techCoursesData, universityPrograms } from '../../data/courses';
@@ -265,6 +265,18 @@ export default function AdminDashboard() {
         } catch (err) { triggerToast("VERIFICATION FAILED"); }
     };
 
+    const handleForceUnlock = async (studentId) => {
+        try {
+            await axios.patch(`${API_URL}/admin/registrations/${studentId}/grant-access`, {}, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+            triggerToast("PORTAL GRANTED FOR TOKEN PAYMENT");
+            fetchEverything();
+        } catch (err) { 
+            triggerToast("PORTAL UNLOCK FAILED"); 
+        }
+    };
+
     const handleCreateCoupon = async (e) => {
         e.preventDefault();
         try {
@@ -296,11 +308,22 @@ export default function AdminDashboard() {
         const { student, amount, mode, transactionId, courseTitle } = paymentModal;
         const amt = Number(amount);
         if (!amt || amt <= 0) return triggerToast("ENTER VALID AMOUNT");
+        
         try {
+            // 1. Sync the payment
             await axios.patch(`${API_URL}/admin/registrations/${student._id}/update-payment`, 
                 { courseTitle, amountPaid: amt, paymentLog: { amount: amt, mode, transactionId, date: new Date() } }, 
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+    
+            // 2. Auto-Unlock if the payment clears the due balance
+            const ledger = calculateAggregateLedger(student);
+            if (amt >= ledger.due && !student.isApproved) {
+                await axios.patch(`${API_URL}/admin/registrations/${student._id}/grant-access`, {}, { 
+                    headers: { Authorization: `Bearer ${token}` } 
+                });
+            }
+    
             triggerToast("LEDGER SYNCED");
             setPaymentModal({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" });
             fetchEverything();
@@ -468,9 +491,21 @@ export default function AdminDashboard() {
                                         <td>
                                             <div className="flex flex-col gap-2">
                                                 {student.isApproved ? (
-                                                    <div className="bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-200 text-[9px] font-black w-fit uppercase flex items-center gap-1.5 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Portal Active</div>
+                                                    <div className="bg-green-50 text-green-600 px-2 py-1 rounded-lg border border-green-200 text-[9px] font-black w-fit uppercase flex items-center gap-1.5 shadow-sm">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Portal Active
+                                                    </div>
                                                 ) : (
-                                                    <div className="bg-red-50 text-red-500 px-2 py-1 rounded-lg border border-red-200 text-[9px] font-black w-fit uppercase flex items-center gap-1.5 shadow-sm"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />Portal Inactive</div>
+                                                    <div className="flex flex-col gap-1.5 w-fit">
+                                                        <div className="bg-red-50 text-red-500 px-2 py-1 rounded-lg border border-red-200 text-[9px] font-black w-fit uppercase flex items-center gap-1.5 shadow-sm">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />Portal Inactive
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => handleForceUnlock(student._id)}
+                                                            className="bg-white border border-slate-200 text-[#F37021] hover:bg-[#F37021] hover:text-white px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider flex items-center justify-center gap-1 transition-all shadow-sm"
+                                                        >
+                                                            <FiUnlock size={10} /> Force Unlock
+                                                        </button>
+                                                    </div>
                                                 )}
                                                 
                                                 {/* STRICTLY FILTERED BATCH RENDERING FOR STUDENT ROWS */}
