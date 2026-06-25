@@ -7,7 +7,7 @@ import {
     FiCheckCircle, FiCreditCard, FiDollarSign, FiVideo, FiBookOpen, 
     FiGrid, FiClock, FiShield, FiTag, FiChevronDown, FiZap, FiPhoneCall, 
     FiAlertCircle, FiCpu, FiUserCheck, FiMessageCircle, FiFacebook, FiGlobe,
-    FiEdit3, FiPlusCircle, FiCheck, FiUnlock
+    FiEdit3, FiPlusCircle, FiCheck, FiUnlock, FiSend, FiTrendingUp, FiAward
 } from 'react-icons/fi';
 
 import { techCoursesData, universityPrograms } from '../../data/courses';
@@ -70,6 +70,7 @@ export default function AdminDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterApproved, setFilterApproved] = useState("all"); 
     const [toast, setToast] = useState({ show: false, message: "" });
+    const [isSendingReport, setIsSendingReport] = useState(false);
     
     const [paymentModal, setPaymentModal] = useState({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" });
     const [batchModal, setBatchModal] = useState({ show: false, student: null, filteredBatches: [] });
@@ -105,7 +106,6 @@ export default function AdminDashboard() {
         setIsSidebarOpen(false); 
     }, []);
 
-    // --- REBUILT BATCH MATCHING ENGINE ---
     const isCourseBatchMatch = useCallback((courseName, batchCourseId, batchCourseName) => {
         if (!courseName) return false;
         
@@ -113,14 +113,12 @@ export default function AdminDashboard() {
         const bId = (batchCourseId || "").toLowerCase();
         const bName = (batchCourseName || "").toLowerCase();
 
-        // 1. Smart Keyword Mapping for specific courses
         if (cName.includes("tally") && (bId.includes("tally") || bName.includes("tally"))) return true;
         if ((cName.includes("gen-ai") || cName.includes("generative ai")) && (bId.includes("gen-ai") || bName.includes("gen-ai") || bId.includes("generative"))) return true;
         if (cName.includes("java") && (bId.includes("java") || bName.includes("java"))) return true;
         if (cName.includes("adca") && (bId.includes("adca") || bName.includes("adca"))) return true;
         if (cName.includes("dca") && !cName.includes("adca") && (bId.includes("dca") || bName.includes("dca"))) return true;
 
-        // 2. Strict Stripped String Validation (Ignores empty fields safely)
         const cleanCourse = cName.replace(/[^a-z0-9]/g, "");
         const cleanBatchId = bId.replace(/[^a-z0-9]/g, "");
         const cleanBatchName = bName.replace(/[^a-z0-9]/g, "");
@@ -212,6 +210,26 @@ export default function AdminDashboard() {
 
         if (!selectedMonth) setSelectedMonth(currentMonthKey);
     }, [getNormalizedEnrollments, selectedMonth]);
+
+    const topCoursesData = useMemo(() => {
+        const stats = {};
+        students.forEach(student => {
+            const enrolls = getNormalizedEnrollments(student);
+            enrolls.forEach(en => {
+                if (!en.course) return;
+                if (!stats[en.course]) {
+                    stats[en.course] = { enrollments: 0, revenue: 0 };
+                }
+                stats[en.course].enrollments += 1;
+                stats[en.course].revenue += (Number(en.amountPaid) || 0);
+            });
+        });
+        
+        return Object.entries(stats)
+            .map(([courseName, data]) => ({ courseName, ...data }))
+            .sort((a, b) => b.enrollments - a.enrollments) 
+            .slice(0, 4); 
+    }, [students, getNormalizedEnrollments]);
 
     const calculateAggregateLedger = useCallback((student) => {
         const enrolls = getNormalizedEnrollments(student);
@@ -310,13 +328,11 @@ export default function AdminDashboard() {
         if (!amt || amt <= 0) return triggerToast("ENTER VALID AMOUNT");
         
         try {
-            // 1. Sync the payment
             await axios.patch(`${API_URL}/admin/registrations/${student._id}/update-payment`, 
                 { courseTitle, amountPaid: amt, paymentLog: { amount: amt, mode, transactionId, date: new Date() } }, 
                 { headers: { Authorization: `Bearer ${token}` } }
             );
     
-            // 2. Auto-Unlock if the payment clears the due balance
             const ledger = calculateAggregateLedger(student);
             if (amt >= ledger.due && !student.isApproved) {
                 await axios.patch(`${API_URL}/admin/registrations/${student._id}/grant-access`, {}, { 
@@ -336,6 +352,25 @@ export default function AdminDashboard() {
             triggerToast(!currentStatus ? "CONTACTED" : "PENDING");
             fetchEverything();
         } catch (err) { triggerToast("FAILED"); }
+    };
+
+    const handleSendReport = async () => {
+        setIsSendingReport(true);
+        try {
+            await axios.post(`${API_URL}/admin/reports/dispatch-founder-report`, {
+                targetMonth: selectedMonth,
+                totalRevenue: monthlyHistory[selectedMonth] || 0,
+                topCourses: topCoursesData,
+                totalStudents: students.length,
+                pendingQueue: finances.pendingAdjustments
+            }, { headers: { Authorization: `Bearer ${token}` } });
+            
+            triggerToast("REPORT DISPATCHED TO FOUNDER");
+        } catch (err) {
+            triggerToast("FAILED TO DISPATCH REPORT");
+        } finally {
+            setIsSendingReport(false);
+        }
     };
 
     const renderSourceBadge = (src) => {
@@ -386,7 +421,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 2. LIVE OPTIMIZATION ARCHITECTURE TRACE (RESTORED) */}
+                {/* 2. LIVE OPTIMIZATION ARCHITECTURE TRACE */}
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
                     <div className="mb-6">
                         <h4 className="font-black text-[#1A5F7A] text-[16px] uppercase tracking-wide italic flex items-center gap-2">
@@ -409,7 +444,57 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 3. ACTIVE BROADCAST STREAMS */}
+                {/* 3. MARKET INTELLIGENCE & REPORT DISPATCH */}
+                <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-slate-50">
+                        <div>
+                            <h4 className="font-black text-[#1A5F7A] text-[16px] uppercase tracking-wide italic flex items-center gap-2">
+                                <FiTrendingUp className="text-[#F37021]"/> Market Intelligence
+                            </h4>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Highest performing programs by enrollment volume.</p>
+                        </div>
+                        {userRole === 'founder' || userRole === 'admin' ? (
+                            <button 
+                                onClick={handleSendReport} 
+                                disabled={isSendingReport}
+                                className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm transition-all border ${
+                                    isSendingReport 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    : "bg-green-50 text-green-700 border-green-200 hover:bg-green-600 hover:text-white"
+                                }`}
+                            >
+                                <FiSend /> {isSendingReport ? "Transmitting..." : "Dispatch Founder Report"}
+                            </button>
+                        ) : null}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {topCoursesData.length > 0 ? topCoursesData.map((course, idx) => (
+                            <div key={idx} className="p-6 bg-slate-50 rounded-2xl border border-slate-100 relative group hover:border-[#F37021] transition-all">
+                                <div className="absolute -top-3 -left-3 w-8 h-8 bg-white rounded-full border border-slate-200 flex items-center justify-center shadow-sm">
+                                    <FiAward className={idx === 0 ? "text-yellow-500" : idx === 1 ? "text-slate-400" : "text-amber-700"} size={16} />
+                                </div>
+                                <h5 className="font-black text-[#1A5F7A] text-[13px] uppercase italic mt-2 leading-tight min-h-[36px]">{course.courseName}</h5>
+                                <div className="mt-4 pt-4 border-t border-slate-200/60 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Enrolls</p>
+                                        <p className="font-black text-[#F37021] text-lg">{course.enrollments}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Revenue</p>
+                                        <p className="font-black text-[#1A5F7A] text-lg">₹{course.revenue.toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="col-span-full p-8 text-center text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+                                <span className="text-[10px] font-black uppercase tracking-widest block">Awaiting Sales Data</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 4. ACTIVE BROADCAST STREAMS */}
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-slate-50">
                         <div>
@@ -442,6 +527,7 @@ export default function AdminDashboard() {
             </div>
         );
     };
+
     const renderRegistry = () => (
         <div className="space-y-8">
              <div className="flex flex-wrap justify-between items-center gap-4">
@@ -482,7 +568,20 @@ export default function AdminDashboard() {
                                     <tr className={`group transition-all ${isExpanded ? 'bg-blue-50/20' : 'hover:bg-slate-50/50'}`}>
                                         <td className="p-7">
                                             <div className="font-black text-[#1A5F7A] uppercase italic text-[16px] leading-none tracking-wide">{student.name}</div>
-                                            <div className="text-slate-400 font-bold text-[10px] uppercase mt-2 italic">{enrollments.length} Enrollment(s) • {student.phone}</div>
+                                            <div className="text-slate-400 font-bold text-[10px] uppercase mt-2 italic flex items-center gap-1.5 flex-wrap">
+                                                <span>{enrollments.length} Enrollment(s)</span>
+                                                <span className="text-slate-200">•</span>
+                                                <span>{student.phone}</span>
+                                                {(student.createdAt || student.date) && (
+                                                    <>
+                                                        <span className="text-slate-200">•</span>
+                                                        <span className="flex items-center gap-1">
+                                                            <FiClock size={10} className="text-[#F37021]"/> 
+                                                            {new Date(student.createdAt || student.date).toLocaleDateString()}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                         <td>
                                             <div className="font-black text-[#1A5F7A] text-[15px]">₹{ledger.paid.toLocaleString()} <span className="text-slate-300 text-[11px] font-normal">/ ₹{ledger.total.toLocaleString()}</span></div>
@@ -508,7 +607,6 @@ export default function AdminDashboard() {
                                                     </div>
                                                 )}
                                                 
-                                                {/* STRICTLY FILTERED BATCH RENDERING FOR STUDENT ROWS */}
                                                 <div className="flex flex-wrap gap-1 mt-0.5">
                                                     {(() => {
                                                         if (!student.activeBatches || student.activeBatches.length === 0) {
@@ -859,7 +957,15 @@ export default function AdminDashboard() {
                                         <tr key={item._id} className="hover:bg-blue-50/20 group">
                                             <td className="p-7">
                                                 <div className="font-black text-[#1A5F7A] uppercase italic text-[15px] group-hover:text-[#F37021]">{item.name}</div>
-                                                <div className="text-slate-400 font-bold text-[11px] mt-1">{item.phone}</div>
+                                                <div className="text-slate-400 font-bold text-[11px] mt-1 flex items-center gap-1.5">
+                                                    <span>{item.phone}</span>
+                                                    {(item.createdAt || item.date) && (
+                                                        <>
+                                                            <span className="text-slate-200">•</span>
+                                                            <span className="flex items-center gap-1"><FiClock size={10} className="text-[#F37021]"/> {new Date(item.createdAt || item.date).toLocaleDateString()}</span>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="font-black text-[#1A5F7A] uppercase opacity-80 text-[13px]">{item.course || "GENERAL"}</td>
                                             <td>{renderSourceBadge(item.source)}</td>
