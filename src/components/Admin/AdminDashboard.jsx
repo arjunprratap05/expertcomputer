@@ -38,11 +38,12 @@ export default function AdminDashboard() {
     const userName = localStorage.getItem("adminName") || "Administrator";
     const currentYear = 2026;
 
+    // WHATSAPP PERMISSION REMOVED FROM 'ACCOUNTS'
     const permissions = {
         founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
         admin: ['overview', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
         frontoffice: ['batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'quizzes','coupons'], 
-        accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons','whatsapp', 'quizzes']
+        accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons', 'quizzes'] 
     };
     
     const hasAccess = (tab) => !permissions[userRole] || permissions[userRole].includes(tab);
@@ -544,8 +545,9 @@ export default function AdminDashboard() {
                     </select>
                 </div>
              </div>
+             {/* ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING */}
              <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full min-w-[1000px] text-left">
                     <thead className="bg-slate-50 font-black uppercase text-slate-400 border-b text-[10px] tracking-wider">
                         <tr><th className="p-7">Profile Identity</th><th>Financial standing (Net Gross)</th><th>Portal Status</th><th className="pr-7 text-right">Ledger Control Links</th></tr>
                     </thead>
@@ -721,7 +723,6 @@ export default function AdminDashboard() {
 
     const renderCoupons = () => (
         <div className="space-y-10 max-w-[1600px] mx-auto">
-            {/* COUPON CREATION FORM */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden border-t-[12px] border-[#1A5F7A]">
                 <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                     <div className="flex items-center gap-4">
@@ -799,7 +800,7 @@ export default function AdminDashboard() {
                 </form>
             </div>
 
-            {/* ACTIVE COUPON REGISTRY TABLE */}
+            {/* ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h3 className="font-black text-[#1A5F7A] uppercase italic flex items-center gap-3">
@@ -810,7 +811,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                    <table className="w-full min-w-[800px] text-left">
                         <thead className="bg-white text-slate-400 font-black uppercase border-b border-slate-100 text-[10px] tracking-widest">
                             <tr>
                                 <th className="p-6 pl-8">Campaign Details</th>
@@ -873,8 +874,9 @@ export default function AdminDashboard() {
     );
 
     const renderLogs = () => (
-        <div className="bg-white rounded-[2.5rem] shadow-xl border overflow-hidden text-left">
-            <table className="w-full text-[11px]">
+        // ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING
+        <div className="bg-white rounded-[2.5rem] shadow-xl border overflow-x-auto text-left">
+            <table className="w-full min-w-[800px] text-[11px]">
                 <thead className="bg-slate-50 text-[10px] font-black uppercase border-b p-8 text-slate-400">
                     <tr><th className="p-8">Operator</th><th>Action</th><th>Target</th><th className="pr-8 text-right">Timestamp</th></tr>
                 </thead>
@@ -947,8 +949,9 @@ export default function AdminDashboard() {
                     {activeTab === 'coupons' && renderCoupons()}
                     {activeTab === 'logs' && renderLogs()}
                     {activeTab === 'enquiries' && (
+                        // ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING
                         <div className="bg-white rounded-[2.5rem] shadow-xl border overflow-hidden overflow-x-auto text-left">
-                            <table className="w-full text-[11px]">
+                            <table className="w-full min-w-[800px] text-[11px]">
                                 <thead className="bg-slate-50 font-black uppercase text-slate-400 border-b text-[9px]">
                                     <tr><th className="p-7">Lead Identity</th><th>Program</th><th>Source</th><th className="pr-7 text-right">Action</th></tr>
                                 </thead>
