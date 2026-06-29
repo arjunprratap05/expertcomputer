@@ -178,7 +178,7 @@ export default function Header() {
                             className="fixed right-0 top-0 bottom-0 h-screen w-full sm:w-[380px] z-[201] lg:hidden bg-white shadow-2xl flex flex-col"
                         >
                             {/* Header */}
-                            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100">
+                            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 shrink-0">
                                 <img src={expertcomputerlogo} className="h-9 w-auto rounded" alt="Logo" />
                                 <button 
                                     className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all" 
@@ -188,85 +188,89 @@ export default function Header() {
                                 </button>
                             </div>
 
-                            {/* Nav Content */}
-                            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-                                <div className="space-y-1">
-                                    <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 mb-2">Navigation</div>
-                                    {['About', 'Founder', 'Hall of Fame', 'Contact'].map((name) => (
-                                        <NavLink 
-                                            key={name} 
-                                            to={`/${name.toLowerCase().replace(/ /g, '')}`} 
-                                            onClick={() => setIsMobileMenuOpen(false)} 
-                                            className={({ isActive }) => `flex items-center w-full px-3 py-3 rounded-xl text-base font-medium transition-all ${
-                                                isActive ? 'bg-orange-50 text-[#F37021] font-semibold' : 'text-slate-600 hover:bg-slate-50'
-                                            }`}
-                                        >
-                                            {name}
-                                        </NavLink>
-                                    ))}
-                                </div>
-
-                                {/* Accordion Segment for Mobile Courses */}
-                                <div className="space-y-1">
-                                    <button 
-                                        className="w-full flex justify-between items-center px-3 py-3 rounded-xl text-base font-medium text-slate-600 hover:bg-slate-50 transition-all" 
-                                        onClick={() => setActiveMobileDropdown(!activeMobileDropdown)}
-                                    >
-                                        <span>Our Programs</span>
-                                        <FiChevronDown className={`transform transition-transform duration-200 ${activeMobileDropdown ? 'rotate-180 text-[#F37021]' : 'text-slate-400'}`} size={18} />
-                                    </button>
-                                    
-                                    <AnimatePresence initial={false}>
-                                        {activeMobileDropdown && (
-                                            <motion.div 
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.2 }}
-                                                className="overflow-hidden bg-slate-50 rounded-xl mt-1 mx-1"
+                            {/* Nav Content & Footer inside ONE scrollable wrapper */}
+                            <div className="flex-1 overflow-y-auto flex flex-col no-scrollbar">
+                                
+                                {/* Links & Accordion */}
+                                <div className="px-6 py-6 space-y-6 flex-1">
+                                    <div className="space-y-1">
+                                        <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 mb-2">Navigation</div>
+                                        {['About', 'Founder', 'Hall of Fame', 'Contact'].map((name) => (
+                                            <NavLink 
+                                                key={name} 
+                                                to={`/${name.toLowerCase().replace(/ /g, '')}`} 
+                                                onClick={() => setIsMobileMenuOpen(false)} 
+                                                className={({ isActive }) => `flex items-center w-full px-3 py-3 rounded-xl text-base font-medium transition-all ${
+                                                    isActive ? 'bg-orange-50 text-[#F37021] font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                                                }`}
                                             >
-                                                <div className="p-2 grid grid-cols-1 gap-1">
-                                                    {techCoursesData.map(c => (
-                                                        <button 
-                                                            key={c.id} 
-                                                            onClick={() => handleCourseClick(c)} 
-                                                            className="w-full text-left py-2.5 px-4 text-sm font-medium text-slate-600 hover:text-[#1A5F7A] transition-colors rounded-lg"
-                                                        >
-                                                            {c.title}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </div>
+                                                {name}
+                                            </NavLink>
+                                        ))}
+                                    </div>
 
-                            {/* Action Buttons Footer */}
-                            <div className="p-6 border-t border-slate-100 bg-slate-50 space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Link 
-                                        to="/admin/login" 
-                                        onClick={() => setIsMobileMenuOpen(false)} 
-                                        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium text-xs shadow-sm"
-                                    >
-                                        <FiLock size={13} /> Admin
-                                    </Link>
-                                    <Link 
-                                        to="/student-login" 
-                                        onClick={() => setIsMobileMenuOpen(false)} 
-                                        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-[#F37021] font-semibold text-xs shadow-sm"
-                                    >
-                                        <FiUser size={14} /> ERP Portal
-                                    </Link>
+                                    {/* Accordion Segment for Mobile Courses */}
+                                    <div className="space-y-1">
+                                        <button 
+                                            className="w-full flex justify-between items-center px-3 py-3 rounded-xl text-base font-medium text-slate-600 hover:bg-slate-50 transition-all" 
+                                            onClick={() => setActiveMobileDropdown(!activeMobileDropdown)}
+                                        >
+                                            <span>Our Programs</span>
+                                            <FiChevronDown className={`transform transition-transform duration-200 ${activeMobileDropdown ? 'rotate-180 text-[#F37021]' : 'text-slate-400'}`} size={18} />
+                                        </button>
+                                        
+                                        <AnimatePresence initial={false}>
+                                            {activeMobileDropdown && (
+                                                <motion.div 
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="overflow-hidden bg-slate-50 rounded-xl mt-1 mx-1"
+                                                >
+                                                    <div className="p-2 grid grid-cols-1 gap-1">
+                                                        {techCoursesData.map(c => (
+                                                            <button 
+                                                                key={c.id} 
+                                                                onClick={() => handleCourseClick(c)} 
+                                                                className="w-full text-left py-2.5 px-4 text-sm font-medium text-slate-600 hover:text-[#1A5F7A] transition-colors rounded-lg"
+                                                            >
+                                                                {c.title}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
-                                <button 
-                                    onClick={() => scrollToSection('signature-courses')} 
-                                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#1A5F7A] text-white font-semibold text-sm shadow-md hover:bg-[#154d63] transition-all"
-                                >
-                                    <span>Get Started</span>
-                                    <FiCompass size={16} />
-                                </button>
+
+                                {/* Action Buttons Footer (Now moves down smoothly when accordion expands) */}
+                                <div className="p-6 border-t border-slate-100 bg-slate-50 space-y-3 shrink-0 mt-auto">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Link 
+                                            to="/admin/login" 
+                                            onClick={() => setIsMobileMenuOpen(false)} 
+                                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium text-xs shadow-sm"
+                                        >
+                                            <FiLock size={13} /> Admin
+                                        </Link>
+                                        <Link 
+                                            to="/student-login" 
+                                            onClick={() => setIsMobileMenuOpen(false)} 
+                                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-[#F37021] font-semibold text-xs shadow-sm"
+                                        >
+                                            <FiUser size={14} /> ERP Portal
+                                        </Link>
+                                    </div>
+                                    <button 
+                                        onClick={() => scrollToSection('signature-courses')} 
+                                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#1A5F7A] text-white font-semibold text-sm shadow-md hover:bg-[#154d63] transition-all"
+                                    >
+                                        <span>Get Started</span>
+                                        <FiCompass size={16} />
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </>
