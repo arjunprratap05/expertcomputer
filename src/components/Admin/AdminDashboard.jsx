@@ -38,7 +38,6 @@ export default function AdminDashboard() {
     const userName = localStorage.getItem("adminName") || "Administrator";
     const currentYear = 2026;
 
-    // WHATSAPP PERMISSION REMOVED FROM 'ACCOUNTS'
     const permissions = {
         founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
         admin: ['overview', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
@@ -298,12 +297,24 @@ export default function AdminDashboard() {
 
     const handleCreateCoupon = async (e) => {
         e.preventDefault();
+        
+        const newCode = couponForm.code.toUpperCase().trim();
+        
+        // Prevent duplicate coupon creation frontend check
+        const codeExists = coupons.some(c => c.code.toUpperCase() === newCode);
+        if (codeExists) {
+            triggerToast("COUPON CODE ALREADY EXISTS");
+            return;
+        }
+
         try {
-            await axios.post(`${API_URL}/admin/coupons`, { ...couponForm, code: couponForm.code.toUpperCase().trim() }, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.post(`${API_URL}/admin/coupons`, { ...couponForm, code: newCode }, { headers: { Authorization: `Bearer ${token}` } });
             triggerToast("COUPON ACTIVATED");
             setCouponForm({ code: "", description: "", maxUsage: "", isActive: true, validFrom: "", validTo: "", courseCode: "ALL", discountType: "PERCENTAGE", discountValue: "" });
             fetchEverything();
-        } catch (err) { triggerToast("DEPLOYMENT FAILED"); }
+        } catch (err) { 
+            triggerToast(err.response?.data?.message?.toUpperCase() || "DEPLOYMENT FAILED"); 
+        }
     };
 
     const generateLocalCashTxn = () => {
@@ -721,160 +732,181 @@ export default function AdminDashboard() {
         </div>
     );
 
-    const renderCoupons = () => (
-        <div className="space-y-10 max-w-[1600px] mx-auto">
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden border-t-[12px] border-[#1A5F7A]">
-                <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <div className="flex items-center gap-4">
-                        <div className="w-2 h-10 bg-[#F37021] rounded-full shadow-md"></div>
-                        <div>
-                            <h3 className="text-xl font-black text-[#1A5F7A] uppercase italic leading-none">Coupon Deployment Engine</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Generate and distribute financial benefits</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <form onSubmit={handleCreateCoupon} className="p-8 md:p-12">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Activation Code</label>
-                            <div className="relative">
-                                <FiTag className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input required className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-black outline-none focus:bg-white focus:border-[#F37021] uppercase transition-all shadow-inner" placeholder="E.g. DIWALI2026" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value})} />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Usage Limit</label>
-                            <div className="relative">
-                                <FiUsers className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input required type="number" min="1" className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] transition-all shadow-inner" placeholder="100" value={couponForm.maxUsage} onChange={e => setCouponForm({...couponForm, maxUsage: e.target.value})} />
+    const renderCoupons = () => {
+        // NEW: Real-time duplicate check based on what is currently typed in the input
+        const isDuplicateCoupon = couponForm.code.trim().length > 0 && coupons.some(c => c.code.toUpperCase() === couponForm.code.toUpperCase().trim());
+
+        return (
+            <div className="space-y-10 max-w-[1600px] mx-auto">
+                {/* COUPON CREATION FORM */}
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden border-t-[12px] border-[#1A5F7A]">
+                    <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div className="flex items-center gap-4">
+                            <div className="w-2 h-10 bg-[#F37021] rounded-full shadow-md"></div>
+                            <div>
+                                <h3 className="text-xl font-black text-[#1A5F7A] uppercase italic leading-none">Coupon Deployment Engine</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Generate and distribute financial benefits</p>
                             </div>
                         </div>
                     </div>
-
-                    <div className="space-y-2 mb-8">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Campaign Narrative</label>
-                        <textarea required className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] min-h-[100px] resize-none transition-all shadow-inner" placeholder="Brief description of this promotional campaign..." value={couponForm.description} onChange={e => setCouponForm({...couponForm, description: e.target.value})} />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Start Date</label>
-                            <input required type="date" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] transition-all shadow-inner text-slate-600" value={couponForm.validFrom} onChange={e => setCouponForm({...couponForm, validFrom: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Expiry Date</label>
-                            <input required type="date" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] transition-all shadow-inner text-slate-600" value={couponForm.validTo} onChange={e => setCouponForm({...couponForm, validTo: e.target.value})} />
-                        </div>
-                    </div>
-
-                    <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-200 shadow-sm grid grid-cols-1 lg:grid-cols-3 gap-8 items-end">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-[#F37021] ml-4 italic">Target Scope</label>
-                            <select className="w-full p-5 bg-white border border-slate-200 rounded-[1.5rem] font-bold outline-none shadow-sm cursor-pointer text-slate-700" value={couponForm.courseCode} onChange={e => setCouponForm({...couponForm, courseCode: e.target.value})}>
-                                <option value="ALL">All Programs (Global)</option>
-                                {allCourses.map(c => <option key={c.title} value={c.title}>{c.title}</option>)}
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-[#F37021] ml-4 italic">Benefit Mode</label>
-                            <div className="flex bg-white p-1.5 rounded-[1.5rem] border border-slate-200 shadow-sm">
-                                <button type="button" onClick={() => setCouponForm({...couponForm, discountType: 'PERCENTAGE'})} className={`flex-1 py-3.5 rounded-[1rem] font-black text-[10px] transition-all uppercase tracking-widest ${couponForm.discountType === 'PERCENTAGE' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>% Percent</button>
-                                <button type="button" onClick={() => setCouponForm({...couponForm, discountType: 'FLAT'})} className={`flex-1 py-3.5 rounded-[1rem] font-black text-[10px] transition-all uppercase tracking-widest ${couponForm.discountType === 'FLAT' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>₹ Flat</button>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-[#1A5F7A] ml-4 italic">Benefit Value</label>
-                            <div className="relative">
-                                <div className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-300 text-xl">
-                                    {couponForm.discountType === 'FLAT' ? '₹' : '%'}
+                    
+                    <form onSubmit={handleCreateCoupon} className="p-8 md:p-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center pr-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Activation Code</label>
+                                    {isDuplicateCoupon && (
+                                        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded-md">
+                                            <FiAlertCircle size={10} /> Duplicate Coupon Detected
+                                        </motion.span>
+                                    )}
                                 </div>
-                                <input required type="number" min="1" className="w-full pl-12 pr-5 py-4 bg-white border border-slate-200 rounded-[1.5rem] font-black text-2xl outline-none focus:border-[#F37021] transition-all shadow-sm text-[#1A5F7A]" placeholder="0" value={couponForm.discountValue} onChange={e => setCouponForm({...couponForm, discountValue: e.target.value})} />
+                                <div className="relative">
+                                    <FiTag className={`absolute left-5 top-1/2 -translate-y-1/2 ${isDuplicateCoupon ? 'text-red-400' : 'text-slate-400'}`} />
+                                    <input 
+                                        required 
+                                        className={`w-full pl-12 pr-5 py-4 bg-slate-50 border-2 rounded-[1.5rem] font-black outline-none uppercase transition-all shadow-inner ${isDuplicateCoupon ? 'border-red-400 text-red-600 focus:bg-red-50 focus:border-red-500' : 'border-slate-100 focus:bg-white focus:border-[#F37021]'}`} 
+                                        placeholder="E.g. DIWALI2026" 
+                                        value={couponForm.code} 
+                                        onChange={e => setCouponForm({...couponForm, code: e.target.value})} 
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Usage Limit</label>
+                                <div className="relative">
+                                    <FiUsers className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input required type="number" min="1" className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] transition-all shadow-inner" placeholder="100" value={couponForm.maxUsage} onChange={e => setCouponForm({...couponForm, maxUsage: e.target.value})} />
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <button className="w-full mt-10 py-5 bg-[#F37021] text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-xl active:scale-[0.98] transition-all flex justify-center items-center gap-3 hover:bg-orange-600">
-                        <FiCheckCircle size={18} /> Authorize Deployment
-                    </button>
-                </form>
-            </div>
+                        <div className="space-y-2 mb-8">
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Campaign Narrative</label>
+                            <textarea required className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] min-h-[100px] resize-none transition-all shadow-inner" placeholder="Brief description of this promotional campaign..." value={couponForm.description} onChange={e => setCouponForm({...couponForm, description: e.target.value})} />
+                        </div>
 
-            {/* ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING */}
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="font-black text-[#1A5F7A] uppercase italic flex items-center gap-3">
-                        <FiGrid className="text-[#F37021]"/> Active Production Registry
-                    </h3>
-                    <div className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-                        {coupons.filter(c => c.isActive).length} LIVE
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Start Date</label>
+                                <input required type="date" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] transition-all shadow-inner text-slate-600" value={couponForm.validFrom} onChange={e => setCouponForm({...couponForm, validFrom: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Expiry Date</label>
+                                <input required type="date" className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:bg-white focus:border-[#F37021] transition-all shadow-inner text-slate-600" value={couponForm.validTo} onChange={e => setCouponForm({...couponForm, validTo: e.target.value})} />
+                            </div>
+                        </div>
+
+                        <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-200 shadow-sm grid grid-cols-1 lg:grid-cols-3 gap-8 items-end">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-[#F37021] ml-4 italic">Target Scope</label>
+                                <select className="w-full p-5 bg-white border border-slate-200 rounded-[1.5rem] font-bold outline-none shadow-sm cursor-pointer text-slate-700" value={couponForm.courseCode} onChange={e => setCouponForm({...couponForm, courseCode: e.target.value})}>
+                                    <option value="ALL">All Programs (Global)</option>
+                                    {allCourses.map(c => <option key={c.title} value={c.title}>{c.title}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-[#F37021] ml-4 italic">Benefit Mode</label>
+                                <div className="flex bg-white p-1.5 rounded-[1.5rem] border border-slate-200 shadow-sm">
+                                    <button type="button" onClick={() => setCouponForm({...couponForm, discountType: 'PERCENTAGE'})} className={`flex-1 py-3.5 rounded-[1rem] font-black text-[10px] transition-all uppercase tracking-widest ${couponForm.discountType === 'PERCENTAGE' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>% Percent</button>
+                                    <button type="button" onClick={() => setCouponForm({...couponForm, discountType: 'FLAT'})} className={`flex-1 py-3.5 rounded-[1rem] font-black text-[10px] transition-all uppercase tracking-widest ${couponForm.discountType === 'FLAT' ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>₹ Flat</button>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-[#1A5F7A] ml-4 italic">Benefit Value</label>
+                                <div className="relative">
+                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-300 text-xl">
+                                        {couponForm.discountType === 'FLAT' ? '₹' : '%'}
+                                    </div>
+                                    <input required type="number" min="1" className="w-full pl-12 pr-5 py-4 bg-white border border-slate-200 rounded-[1.5rem] font-black text-2xl outline-none focus:border-[#F37021] transition-all shadow-sm text-[#1A5F7A]" placeholder="0" value={couponForm.discountValue} onChange={e => setCouponForm({...couponForm, discountValue: e.target.value})} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button 
+                            disabled={isDuplicateCoupon}
+                            className={`w-full mt-10 py-5 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-xl transition-all flex justify-center items-center gap-3 ${isDuplicateCoupon ? 'bg-slate-300 cursor-not-allowed' : 'bg-[#F37021] active:scale-[0.98] hover:bg-orange-600'}`}
+                        >
+                            <FiCheckCircle size={18} /> {isDuplicateCoupon ? "Cannot Deploy Duplicate" : "Authorize Deployment"}
+                        </button>
+                    </form>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[800px] text-left">
-                        <thead className="bg-white text-slate-400 font-black uppercase border-b border-slate-100 text-[10px] tracking-widest">
-                            <tr>
-                                <th className="p-6 pl-8">Campaign Details</th>
-                                <th className="p-6 text-center">Access Code</th>
-                                <th className="p-6 text-center">Benefit</th>
-                                <th className="p-6 text-center">Usage Metrics</th>
-                                <th className="p-6 pr-8 text-right">System Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50 text-[12px] font-bold">
-                            {coupons.length > 0 ? coupons.map(c => (
-                                <tr key={c._id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="p-6 pl-8">
-                                        <div className="text-[#1A5F7A] font-black uppercase text-[13px] group-hover:text-[#F37021] transition-colors">{c.description || "No Narrative"}</div>
-                                        <div className="flex items-center gap-2 mt-1.5">
-                                            <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">{c.courseCode === 'ALL' ? 'Global Scope' : c.courseCode}</span>
-                                            <span className="text-slate-300">•</span>
-                                            <span className="text-slate-400 text-[10px] italic flex items-center gap-1"><FiClock size={10}/> Exp: {new Date(c.validTo).toLocaleDateString()}</span>
-                                        </div>
-                                    </td>
-                                    <td className="p-6 text-center">
-                                        <span className="bg-orange-50 text-[#F37021] border border-orange-100 px-3 py-1.5 rounded-lg italic uppercase font-black tracking-wider text-[13px] shadow-sm">
-                                            {c.code}
-                                        </span>
-                                    </td>
-                                    <td className="p-6 text-center">
-                                        <div className="font-black text-[#1A5F7A] text-[14px]">
-                                            {c.discountType === 'PERCENTAGE' ? `${c.discountValue}%` : `₹${c.discountValue}`}
-                                        </div>
-                                        <div className="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">Discount</div>
-                                    </td>
-                                    <td className="p-6 text-center">
-                                        <div className="flex flex-col items-center justify-center">
-                                            <span className="font-black text-[14px] text-slate-700">{c.usedCount || 0} <span className="text-slate-300 text-[10px] font-bold">/ {c.maxUsage}</span></span>
-                                            <div className="w-16 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                                                <div className="h-full bg-[#1A5F7A] rounded-full" style={{ width: `${((c.usedCount || 0) / c.maxUsage) * 100}%` }}></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-6 pr-8 text-right">
-                                        <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border inline-flex items-center gap-1.5 shadow-sm ${c.isActive ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-500 border-red-200'}`}>
-                                            {c.isActive ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> ACTIVE</> : <><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> EXPIRED</>}
-                                        </div>
-                                    </td>
-                                </tr>
-                            )) : (
+
+                {/* ACTIVE COUPON REGISTRY TABLE */}
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-black text-[#1A5F7A] uppercase italic flex items-center gap-3">
+                            <FiGrid className="text-[#F37021]"/> Active Production Registry
+                        </h3>
+                        <div className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                            {coupons.filter(c => c.isActive).length} LIVE
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[800px] text-left">
+                            <thead className="bg-white text-slate-400 font-black uppercase border-b border-slate-100 text-[10px] tracking-widest">
                                 <tr>
-                                    <td colSpan="5" className="p-16 text-center">
-                                        <FiTag className="mx-auto text-slate-200 mb-4" size={40} />
-                                        <h4 className="text-slate-400 font-black uppercase tracking-widest text-[11px]">No Active Coupons</h4>
-                                        <p className="text-slate-400/60 font-bold text-[10px] mt-1">Deploy a new coupon above to see it listed here.</p>
-                                    </td>
+                                    <th className="p-6 pl-8">Campaign Details</th>
+                                    <th className="p-6 text-center">Access Code</th>
+                                    <th className="p-6 text-center">Benefit</th>
+                                    <th className="p-6 text-center">Usage Metrics</th>
+                                    <th className="p-6 pr-8 text-right">System Status</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50 text-[12px] font-bold">
+                                {coupons.length > 0 ? coupons.map(c => (
+                                    <tr key={c._id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <td className="p-6 pl-8">
+                                            <div className="text-[#1A5F7A] font-black uppercase text-[13px] group-hover:text-[#F37021] transition-colors">{c.description || "No Narrative"}</div>
+                                            <div className="flex items-center gap-2 mt-1.5">
+                                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">{c.courseCode === 'ALL' ? 'Global Scope' : c.courseCode}</span>
+                                                <span className="text-slate-300">•</span>
+                                                <span className="text-slate-400 text-[10px] italic flex items-center gap-1"><FiClock size={10}/> Exp: {new Date(c.validTo).toLocaleDateString()}</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-6 text-center">
+                                            <span className="bg-orange-50 text-[#F37021] border border-orange-100 px-3 py-1.5 rounded-lg italic uppercase font-black tracking-wider text-[13px] shadow-sm">
+                                                {c.code}
+                                            </span>
+                                        </td>
+                                        <td className="p-6 text-center">
+                                            <div className="font-black text-[#1A5F7A] text-[14px]">
+                                                {c.discountType === 'PERCENTAGE' ? `${c.discountValue}%` : `₹${c.discountValue}`}
+                                            </div>
+                                            <div className="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">Discount</div>
+                                        </td>
+                                        <td className="p-6 text-center">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span className="font-black text-[14px] text-slate-700">{c.usedCount || 0} <span className="text-slate-300 text-[10px] font-bold">/ {c.maxUsage}</span></span>
+                                                <div className="w-16 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+                                                    <div className="h-full bg-[#1A5F7A] rounded-full" style={{ width: `${((c.usedCount || 0) / c.maxUsage) * 100}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-6 pr-8 text-right">
+                                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border inline-flex items-center gap-1.5 shadow-sm ${c.isActive ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-500 border-red-200'}`}>
+                                                {c.isActive ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> ACTIVE</> : <><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> EXPIRED</>}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="5" className="p-16 text-center">
+                                            <FiTag className="mx-auto text-slate-200 mb-4" size={40} />
+                                            <h4 className="text-slate-400 font-black uppercase tracking-widest text-[11px]">No Active Coupons</h4>
+                                            <p className="text-slate-400/60 font-bold text-[10px] mt-1">Deploy a new coupon above to see it listed here.</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderLogs = () => (
-        // ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING
         <div className="bg-white rounded-[2.5rem] shadow-xl border overflow-x-auto text-left">
             <table className="w-full min-w-[800px] text-[11px]">
                 <thead className="bg-slate-50 text-[10px] font-black uppercase border-b p-8 text-slate-400">
@@ -949,7 +981,6 @@ export default function AdminDashboard() {
                     {activeTab === 'coupons' && renderCoupons()}
                     {activeTab === 'logs' && renderLogs()}
                     {activeTab === 'enquiries' && (
-                        // ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING
                         <div className="bg-white rounded-[2.5rem] shadow-xl border overflow-hidden overflow-x-auto text-left">
                             <table className="w-full min-w-[800px] text-[11px]">
                                 <thead className="bg-slate-50 font-black uppercase text-slate-400 border-b text-[9px]">
