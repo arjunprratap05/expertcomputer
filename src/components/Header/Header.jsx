@@ -188,11 +188,11 @@ export default function Header() {
                                 </button>
                             </div>
 
-                            {/* Nav Content & Footer inside ONE scrollable wrapper */}
-                            <div className="flex-1 overflow-y-auto flex flex-col no-scrollbar">
+                            {/* Nav Content & Footer inside ONE flowing wrapper */}
+                            <div className="flex-1 overflow-y-auto no-scrollbar">
                                 
                                 {/* Links & Accordion */}
-                                <div className="px-6 py-6 space-y-6 flex-1">
+                                <div className="px-6 py-6 space-y-6">
                                     <div className="space-y-1">
                                         <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 mb-2">Navigation</div>
                                         {['About', 'Founder', 'Hall of Fame', 'Contact'].map((name) => (
@@ -245,20 +245,20 @@ export default function Header() {
                                     </div>
                                 </div>
 
-                                {/* Action Buttons Footer (Now moves down smoothly when accordion expands) */}
-                                <div className="p-6 border-t border-slate-100 bg-slate-50 space-y-3 shrink-0 mt-auto">
+                                {/* Action Buttons (Immediately below Accordion) */}
+                                <div className="px-6 pb-8 space-y-3">
                                     <div className="grid grid-cols-2 gap-3">
                                         <Link 
                                             to="/admin/login" 
                                             onClick={() => setIsMobileMenuOpen(false)} 
-                                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium text-xs shadow-sm"
+                                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium text-xs shadow-sm hover:bg-slate-50"
                                         >
                                             <FiLock size={13} /> Admin
                                         </Link>
                                         <Link 
                                             to="/student-login" 
                                             onClick={() => setIsMobileMenuOpen(false)} 
-                                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-[#F37021] font-semibold text-xs shadow-sm"
+                                            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-[#F37021] font-semibold text-xs shadow-sm hover:bg-orange-50"
                                         >
                                             <FiUser size={14} /> ERP Portal
                                         </Link>
@@ -271,6 +271,7 @@ export default function Header() {
                                         <FiCompass size={16} />
                                     </button>
                                 </div>
+                                
                             </div>
                         </motion.div>
                     </>
