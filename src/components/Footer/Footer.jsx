@@ -1,29 +1,24 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaFacebookF, FaYoutube, FaLinkedinIn, FaInstagram, FaArrowRight } from 'react-icons/fa';
 import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker } from 'react-icons/hi';
 import expertcomputerlogo from '../../assets/expertcomputerlogo.jpeg'; 
 
-// --- AUTOMATED YEARS CALCULATION ---
 const calculateYearsOfExperience = () => {
     const today = new Date();
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth(); // 0 = Jan, 1 = Feb, 2 = Mar...
-    
-    // Base subtraction from establishment year (1987)
+    const currentMonth = today.getMonth(); 
     let years = currentYear - 1987;
-    
-    // If we are in January (0) or February (1), the milestone in March hasn't hit yet
     if (currentMonth < 2) {
         years--;
     }
-    
     return years;
 };
 
 export default function Footer() {
     const navigate = useNavigate();
+    const location = useLocation();
     const mapUrl = "https://maps.google.com/?q=Expert+Computer+Academy+Patna";
 
     const handleFooterLinkClick = (item) => {
@@ -32,6 +27,16 @@ export default function Footer() {
         } else {
             window.scrollTo({ top: 0, behavior: 'instant' });
             navigate(item.link);
+        }
+    };
+
+    // UNIVERSAL LOGO ROUTING & SCROLL LOGIC
+    const handleLogoClick = (e) => {
+        if (location.pathname === '/') {
+            e.preventDefault(); 
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'instant' });
         }
     };
 
@@ -55,38 +60,30 @@ export default function Footer() {
 
     return (
         <footer className="relative overflow-hidden bg-slate-950 text-slate-200">
-            {/* Top Accent Gradient Border */}
             <div className="h-[4px] w-full bg-gradient-to-r from-orange-500 via-amber-500 to-cyan-500" />
-
-            {/* Glowing Decorative Background Blobs for Modern UI Depth */}
             <div className="absolute top-0 right-0 -z-10 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 -z-10 h-72 w-72 rounded-full bg-orange-500/10 blur-[120px] pointer-events-none" />
 
             <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
-                {/* Responsive Grid Architecture:
-                  - Mobile: 1 Column
-                  - iPads/Tablets (md): 2 Columns (Clean layout split)
-                  - Desktop (lg): 12-Column Grid for precise proportioning
-                */}
                 <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
                     
-                    {/* 1. BRAND COLUMN */}
                     <div className="space-y-6 lg:col-span-4">
-                        <button 
-                            onClick={() => navigate('/')} 
-                            className="group block transition-transform duration-300 active:scale-95"
+                        {/* ATTACHED TO FOOTER LOGO */}
+                        <Link 
+                            to="/"
+                            onClick={handleLogoClick} 
+                            className="group block transition-transform duration-300 active:scale-95 w-max"
                         >
                             <img 
                                 src={expertcomputerlogo} 
                                 className="h-14 w-auto rounded-xl bg-white p-1.5 shadow-md transition-all duration-300 group-hover:shadow-cyan-500/20" 
-                                alt="Logo" 
+                                alt="Expert Computer Logo" 
                             />
-                        </button>
+                        </Link>
                         <p className="max-w-sm text-sm font-normal leading-relaxed text-slate-400">
                             Empowering students in Patna with IT excellence since 1987. 
                             Our <span className="font-semibold text-white">{yearsOfExperience}+ years legacy</span> is built entirely on hands-on, practical learning.
                         </p>
-                        {/* Social Media Links with glassmorphism style */}
                         <div className="flex flex-wrap gap-3">
                             {[
                                 { icon: <FaFacebookF />, url: "https://www.facebook.com/expertcomputeracademypat/" },
@@ -107,7 +104,6 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* 2. PROGRAMS COLUMN */}
                     <div className="lg:col-span-2 lg:pl-4">
                         <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-6 after:h-[2px] after:bg-orange-500">
                             Programs
@@ -134,7 +130,6 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* 3. ACADEMY COLUMN */}
                     <div className="lg:col-span-2 lg:pl-2">
                         <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-6 after:h-[2px] after:bg-orange-500">
                             Academy
@@ -154,13 +149,11 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* 4. CONTACT & LOCATION COLUMN */}
                     <div className="space-y-6 lg:col-span-4">
                         <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-6 after:h-[2px] after:bg-orange-500">
                             Visit Us
                         </h4>
                         <div className="space-y-4">
-                            {/* Phone */}
                             <a href="tel:+917282983335" className="group flex items-start gap-3.5 rounded-2xl border border-slate-900 bg-slate-900/50 p-3.5 backdrop-blur-md transition-all duration-300 hover:border-slate-800 hover:bg-slate-900">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 transition-colors duration-300 group-hover:bg-orange-500 group-hover:text-white">
                                     <HiOutlinePhone className="text-xl" />
@@ -171,7 +164,6 @@ export default function Footer() {
                                 </div>
                             </a>
 
-                            {/* Email */}
                             <a href="mailto:expertcomputeracademypatna@gmail.com" className="group flex items-start gap-3.5 rounded-2xl border border-slate-900 bg-slate-900/50 p-3.5 backdrop-blur-md transition-all duration-300 hover:border-slate-800 hover:bg-slate-900 min-w-0">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 transition-colors duration-300 group-hover:bg-cyan-500 group-hover:text-white">
                                     <HiOutlineMail className="text-xl" />
@@ -182,7 +174,6 @@ export default function Footer() {
                                 </div>
                             </a>
 
-                            {/* Location */}
                             <a href={mapUrl} target="_blank" rel="noreferrer" className="group flex items-start gap-3.5 rounded-2xl border border-slate-900 bg-slate-900/50 p-3.5 backdrop-blur-md transition-all duration-300 hover:border-slate-800 hover:bg-slate-900">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 transition-colors duration-300 group-hover:bg-amber-500 group-hover:text-white">
                                     <HiOutlineLocationMarker className="text-xl" />
@@ -196,7 +187,6 @@ export default function Footer() {
                     </div>
                 </div>
 
-                {/* BOTTOM FOOTER BAR */}
                 <div className="mt-16 pt-8 border-t border-slate-900 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="text-[11px] font-medium tracking-widest text-slate-500 text-center sm:text-left">
                         © {new Date().getFullYear()} EXPERT COMPUTER ACADEMY. ALL RIGHTS RESERVED.

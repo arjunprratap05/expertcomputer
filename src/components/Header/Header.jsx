@@ -41,6 +41,18 @@ export default function Header() {
         scrollToSection(course.sectionId || 'signature-courses');
     };
 
+    // UNIVERSAL LOGO ROUTING & SCROLL LOGIC
+    const handleLogoClick = (e) => {
+        setIsMobileMenuOpen(false);
+        if (location.pathname === '/') {
+            e.preventDefault(); // Stop routing, just scroll up smoothly
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            // Let the <Link> handle routing, but force window to top instantly
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+    };
+
     return (
         <header 
             className={`fixed top-0 left-0 w-full z-[100] transition-all duration-300 ${
@@ -49,7 +61,6 @@ export default function Header() {
                 : 'py-4 lg:py-5 bg-transparent border-b border-transparent'
             }`}
         >
-            {/* MOBILE ONLY TOP GRADIENT SCRIM: Ensures white mobile icons stand out against any background image */}
             {!isScrolled && (
                 <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-transparent pointer-events-none lg:hidden" />
             )}
@@ -57,9 +68,9 @@ export default function Header() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <div className="flex justify-between items-center h-14 lg:h-16">
                     
-                    {/* LOGO AREA */}
                     <div className="flex items-center gap-8">
-                        <Link to="/" className="flex items-center shrink-0 transition-transform hover:scale-[1.02]">
+                        {/* ATTACHED TO DESKTOP LOGO */}
+                        <Link to="/" onClick={handleLogoClick} className="flex items-center shrink-0 transition-transform hover:scale-[1.02]">
                             <img 
                                 src={expertcomputerlogo} 
                                 className={`transition-all duration-300 w-auto rounded-lg ${
@@ -69,7 +80,6 @@ export default function Header() {
                             />
                         </Link>
 
-                        {/* DESKTOP NAVIGATION (Stays Dark Slate at top; Active is Orange) */}
                         <nav className="hidden lg:flex items-center gap-1">
                             {['About', 'Founder', 'Hall of Fame', 'Contact'].map((name) => (
                                 <NavLink 
@@ -85,7 +95,6 @@ export default function Header() {
                                 </NavLink>
                             ))}
                             
-                            {/* DESKTOP COURSES DROPDOWN */}
                             <div className="relative group/menu">
                                 <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium tracking-wide text-slate-600 hover:text-[#1A5F7A] hover:bg-slate-50 transition-all">
                                     <span>Courses</span>
@@ -118,7 +127,6 @@ export default function Header() {
                         </nav>
                     </div>
 
-                    {/* ACTION BUTTONS (DESKTOP) */}
                     <div className="hidden lg:flex items-center gap-4">
                         <Link to="/admin/login" className="flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm text-slate-500 hover:text-[#1A5F7A] hover:bg-slate-50 transition-all group">
                             <FiLock className="text-slate-400 group-hover:text-[#F37021] transition-colors" /> 
@@ -139,7 +147,6 @@ export default function Header() {
                         </button>
                     </div>
 
-                    {/* MOBILE HAMBURGER BUTTON (Responsive styling logic) */}
                     <div className="flex lg:hidden">
                         <button 
                             className={`p-2 rounded-xl transition-all ${
@@ -156,11 +163,9 @@ export default function Header() {
                 </div>
             </div>
 
-            {/* FULLY FUNCTIONAL MOBILE DRAWER */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <>
-                        {/* Backdrop overlay */}
                         <motion.div 
                             initial={{ opacity: 0 }} 
                             animate={{ opacity: 1 }} 
@@ -169,7 +174,6 @@ export default function Header() {
                             className="fixed inset-0 z-[200] lg:hidden bg-slate-900/50 backdrop-blur-sm"
                         />
                         
-                        {/* Drawer Panel */}
                         <motion.div 
                             initial={{ x: '100%' }} 
                             animate={{ x: 0 }} 
@@ -177,9 +181,11 @@ export default function Header() {
                             transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }} 
                             className="fixed right-0 top-0 bottom-0 h-screen w-full sm:w-[380px] z-[201] lg:hidden bg-white shadow-2xl flex flex-col"
                         >
-                            {/* Header */}
                             <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 shrink-0">
-                                <img src={expertcomputerlogo} className="h-9 w-auto rounded" alt="Logo" />
+                                {/* ATTACHED TO MOBILE DRAWER LOGO */}
+                                <Link to="/" onClick={handleLogoClick}>
+                                    <img src={expertcomputerlogo} className="h-9 w-auto rounded" alt="Logo" />
+                                </Link>
                                 <button 
                                     className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all" 
                                     onClick={() => setIsMobileMenuOpen(false)}
@@ -188,10 +194,7 @@ export default function Header() {
                                 </button>
                             </div>
 
-                            {/* Nav Content & Footer inside ONE flowing wrapper */}
                             <div className="flex-1 overflow-y-auto no-scrollbar">
-                                
-                                {/* Links & Accordion */}
                                 <div className="px-6 py-6 space-y-6">
                                     <div className="space-y-1">
                                         <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase px-3 mb-2">Navigation</div>
@@ -209,7 +212,6 @@ export default function Header() {
                                         ))}
                                     </div>
 
-                                    {/* Accordion Segment for Mobile Courses */}
                                     <div className="space-y-1">
                                         <button 
                                             className="w-full flex justify-between items-center px-3 py-3 rounded-xl text-base font-medium text-slate-600 hover:bg-slate-50 transition-all" 
@@ -245,7 +247,6 @@ export default function Header() {
                                     </div>
                                 </div>
 
-                                {/* Action Buttons (Immediately below Accordion) */}
                                 <div className="px-6 pb-8 space-y-3">
                                     <div className="grid grid-cols-2 gap-3">
                                         <Link 
@@ -271,7 +272,6 @@ export default function Header() {
                                         <FiCompass size={16} />
                                     </button>
                                 </div>
-                                
                             </div>
                         </motion.div>
                     </>
