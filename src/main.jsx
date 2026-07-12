@@ -33,7 +33,6 @@ import Certificates from './components/StudentPortal/Certificates.jsx';
 import BatchScheduler from './components/Admin/BatchScheduler.jsx';
 import StudentQuizHub from './components/StudentPortal/StudentQuizHub';
 
-
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route 
@@ -60,6 +59,7 @@ const router = createBrowserRouter(
         <Route path="live-lectures" element={<LiveLectures />} />
         <Route path="fee-ledger" element={<FeeLedger />} />
         <Route path="/erp/exams" element={<StudentQuizHub />} />
+        
       </Route>
 
       {/* Admin and Other Routes */}

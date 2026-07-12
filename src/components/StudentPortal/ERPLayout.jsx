@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import ERPSidebar from './ERPSidebar';
+import FloatingAIBot from '../StudentPortal/FloatingAIBot.jsx';
 
 export default function ERPLayout() {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ export default function ERPLayout() {
       <main className="flex-1 min-w-0 h-full overflow-y-auto overflow-x-hidden ml-0 lg:ml-72 pt-16">
         <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
           <Outlet /> 
+          <FloatingAIBot />
         </div>
       </main>
     </div>
