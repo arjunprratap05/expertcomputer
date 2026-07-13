@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMessageSquare, FiX, FiSend, FiCpu, FiLoader, FiMinimize2 } from 'react-icons/fi';
+import { FiMessageSquare, FiX, FiSend, FiCpu, FiLoader, FiMinimize2, FiImage } from 'react-icons/fi';
 
 export default function FloatingAIBot() {
     const [isOpen, setIsOpen] = useState(false);
@@ -33,8 +33,7 @@ export default function FloatingAIBot() {
 
         try {
             // BEST PRACTICE: Dynamically fetch the Base URL from Vite's environment variables
-            // It falls back to localhost:5000 strictly for local development if the env var isn't loaded yet
-            const API_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || 'http://localhost:5000';
+            const API_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:5000";
 
             const response = await fetch(`${API_URL}/lms/chat`, {
                 method: 'POST',
@@ -45,7 +44,12 @@ export default function FloatingAIBot() {
             const data = await response.json();
             
             if (response.ok) {
-                setMessages(prev => [...prev, { role: 'ai', text: data.response }]);
+                // UPDATE: Now capturing the images array from the backend response
+                setMessages(prev => [...prev, { 
+                    role: 'ai', 
+                    text: data.response,
+                    images: data.images || [] // Default to empty array if undefined
+                }]);
             } else {
                 setMessages(prev => [...prev, { role: 'ai', text: "Sorry, I'm having trouble connecting to the server." }]);
             }
@@ -93,13 +97,41 @@ export default function FloatingAIBot() {
                         {/* Chat History Area */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
                             {messages.map((msg, index) => (
-                                <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                                     <div className={`max-w-[85%] p-3 rounded-2xl text-sm font-medium leading-relaxed ${
                                         msg.role === 'user' 
                                             ? 'bg-[#F37021] text-white rounded-br-sm shadow-md' 
                                             : 'bg-white text-slate-700 border border-slate-100 rounded-bl-sm shadow-sm'
                                     }`}>
-                                        {msg.text}
+                                        {/* Standard Text */}
+                                        <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                                        
+                                        {/* NEW: Render Images if the backend provided them */}
+                                        {msg.images && msg.images.length > 0 && (
+                                            <div className="mt-3 space-y-2">
+                                                <div className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1 border-b border-slate-100 pb-1">
+                                                    <FiImage /> Visual Reference
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    {msg.images.map((imgUrl, i) => (
+                                                        <a 
+                                                            key={i} 
+                                                            href={imgUrl} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="block overflow-hidden rounded-xl border border-slate-200 shadow-sm hover:opacity-90 transition-opacity"
+                                                        >
+                                                            <img 
+                                                                src={imgUrl} 
+                                                                alt={`AI Diagram ${i + 1}`} 
+                                                                className="w-full h-auto object-cover max-h-48 bg-slate-100" 
+                                                                loading="lazy"
+                                                            />
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
