@@ -1,15 +1,21 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiX, FiCheckCircle, FiEdit3, FiSave, FiList, FiUsers, FiAward, FiTrash2, FiLock, FiUnlock } from 'react-icons/fi';
+import { FiPlus, FiX, FiCheckCircle, FiEdit3, FiSave, FiList, FiUsers, FiAward, FiTrash2, FiLock, FiUnlock, FiUploadCloud, FiCpu, FiLoader, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
 
 import { techCoursesData, universityPrograms } from '../../data/courses';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
+const API_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 
 export default function QuizManager() {
     const [quizzes, setQuizzes] = useState([]); 
     const [isCreating, setIsCreating] = useState(false);
+    
+    // AI Generation States
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [pdfFile, setPdfFile] = useState(null);
+    const [notification, setNotification] = useState('');
+    const fileInputRef = useRef(null);
     
     useEffect(() => {
         const fetchQuizzes = async () => {
@@ -44,6 +50,59 @@ export default function QuizManager() {
         correctIndex: 0
     });
 
+    const showNotification = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(''), 4000);
+    };
+
+    // --- AI PDF INTEGRATION ---
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setPdfFile(e.target.files[0]);
+        }
+    };
+
+    const generateFromPdf = async () => {
+        if (!pdfFile) return showNotification('Please upload a PDF document first.');
+        
+        setIsGenerating(true);
+        const formData = new FormData();
+        formData.append('document', pdfFile);
+
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.post(`${API_URL}/quizzes/generate-from-pdf`, formData, {
+                headers: { 
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${token}` 
+                }
+            });
+
+            if (res.data.success && res.data.questions) {
+                // Map AI's "question" property to your state's "questionText" property
+                const formattedQuestions = res.data.questions.map(q => ({
+                    questionText: q.question,
+                    options: q.options,
+                    correctIndex: q.correctIndex
+                }));
+
+                setQuizForm(prev => ({
+                    ...prev,
+                    questions: [...prev.questions, ...formattedQuestions]
+                }));
+                
+                setPdfFile(null);
+                showNotification('AI successfully extracted questions!');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification('Failed to generate questions. Ensure PDF text is readable.');
+        } finally {
+            setIsGenerating(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     const handleAddQuestion = () => {
         if (!currentQuestion.questionText) return alert("Question text required!");
         setQuizForm({
@@ -57,6 +116,13 @@ export default function QuizManager() {
         const newOptions = [...currentQuestion.options];
         newOptions[index] = value;
         setCurrentQuestion({ ...currentQuestion, options: newOptions });
+    };
+
+    const removeQuestion = (indexToRemove) => {
+        setQuizForm(prev => ({
+            ...prev,
+            questions: prev.questions.filter((_, idx) => idx !== indexToRemove)
+        }));
     };
 
     const handleSaveQuiz = async (e) => {
@@ -94,14 +160,15 @@ export default function QuizManager() {
         }
     };
 
-    // --- NEW TOGGLE FUNCTION ---
     const handleToggleStatus = async (id) => {
         try {
             const token = localStorage.getItem("adminToken");
-            const res = await axios.patch(`${API_URL}/admin/quizzes/${id}/status`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
+            const res = await axios.post(`${API_URL}/admin/quizzes/generate-from-pdf`, formData, {
+                headers: { 
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${token}` 
+                }
             });
-            
             // Update the UI instantly
             setQuizzes(quizzes.map(q => q._id === id ? { ...q, status: res.data.status } : q));
         } catch (err) {
@@ -111,7 +178,17 @@ export default function QuizManager() {
     };
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-10 relative">
+            
+            {/* AI Notification Toast */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl flex items-center gap-2 z-[9999]">
+                        <FiAlertCircle className="text-[#F37021]" /> {notification}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header & Controls */}
             <div className="flex justify-between items-end">
                 <div>
@@ -176,7 +253,7 @@ export default function QuizManager() {
                                             
                                             {/* VISIBILITY BADGE */}
                                             <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase border flex items-center gap-1 shadow-sm ${isActive ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                {isActive ? <FiCheckCircle/> : <FiLock/>} {q.status || 'LOCKED'}
+                                                {isActive ? <FiCheckCircle size={12}/> : <FiLock size={12}/>} {q.status || 'LOCKED'}
                                             </div>
 
                                             {/* TOGGLE LOCK BUTTON */}
@@ -234,7 +311,7 @@ export default function QuizManager() {
                                         >
                                             <option value="ALL">ALL GENERAL PROGRAMS</option>
                                             {allCourses.map(course => (
-                                                <option key={course.id} value={course.title}>
+                                                <option key={course.id || course.title} value={course.title}>
                                                     {course.title}
                                                 </option>
                                             ))}
@@ -247,12 +324,61 @@ export default function QuizManager() {
                                     </div>
                                 </div>
 
-                                {/* Question Builder Sub-Module */}
-                                <div className="border-2 border-dashed border-slate-200 rounded-3xl p-6 relative">
-                                    <div className="absolute -top-3 left-6 bg-white px-2 text-[10px] font-black uppercase text-[#F37021] italic flex items-center gap-1"><FiList/> Question Compiler</div>
+                                {/* --- NEW: AI AUTO-GENERATOR MODULE --- */}
+                                <div className="bg-gradient-to-br from-[#1A5F7A] to-slate-900 rounded-[2.5rem] p-8 shadow-xl text-white relative overflow-hidden">
+                                    <FiCpu className="absolute -right-10 -bottom-10 text-9xl opacity-10" />
+                                    
+                                    <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+                                        <div className="flex-1">
+                                            <h3 className="font-black uppercase italic text-xl flex items-center gap-2 mb-2"><FiCpu className="text-[#F37021]"/> AI Auto-Generate</h3>
+                                            <p className="text-xs text-blue-100/70 font-medium leading-relaxed">Upload a syllabus or study material in PDF format. The Neural Engine will extract the context and inject 5 automated questions directly into this assessment.</p>
+                                        </div>
+                                        
+                                        <div className="w-full md:w-auto flex flex-col gap-3">
+                                            <input type="file" accept="application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                                            
+                                            <button type="button" onClick={() => fileInputRef.current.click()} className="bg-white/10 border border-white/20 hover:bg-white/20 px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all w-full md:w-64">
+                                                <FiUploadCloud size={16} /> {pdfFile ? pdfFile.name.substring(0, 20) + '...' : 'Select PDF Document'}
+                                            </button>
+
+                                            <button 
+                                                type="button"
+                                                disabled={!pdfFile || isGenerating} 
+                                                onClick={generateFromPdf}
+                                                className={`px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all w-full md:w-64 shadow-lg
+                                                    ${!pdfFile ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#F37021] text-white hover:bg-orange-600'}`}
+                                            >
+                                                {isGenerating ? <><FiLoader className="animate-spin" /> Processing Data...</> : <><FiCpu /> Generate Questions</>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Active Question Roster (Shows what is in the bank so far) */}
+                                {quizForm.questions.length > 0 && (
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase text-[#F37021] ml-4 italic">Active Question Bank ({quizForm.questions.length})</label>
+                                        <div className="max-h-[250px] overflow-y-auto pr-2 space-y-2 no-scrollbar">
+                                            {quizForm.questions.map((q, idx) => (
+                                                <div key={idx} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex justify-between items-center group">
+                                                    <div className="truncate font-bold text-[13px] text-[#1A5F7A] pr-4 flex-1">
+                                                        <span className="opacity-50 mr-2">{idx + 1}.</span>{q.questionText}
+                                                    </div>
+                                                    <button type="button" onClick={() => removeQuestion(idx)} className="text-slate-300 hover:text-red-500 transition-colors p-2 bg-white rounded-xl shadow-sm group-hover:shadow-md">
+                                                        <FiTrash2 size={16}/>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Manual Question Builder Sub-Module */}
+                                <div className="border-2 border-dashed border-slate-200 rounded-3xl p-6 relative bg-white">
+                                    <div className="absolute -top-3 left-6 bg-white px-2 text-[10px] font-black uppercase text-slate-400 italic flex items-center gap-1"><FiList size={12}/> Manual Compiler</div>
                                     
                                     <div className="space-y-4">
-                                        <textarea className="w-full p-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] font-bold outline-none focus:border-[#F37021] min-h-[80px] resize-none" placeholder="Enter question text here..." value={currentQuestion.questionText} onChange={e => setCurrentQuestion({...currentQuestion, questionText: e.target.value})} />
+                                        <textarea className="w-full p-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] font-bold outline-none focus:border-[#F37021] min-h-[80px] resize-none" placeholder="Enter manual question text here..." value={currentQuestion.questionText} onChange={e => setCurrentQuestion({...currentQuestion, questionText: e.target.value})} />
                                         
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {currentQuestion.options.map((opt, idx) => (
@@ -275,8 +401,8 @@ export default function QuizManager() {
                                             ))}
                                         </div>
                                         
-                                        <button type="button" onClick={handleAddQuestion} className="w-full py-4 border-2 border-[#1A5F7A] text-[#1A5F7A] rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#1A5F7A] hover:text-white transition-all">
-                                            + Commit Question to Bank
+                                        <button type="button" onClick={handleAddQuestion} className="w-full py-4 border-2 border-[#1A5F7A] text-[#1A5F7A] rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#1A5F7A] hover:text-white transition-all flex items-center justify-center gap-2">
+                                            <FiPlus size={16}/> Commit Manual Question to Bank
                                         </button>
                                     </div>
                                 </div>
@@ -286,7 +412,7 @@ export default function QuizManager() {
                                     <div className="text-[10px] font-black uppercase text-slate-400 italic">
                                         Questions in Bank: <span className="text-[#F37021] text-lg">{quizForm.questions.length}</span>
                                     </div>
-                                    <button type="submit" disabled={quizForm.questions.length === 0} className="bg-[#1A5F7A] disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-8 py-4 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center gap-2 text-xs transition-all">
+                                    <button type="submit" disabled={quizForm.questions.length === 0} className="bg-[#1A5F7A] disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-8 py-4 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center gap-2 text-xs transition-all hover:scale-105">
                                         <FiSave size={18}/> Authorize Deployment
                                     </button>
                                 </div>
