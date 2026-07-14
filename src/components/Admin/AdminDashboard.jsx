@@ -9,7 +9,7 @@ import {
     FiAlertCircle, FiCpu, FiUserCheck, FiMessageCircle, FiFacebook, FiGlobe,
     FiEdit3, FiPlusCircle, FiCheck, FiUnlock, FiSend, FiTrendingUp, FiAward
 } from 'react-icons/fi';
-
+import AdminAIBot from './AdminAIBot';
 import { techCoursesData, universityPrograms } from '../../data/courses';
 import AddLecture from '../Admin/AddLecture';
 import AddMaterial from '../Admin/AddMaterial';
@@ -1112,6 +1112,19 @@ export default function AdminDashboard() {
                     </motion.div>
                 </div>
             )}</AnimatePresence>
+            {/* TERMINATION MODAL */}
+            {/* ... your existing modal code ... */}
+
+            <AdminAIBot 
+                systemData={{
+                    totalRevenue: finances.total,
+                    monthlyRevenue: selectedMonth ? (monthlyHistory[selectedMonth] || 0) : 0,
+                    totalStudents: students.length,
+                    activeBatches: availableBatches.length,
+                    pendingAlerts: finances.pendingAdjustments
+                }} 
+            /> {/* <--- ADD THIS RIGHT HERE */}
         </div>
+        
     );
 }
