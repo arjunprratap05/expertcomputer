@@ -1121,9 +1121,13 @@ export default function AdminDashboard() {
                     monthlyRevenue: selectedMonth ? (monthlyHistory[selectedMonth] || 0) : 0,
                     totalStudents: students.length,
                     activeBatches: availableBatches.length,
-                    pendingAlerts: finances.pendingAdjustments
+                    pendingAlerts: finances.pendingAdjustments,
+                    pendingStudentsList: students.filter(s => !s.isApproved).map(s => s.name).join(", "),
+                    activeBatchCodes: availableBatches.map(b => b.batchCode).join(", "),
+                    availableCourses: allCourses.map(c => c.title).join(", ")
                 }} 
-            /> {/* <--- ADD THIS RIGHT HERE */}
+                onStateChange={fetchEverything} // <--- ADD THIS LINE
+            />
         </div>
         
     );
