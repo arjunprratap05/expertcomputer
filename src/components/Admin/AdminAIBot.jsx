@@ -1,22 +1,51 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiTerminal, FiX, FiSend, FiCpu, FiLoader, FiMinimize2, FiImage, FiPaperclip, FiFileText } from 'react-icons/fi';
+import { FiTerminal, FiX, FiSend, FiCpu, FiLoader, FiMinimize2, FiImage, FiPaperclip, FiFileText, FiRefreshCcw } from 'react-icons/fi';
+
+// Helper function to format the timestamp perfectly
+const timeAgo = (date) => {
+    if (!date) return '';
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    
+    return "Just now";
+};
 
 export default function AdminAIBot({ systemData, onStateChange }) {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState('');
     const [suggestion, setSuggestion] = useState('');
     const [attachedFile, setAttachedFile] = useState(null);
-    const [messages, setMessages] = useState([
-        { role: 'ai', text: 'Executive Co-Pilot online. I am connected to your live system data and can analyze PDF documents. How can I assist you?' }
-    ]);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // State to hold the dynamic typing text
+    const [loadingText, setLoadingText] = useState('');
+    
+    // Ticking state to force UI re-renders every minute for live timestamps
+    const [, setTick] = useState(0);
+
+    const [messages, setMessages] = useState([
+        { 
+            role: 'ai', 
+            text: 'Executive Co-Pilot online. I am connected to your live system data and can analyze PDF documents. How can I assist you?',
+            timestamp: new Date()
+        }
+    ]);
     
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
     const fileInputRef = useRef(null);
 
-    // Auto-scroll to bottom
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -25,14 +54,30 @@ export default function AdminAIBot({ systemData, onStateChange }) {
         scrollToBottom();
     }, [messages, isLoading]);
 
-    // Auto-focus input when chat opens
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => textareaRef.current?.focus(), 100);
         }
     }, [isOpen]);
 
-    // Dynamic autocomplete dictionary
+    useEffect(() => {
+        const timer = setInterval(() => setTick(t => t + 1), 60000); 
+        return () => clearInterval(timer);
+    }, []);
+
+    // Function to clear chat and context memory
+    const handleClearChat = () => {
+        setMessages([
+            { 
+                role: 'ai', 
+                text: 'System memory cleared. Executive Co-Pilot online. How can I assist you?',
+                timestamp: new Date()
+            }
+        ]);
+        setAttachedFile(null);
+        setSuggestion('');
+    };
+
     const autocompleteDictionary = useMemo(() => {
         const commands = [
             "Create a coupon for ",
@@ -53,7 +98,6 @@ export default function AdminAIBot({ systemData, onStateChange }) {
         return commands;
     }, [systemData]);
 
-    // Handle PDF selection & conversion to Base64
     const handleFileSelect = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -130,6 +174,7 @@ export default function AdminAIBot({ systemData, onStateChange }) {
         setInput('');
         setSuggestion('');
         setAttachedFile(null);
+        setLoadingText("Initializing protocol..."); 
         
         if (textareaRef.current) textareaRef.current.style.height = '54px';
         
@@ -137,7 +182,7 @@ export default function AdminAIBot({ systemData, onStateChange }) {
             ? `${userMessage ? userMessage + '\n' : ''}📄 [Attached Document: ${filePayload.name}]` 
             : userMessage;
 
-        const newMessages = [...messages, { role: 'user', text: displayPrompt }];
+        const newMessages = [...messages, { role: 'user', text: displayPrompt, timestamp: new Date() }];
         setMessages(newMessages);
         setIsLoading(true);
 
@@ -150,6 +195,7 @@ export default function AdminAIBot({ systemData, onStateChange }) {
                 content: msg.text
             }));
 
+            // Make the fetch request
             const response = await fetch(`${API_URL}/admin/chat`, {
                 method: 'POST',
                 headers: { 
@@ -164,29 +210,54 @@ export default function AdminAIBot({ systemData, onStateChange }) {
                 })
             });
 
-            const data = await response.json();
-            
-            if (response.ok) {
-                // STRICT FALLBACK: Prevents 'undefined' UI leak
-                const aiResponseText = data.response || "✅ Action processed successfully.";
+            // LIVE STREAM DECODER: Listen to chunks as they arrive from the Node backend
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
                 
-                setMessages(prev => [...prev, { 
-                    role: 'ai', 
-                    text: aiResponseText,
-                    images: data.images || []
-                }]);
+                // Keep the last incomplete chunk in the buffer to prevent JSON errors
+                buffer = lines.pop(); 
 
-                // --- LIVE DASHBOARD REFRESH TRIGGER ---
-                // If the AI confirms a database action was completed, refresh the dashboard instantly!
-                if (onStateChange && aiResponseText.includes('System Action Completed')) {
-                    onStateChange();
+                for (const line of lines) {
+                    if (line.trim()) {
+                        const parsedData = JSON.parse(line);
+                        
+                        // 1. If backend sends a status update, update UI instantly!
+                        if (parsedData.streamType === 'status') {
+                            setLoadingText(parsedData.message);
+                        } 
+                        // 2. If backend sends the final answer, post it to chat
+                        else if (parsedData.streamType === 'done') {
+                            const aiResponseText = parsedData.response || "✅ Action processed successfully.";
+                            
+                            setMessages(prev => [...prev, { 
+                                role: 'ai', 
+                                text: aiResponseText,
+                                images: parsedData.images || [],
+                                timestamp: new Date()
+                            }]);
+
+                            if (onStateChange && aiResponseText.includes('System Action Completed')) {
+                                onStateChange();
+                            }
+                        } 
+                        // 3. Handle errors
+                        else if (parsedData.streamType === 'error') {
+                            setMessages(prev => [...prev, { role: 'ai', text: `Co-Pilot Error: ${parsedData.error}`, timestamp: new Date() }]);
+                        }
+                    }
                 }
-
-            } else {
-                setMessages(prev => [...prev, { role: 'ai', text: "Co-Pilot Error: " + (data.error || "Unable to reach the server.") }]);
             }
+
         } catch (error) {
-            setMessages(prev => [...prev, { role: 'ai', text: "Network anomaly detected. Please check connection." }]);
+            setMessages(prev => [...prev, { role: 'ai', text: "Network anomaly detected. Please check connection.", timestamp: new Date() }]);
         } finally {
             setIsLoading(false);
             setTimeout(() => textareaRef.current?.focus(), 100);
@@ -217,9 +288,15 @@ export default function AdminAIBot({ systemData, onStateChange }) {
                                     </span>
                                 </div>
                             </div>
-                            <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
-                                <FiMinimize2 size={20} />
-                            </button>
+                            
+                            <div className="flex items-center gap-1">
+                                <button onClick={handleClearChat} title="Clear Chat History" className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                                    <FiRefreshCcw size={18} />
+                                </button>
+                                <button onClick={() => setIsOpen(false)} title="Minimize Chat" className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                                    <FiMinimize2 size={20} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-slate-50">
@@ -249,17 +326,35 @@ export default function AdminAIBot({ systemData, onStateChange }) {
                                             </div>
                                         )}
                                     </div>
+                                    
+                                    <div className={`text-[10px] text-slate-400 mt-1.5 flex items-center gap-1 font-medium ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                        {msg.role === 'ai' && <FiCpu size={11} className="text-slate-500" />}
+                                        <span>
+                                            {msg.role === 'ai' ? 'Executive Co-Pilot' : 'You'} &middot; {timeAgo(msg.timestamp)}
+                                        </span>
+                                    </div>
+
                                 </div>
                             ))}
                             
+                            {/* Dynamic Typing & Status Indicator */}
                             {isLoading && (
-                                <div className="flex justify-start">
-                                    <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-sm shadow-sm flex gap-2">
-                                        <span className="w-2 h-2 bg-[#1A5F7A] rounded-full animate-bounce"></span>
-                                        <span className="w-2 h-2 bg-[#1A5F7A] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                                        <span className="w-2 h-2 bg-[#1A5F7A] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex justify-start"
+                                >
+                                    <div className="bg-white border border-slate-200 py-3 px-5 rounded-[1.5rem] rounded-bl-sm shadow-sm flex items-center gap-3 w-fit">
+                                        <div className="flex gap-1.5">
+                                            <span className="w-1.5 h-1.5 bg-[#F37021] rounded-full animate-bounce"></span>
+                                            <span className="w-1.5 h-1.5 bg-[#F37021] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                                            <span className="w-1.5 h-1.5 bg-[#F37021] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
+                                            {loadingText}
+                                        </span>
                                     </div>
-                                </div>
+                                </motion.div>
                             )}
                             <div ref={messagesEndRef} />
                         </div>
