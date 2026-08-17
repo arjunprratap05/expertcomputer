@@ -1,14 +1,30 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiMessageSquare, FiX, FiSend } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
+
 // PROD TIP: Use a simple random string or install 'uuid'
 const generateSessionId = () => Math.random().toString(36).substring(2, 15);
 
 import expertcomputerlogo from '../assets/expertcomputerlogo.png'; 
 
 export default function ChatBot() {
+    const location = useLocation();
+    const path = location.pathname;
+
+    // Define paths where the chatbot should NOT appear (prevents overlapping admin/student logins)
+    const hideChatPaths = ['/admin', '/student', '/login', '/dashboard'];
+    const shouldHideChat = hideChatPaths.some((restrictedRoute) => 
+        path.startsWith(restrictedRoute)
+    );
+
+    // If on admin or student portals, do not render the widget at all
+    if (shouldHideChat) {
+        return null;
+    }
+
     const [isOpen, setIsOpen] = useState(false);
     // Persist sessionId for the duration of the browser tab
     const [sessionId] = useState(() => {
