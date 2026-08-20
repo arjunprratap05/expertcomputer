@@ -36,7 +36,6 @@ export default function AdminDashboard() {
     const token = localStorage.getItem("adminToken");
     const userRole = localStorage.getItem("userRole")?.toLowerCase() || 'admin'; 
     const userName = localStorage.getItem("adminName") || "Administrator";
-    const currentYear = 2026;
 
     const permissions = {
         founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes'],
@@ -83,6 +82,25 @@ export default function AdminDashboard() {
 
     const allCourses = useMemo(() => [...techCoursesData, ...universityPrograms], []);
 
+    // Real Deep ML & Neural Intelligence Overview Metrics derived from real student records
+    const mlOverviewStats = useMemo(() => {
+        if (students.length === 0) return { avgProb: 0, positive: 0, neutral: 0, negative: 0 };
+        let totalProb = 0;
+        let positive = 0, neutral = 0, negative = 0;
+        students.forEach(s => {
+            totalProb += (s.conversionProbability || 50);
+            if (s.sentiment === 'positive') positive++;
+            else if (s.sentiment === 'negative') negative++;
+            else neutral++;
+        });
+        return {
+            avgProb: Math.round(totalProb / students.length),
+            positive,
+            neutral,
+            negative
+        };
+    }, [students]);
+
     const webPerformanceMetrics = useMemo(() => [
         { label: "First Contentful Paint (FCP)", value: "0.74s", status: "Optimal", color: "text-green-600 bg-green-50" },
         { label: "Time to Interactive (TTI)", value: "1.25s", status: "Optimal", color: "text-green-600 bg-green-50" },
@@ -114,7 +132,7 @@ export default function AdminDashboard() {
         const bName = (batchCourseName || "").toLowerCase();
 
         if (cName.includes("tally") && (bId.includes("tally") || bName.includes("tally"))) return true;
-        if ((cName.includes("gen-ai") || cName.includes("generative ai")) && (bId.includes("gen-ai") || bName.includes("gen-ai") || bId.includes("generative"))) return true;
+        if ((cName.includes("gen-ai") || cName.includes("generative ai")) && (bId.includes("gen-ai") || bId.includes("gen-ai") || bId.includes("generative"))) return true;
         if (cName.includes("java") && (bId.includes("java") || bName.includes("java"))) return true;
         if (cName.includes("adca") && (bId.includes("adca") || bName.includes("adca"))) return true;
         if (cName.includes("dca") && !cName.includes("adca") && (bId.includes("dca") || bName.includes("dca"))) return true;
@@ -300,7 +318,6 @@ export default function AdminDashboard() {
         
         const newCode = couponForm.code.toUpperCase().trim();
         
-        // Prevent duplicate coupon creation frontend check
         const codeExists = coupons.some(c => c.code.toUpperCase() === newCode);
         if (codeExists) {
             triggerToast("COUPON CODE ALREADY EXISTS");
@@ -433,6 +450,107 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* --- GRAPHICAL TIME-SERIES & DEEP ML ANALYTICS SECTION --- */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    {/* 1. TIME-SERIES REVENUE TREND CHART */}
+                    <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm flex flex-col justify-between">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h4 className="font-black text-[#1A5F7A] text-[15px] uppercase tracking-wide italic flex items-center gap-2">
+                                    <FiTrendingUp className="text-[#F37021]"/> Time-Series Revenue Trend
+                                </h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Monthly collection history across chronological time-buckets.</p>
+                            </div>
+                            <span className="bg-orange-50 text-[#F37021] border border-orange-100 px-3 py-1 rounded-xl text-[9px] font-black uppercase">
+                                Live Data Stream
+                            </span>
+                        </div>
+
+                        <div className="h-48 w-full flex items-end gap-3 pt-6 pb-2 px-2 border-b border-slate-100">
+                            {Object.keys(monthlyHistory).length > 0 ? (
+                                Object.entries(monthlyHistory).map(([month, rev], idx) => {
+                                    const maxVal = Math.max(...Object.values(monthlyHistory), 1000);
+                                    const heightPercent = Math.max((rev / maxVal) * 100, 12);
+                                    return (
+                                        <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group relative">
+                                            <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-[#1A5F7A] text-white text-[8px] font-black px-2 py-1 rounded-lg uppercase whitespace-nowrap shadow-md pointer-events-none z-10">
+                                                {month}: ₹{rev.toLocaleString()}
+                                            </div>
+                                            <div 
+                                                className="w-full bg-[#1A5F7A] group-hover:bg-[#F37021] rounded-t-xl transition-all duration-500 shadow-sm"
+                                                style={{ height: `${heightPercent}%` }}
+                                            ></div>
+                                            <span className="text-[8px] font-black text-slate-400 uppercase truncate w-full text-center">
+                                                {month.split('-')[1]}M
+                                            </span>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-400 text-[10px] font-black uppercase">
+                                    Waiting for time-series telemetry entries...
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex justify-between items-center mt-4 text-[10px] font-bold text-slate-400 uppercase">
+                            <span>Timeline Origin</span>
+                            <span className="text-[#1A5F7A] font-black">Current Period ({selectedMonth})</span>
+                        </div>
+                    </div>
+
+                    {/* 2. DEEP ML SENTIMENT & PROBABILITY BREAKDOWN */}
+                    <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h4 className="font-black text-[#1A5F7A] text-[15px] uppercase tracking-wide italic flex items-center gap-2">
+                                <FiCpu className="text-[#F37021]"/> Deep ML Analytics
+                            </h4>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Neural network classification metrics.</p>
+                        </div>
+
+                        <div className="space-y-5 my-6">
+                            <div>
+                                <div className="flex justify-between text-[10px] font-black uppercase text-slate-600 mb-1.5">
+                                    <span>Positive Sentiment</span>
+                                    <span className="text-green-600">{mlOverviewStats.positive} Leads</span>
+                                </div>
+                                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div className="bg-green-500 h-full rounded-full transition-all duration-500" style={{ width: `${students.length ? (mlOverviewStats.positive / students.length) * 100 : 0}%` }}></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between text-[10px] font-black uppercase text-slate-600 mb-1.5">
+                                    <span>Neutral Sentiment</span>
+                                    <span className="text-slate-500">{mlOverviewStats.neutral} Leads</span>
+                                </div>
+                                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div className="bg-slate-400 h-full rounded-full transition-all duration-500" style={{ width: `${students.length ? (mlOverviewStats.neutral / students.length) * 100 : 0}%` }}></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between text-[10px] font-black uppercase text-slate-600 mb-1.5">
+                                    <span>Negative / Urgent</span>
+                                    <span className="text-red-600">{mlOverviewStats.negative} Leads</span>
+                                </div>
+                                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div className="bg-red-500 h-full rounded-full transition-all duration-500" style={{ width: `${students.length ? (mlOverviewStats.negative / students.length) * 100 : 0}%` }}></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 flex items-center justify-between">
+                            <div>
+                                <span className="text-[8px] font-black text-[#F37021] uppercase block">Avg Conversion Score</span>
+                                <span className="text-2xl font-black text-[#1A5F7A] italic">{mlOverviewStats.avgProb}%</span>
+                            </div>
+                            <FiActivity className="text-[#F37021] text-2xl animate-pulse" />
+                        </div>
+                    </div>
+
+                </div>
+
                 {/* 2. LIVE OPTIMIZATION ARCHITECTURE TRACE */}
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
                     <div className="mb-6">
@@ -556,7 +674,6 @@ export default function AdminDashboard() {
                     </select>
                 </div>
              </div>
-             {/* ADDED MIN-WIDTH HERE TO PREVENT MOBILE SQUISHING */}
              <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden overflow-x-auto">
                 <table className="w-full min-w-[1000px] text-left">
                     <thead className="bg-slate-50 font-black uppercase text-slate-400 border-b text-[10px] tracking-wider">
@@ -595,6 +712,18 @@ export default function AdminDashboard() {
                                                     </>
                                                 )}
                                             </div>
+                                            {/* Deep ML Sentiment & Conversion Badges */}
+                                            <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                                <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider ${
+                                                    student.sentiment === 'positive' ? 'bg-green-50 text-green-600 border border-green-200' :
+                                                    student.sentiment === 'negative' ? 'bg-red-50 text-red-500 border border-red-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                                }`}>
+                                                    Sentiment: {student.sentiment || 'Neutral'}
+                                                </span>
+                                                <span className="bg-orange-50 text-[#F37021] border border-orange-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider">
+                                                    Conversion Prob: {student.conversionProbability || 50}%
+                                                </span>
+                                            </div>
                                         </td>
                                         <td>
                                             <div className="font-black text-[#1A5F7A] text-[15px]">₹{ledger.paid.toLocaleString()} <span className="text-slate-300 text-[11px] font-normal">/ ₹{ledger.total.toLocaleString()}</span></div>
@@ -628,7 +757,7 @@ export default function AdminDashboard() {
                                                         
                                                         const relatedBatches = student.activeBatches.map(b => availableBatches.find(ab => ab._id === b || ab._id === b._id))
                                                             .filter(batchObj => batchObj && enrollments.some(en => isCourseBatchMatch(en.course, batchObj.courseId, batchObj.courseName)));
-                                                            
+                                                        
                                                         if (relatedBatches.length === 0) {
                                                             return <div className="text-slate-300 text-[9px] font-bold uppercase italic tracking-wider ml-1">No Batches Assigned</div>;
                                                         }
@@ -652,7 +781,7 @@ export default function AdminDashboard() {
                                                 >
                                                     <FiUserCheck size={16}/>
                                                 </button>
-                                                <button onClick={() => setPaymentModal({ show: true, student: student, amount: "", mode: "Cash", transactionId: generateLocalCashTxn(), courseTitle: enrollments[0]?.course || "" })} className="w-10 h-10 bg-white border text-slate-400 rounded-xl flex items-center justify-center hover:bg-[#F37021] hover:text-white transition-all shadow-sm" title="Ledger Sync"><FiCreditCard size={16}/></button>
+                                                <button onClick={() => setPaymentModal({ show: true, student: student, amount: "", mode: "Cash", transactionId: generateLocalCashTxn(), courseTitle: enrollments[0]?.course || "" })} className="w-10 h-10 bg-white border text-slate-400 rounded-xl flex items-center justify-center hover:bg-[#1A5F7A] hover:text-white transition-all shadow-sm" title="Ledger Sync"><FiCreditCard size={16}/></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -668,26 +797,26 @@ export default function AdminDashboard() {
                                                                 return (
                                                                     <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-4">
                                                                         <div className="flex flex-wrap items-center justify-between gap-4">
-                                                                            <div className="flex items-center gap-5">
-                                                                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#F37021] font-black italic shadow-inner">{i+1}</div>
-                                                                                <div>
-                                                                                    <div className="text-[14px] font-black text-[#1A5F7A] uppercase italic leading-none">{en.course}</div>
-                                                                                    <div className="flex items-center gap-3 text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-wider">
-                                                                                        <span className="flex items-center gap-1"><FiTag className="cursor-pointer hover:text-[#F37021]" onClick={() => {navigator.clipboard.writeText(en.transactionId); triggerToast("COPIED UTR")}}/>UTR: <span className="text-slate-600 font-black">{en.transactionId}</span></span>
-                                                                                        <span className="text-slate-200">•</span>
-                                                                                        <span>Status: <span className={`font-black ${['PAID', 'VERIFIED'].includes(en.paymentStatus?.toUpperCase()) ? 'text-green-600' : en.paymentStatus === 'PARTIALLY_PAID' ? 'text-orange-500' : 'text-red-500'}`}>{en.paymentStatus}</span></span>
-                                                                                    </div>
-                                                                                </div>
+                                                                           <div className="flex items-center gap-5">
+                                                                               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#F37021] font-black italic shadow-inner">{i+1}</div>
+                                                                               <div>
+                                                                                   <div className="text-[14px] font-black text-[#1A5F7A] uppercase italic leading-none">{en.course}</div>
+                                                                                   <div className="flex items-center gap-3 text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-wider">
+                                                                                       <span className="flex items-center gap-1"><FiTag className="cursor-pointer hover:text-[#F37021]" onClick={() => {navigator.clipboard.writeText(en.transactionId); triggerToast("COPIED UTR")}}/>UTR: <span className="text-slate-600 font-black">{en.transactionId}</span></span>
+                                                                                       <span className="text-slate-200">•</span>
+                                                                                       <span>Status: <span className={`font-black ${['PAID', 'VERIFIED'].includes(en.paymentStatus?.toUpperCase()) ? 'text-green-600' : en.paymentStatus === 'PARTIALLY_PAID' ? 'text-orange-500' : 'text-red-500'}`}>{en.paymentStatus}</span></span>
+                                                                                   </div>
+                                                                               </div>
+                                                                           </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-6">
+                                                                            <div className="text-right pr-6 border-r border-slate-100">
+                                                                                <p className="text-[8px] font-black text-slate-300 uppercase leading-none">Paid / Net Fee</p>
+                                                                                <p className="text-[14px] font-black text-[#1A5F7A] mt-1">₹{(en.amountPaid || 0).toLocaleString()} <span className="text-slate-400 text-xs font-normal">/ ₹{en.courseFee?.toLocaleString()}</span></p>
                                                                             </div>
-                                                                            <div className="flex items-center gap-6">
-                                                                                <div className="text-right pr-6 border-r border-slate-100">
-                                                                                    <p className="text-[8px] font-black text-slate-300 uppercase leading-none">Paid / Net Fee</p>
-                                                                                    <p className="text-[14px] font-black text-[#1A5F7A] mt-1">₹{(en.amountPaid || 0).toLocaleString()} <span className="text-slate-400 text-xs font-normal">/ ₹{en.courseFee?.toLocaleString()}</span></p>
-                                                                                </div>
-                                                                                {['PENDING', 'PARTIALLY_PAID'].includes(en.paymentStatus?.toUpperCase()) ? (
-                                                                                    <button onClick={() => handleApprovePayment(student._id, student.name, en.transactionId)} className="bg-green-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic hover:bg-green-700 flex items-center gap-1.5"><FiShield /> Verify</button>
-                                                                                ) : <div className="bg-green-50 text-green-600 border border-green-200 font-black text-[9px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1.5"><FiCheckCircle/> Verified</div>}
-                                                                            </div>
+                                                                            {['PENDING', 'PARTIALLY_PAID'].includes(en.paymentStatus?.toUpperCase()) ? (
+                                                                                <button onClick={() => handleApprovePayment(student._id, student.name, en.transactionId)} className="bg-green-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase italic hover:bg-green-700 flex items-center gap-1.5"><FiShield /> Verify</button>
+                                                                            ) : <div className="bg-green-50 text-green-600 border border-green-200 font-black text-[9px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1.5"><FiCheckCircle/> Verified</div>}
                                                                         </div>
 
                                                                         <div className="mt-2 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2 bg-slate-50/50 p-4 rounded-xl">
@@ -733,12 +862,10 @@ export default function AdminDashboard() {
     );
 
     const renderCoupons = () => {
-        // NEW: Real-time duplicate check based on what is currently typed in the input
         const isDuplicateCoupon = couponForm.code.trim().length > 0 && coupons.some(c => c.code.toUpperCase() === couponForm.code.toUpperCase().trim());
 
         return (
             <div className="space-y-10 max-w-[1600px] mx-auto">
-                {/* COUPON CREATION FORM */}
                 <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden border-t-[12px] border-[#1A5F7A]">
                     <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                         <div className="flex items-center gap-4">
@@ -832,7 +959,6 @@ export default function AdminDashboard() {
                     </form>
                 </div>
 
-                {/* ACTIVE COUPON REGISTRY TABLE */}
                 <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <h3 className="font-black text-[#1A5F7A] uppercase italic flex items-center gap-3">
@@ -1112,8 +1238,6 @@ export default function AdminDashboard() {
                     </motion.div>
                 </div>
             )}</AnimatePresence>
-            {/* TERMINATION MODAL */}
-            {/* ... your existing modal code ... */}
 
             <AdminAIBot 
                 systemData={{
@@ -1126,9 +1250,8 @@ export default function AdminDashboard() {
                     activeBatchCodes: availableBatches.map(b => b.batchCode).join(", "),
                     availableCourses: allCourses.map(c => c.title).join(", ")
                 }} 
-                onStateChange={fetchEverything} // <--- ADD THIS LINE
+                onStateChange={fetchEverything}
             />
         </div>
-        
     );
 }
