@@ -59,6 +59,12 @@ export default function AdminDashboard() {
     const [availableBatches, setAvailableBatches] = useState([]);
     const [apiLatency, setApiLatency] = useState("Calculating..."); 
     
+    // Global Search & Neural Tracer States
+    const [globalQuery, setGlobalQuery] = useState("");
+    const [searchResults, setSearchResults] = useState(null);
+    const [isSearching, setIsSearching] = useState(false);
+    const [traceModal, setTraceModal] = useState({ show: false, phone: null, data: null, loading: false });
+
     const [finances, setFinances] = useState({ total: 0, pendingAdjustments: 0 });
     const [monthlyHistory, setMonthlyHistory] = useState({}); 
     const [selectedMonth, setSelectedMonth] = useState(""); 
@@ -82,7 +88,47 @@ export default function AdminDashboard() {
 
     const allCourses = useMemo(() => [...techCoursesData, ...universityPrograms], []);
 
-    // Real Deep ML & Neural Intelligence Overview Metrics derived from real student records
+    // Global Search Effect with Debounce
+    useEffect(() => {
+        if (!globalQuery || globalQuery.trim().length < 2) {
+            setSearchResults(null);
+            return;
+        }
+        const delayDebounce = setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const res = await axios.get(`${API_URL}/admin/global-search?q=${globalQuery}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.data.success) {
+                    setSearchResults(res.data.results);
+                }
+            } catch (err) {
+                console.error("Global search failed", err);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounce);
+    }, [globalQuery, token]);
+
+    // Neural Intelligence Tracer Handler
+    const handleOpenTracer = async (phone) => {
+        setTraceModal({ show: true, phone, data: null, loading: true });
+        try {
+            const res = await axios.get(`${API_URL}/admin/trace/${phone}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setTraceModal(prev => ({ ...prev, data: res.data.dossier, loading: false }));
+            }
+        } catch (err) {
+            triggerToast("TRACE FAILED: RECORD NOT FOUND");
+            setTraceModal({ show: false, phone: null, data: null, loading: false });
+        }
+    };
+
     const mlOverviewStats = useMemo(() => {
         if (students.length === 0) return { avgProb: 0, positive: 0, neutral: 0, negative: 0 };
         let totalProb = 0;
@@ -132,7 +178,7 @@ export default function AdminDashboard() {
         const bName = (batchCourseName || "").toLowerCase();
 
         if (cName.includes("tally") && (bId.includes("tally") || bName.includes("tally"))) return true;
-        if ((cName.includes("gen-ai") || cName.includes("generative ai")) && (bId.includes("gen-ai") || bId.includes("gen-ai") || bId.includes("generative"))) return true;
+        if ((cName.includes("gen-ai") || cName.includes("generative ai")) && (bId.includes("gen-ai") || bId.includes("generative"))) return true;
         if (cName.includes("java") && (bId.includes("java") || bName.includes("java"))) return true;
         if (cName.includes("adca") && (bId.includes("adca") || bName.includes("adca"))) return true;
         if (cName.includes("dca") && !cName.includes("adca") && (bId.includes("dca") || bName.includes("dca"))) return true;
@@ -697,7 +743,12 @@ export default function AdminDashboard() {
                                 <React.Fragment key={student._id}>
                                     <tr className={`group transition-all ${isExpanded ? 'bg-blue-50/20' : 'hover:bg-slate-50/50'}`}>
                                         <td className="p-7">
-                                            <div className="font-black text-[#1A5F7A] uppercase italic text-[16px] leading-none tracking-wide">{student.name}</div>
+                                            <div className="font-black text-[#1A5F7A] uppercase italic text-[16px] leading-none tracking-wide flex items-center justify-between">
+                                                <span>{student.name}</span>
+                                                <button onClick={() => handleOpenTracer(student.phone)} className="px-3 py-1 bg-orange-50 text-[#F37021] rounded-xl font-black text-[8px] uppercase border border-orange-100 flex items-center gap-1 hover:bg-[#F37021] hover:text-white transition-all">
+                                                    <FiCpu size={10} /> Trace Profile
+                                                </button>
+                                            </div>
                                             <div className="text-slate-400 font-bold text-[10px] uppercase mt-2 italic flex items-center gap-1.5 flex-wrap">
                                                 <span>{enrollments.length} Enrollment(s)</span>
                                                 <span className="text-slate-200">•</span>
@@ -712,7 +763,6 @@ export default function AdminDashboard() {
                                                     </>
                                                 )}
                                             </div>
-                                            {/* Deep ML Sentiment & Conversion Badges */}
                                             <div className="flex items-center gap-2 mt-3 flex-wrap">
                                                 <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider ${
                                                     student.sentiment === 'positive' ? 'bg-green-50 text-green-600 border border-green-200' :
@@ -1087,11 +1137,106 @@ export default function AdminDashboard() {
             </aside>
 
             <div className="flex-1 flex flex-col min-w-0 relative">
-                <header className="bg-white h-24 px-10 flex items-center justify-between border-b border-slate-100 shadow-sm sticky top-0 z-[100]">
+                <header className="bg-white h-24 px-10 flex items-center justify-between border-b border-slate-100 shadow-sm sticky top-0 z-[150]">
                     <div className="flex items-center gap-5">
                         <button className="lg:hidden text-[#1A5F7A] p-2" onClick={() => setIsSidebarOpen(true)}><FiMenu size={24} /></button>
-                        <h2 className="font-black text-[#1A5F7A] text-lg uppercase italic">{activeTab.replace('-', ' ')}</h2>
+                        <h2 className="font-black text-[#1A5F7A] text-lg uppercase italic hidden sm:block">{activeTab.replace('-', ' ')}</h2>
                     </div>
+
+                    {/* --- GLOBAL SEARCH BAR & DROPDOWN PANEL --- */}
+                    <div className="relative max-w-md w-full mx-4">
+                        <div className="relative flex items-center">
+                            <FiSearch className="absolute left-4 text-slate-400" />
+                            <input 
+                                type="text" 
+                                placeholder="Global Search (Students, Relatives, Web, Chats)..." 
+                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:border-[#F37021] transition-all shadow-inner"
+                                value={globalQuery}
+                                onChange={e => setGlobalQuery(e.target.value)}
+                            />
+                            {isSearching && <span className="absolute right-4 text-[9px] font-black text-[#F37021] uppercase animate-pulse">Searching...</span>}
+                        </div>
+
+                        {/* Floating Search Results Dropdown Panel */}
+                        <AnimatePresence>
+                            {searchResults && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute left-0 right-0 top-14 bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 max-h-[450px] overflow-y-auto no-scrollbar z-[300]">
+                                    <div className="flex justify-between items-center mb-4 pb-2 border-b">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Intelligence Match</span>
+                                        <button onClick={() => { setSearchResults(null); setGlobalQuery(""); }} className="text-slate-400 hover:text-red-500"><FiX size={16}/></button>
+                                    </div>
+
+                                    {/* --- EXCLUSIVE EXTRACTED PROFILE METADATA CARD --- */}
+                                    {searchResults.extractedProfile && (
+                                        <div className="mb-6 p-5 bg-gradient-to-br from-slate-900 to-[#1A5F7A] text-white rounded-2xl shadow-xl relative overflow-hidden">
+                                            <div className="absolute -right-4 -bottom-4 text-white/5 text-8xl font-black pointer-events-none">ID</div>
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div>
+                                                    <span className="text-[8px] font-black bg-[#F37021] text-white px-2 py-0.5 rounded uppercase tracking-widest">
+                                                        {searchResults.extractedProfile.status}
+                                                    </span>
+                                                    <h4 className="text-lg font-black uppercase italic mt-1">{searchResults.extractedProfile.matchedName}</h4>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[9px] font-bold text-slate-300 block">Conversion Prob</span>
+                                                    <span className="text-xl font-black text-[#F37021] italic">{searchResults.extractedProfile.conversionProbability}%</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-white/10 text-[10px]">
+                                                <div>
+                                                    <span className="text-slate-400 uppercase block">Phone Number</span>
+                                                    <span className="font-bold text-white">{searchResults.extractedProfile.metadata?.formattedNumber || searchResults.extractedProfile.identifier}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 uppercase block">Telecom Circle</span>
+                                                    <span className="font-bold text-white">{searchResults.extractedProfile.metadata?.telecomCircle}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 uppercase block">WhatsApp Logs</span>
+                                                    <span className="font-bold text-white">{searchResults.extractedProfile.totalMessages} Messages exchanged</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 uppercase block">Sentiment State</span>
+                                                    <span className="font-bold text-green-400 uppercase">{searchResults.extractedProfile.sentiment}</span>
+                                                </div>
+                                            </div>
+
+                                            {searchResults.extractedProfile.lastMessage && (
+                                                <div className="mt-3 p-2.5 bg-white/10 rounded-xl text-[10px] italic text-slate-200">
+                                                    💬 Last Msg: "{searchResults.extractedProfile.lastMessage}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Students Section */}
+                                    {searchResults.students?.length > 0 && (
+                                        <div className="mb-4">
+                                            <p className="text-[9px] font-black text-[#F37021] uppercase tracking-wider mb-2">Matched Students</p>
+                                            {searchResults.students.map(s => (
+                                                <div key={s._id} onClick={() => { handleOpenTracer(s.phone); setSearchResults(null); }} className="p-3 bg-slate-50 hover:bg-orange-50 rounded-xl cursor-pointer transition-colors mb-1.5 flex justify-between items-center">
+                                                    <div>
+                                                        <div className="font-black text-[#1A5F7A] text-xs uppercase">{s.name}</div>
+                                                        <div className="text-[9px] text-slate-400 font-bold">📞 {s.phone}</div>
+                                                    </div>
+                                                    <span className="text-[8px] font-black uppercase bg-blue-50 text-blue-600 px-2 py-0.5 rounded">Trace Profile</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Fallback Check */}
+                                    {(!searchResults.extractedProfile && !searchResults.students?.length && !searchResults.enquiries?.length && !searchResults.messages?.length && !searchResults.coupons?.length && !searchResults.batches?.length) && (
+                                        <div className="py-8 text-center text-slate-400 font-black uppercase text-[10px]">
+                                            No local or telemetry details found for this query.
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
                     <div className="flex items-center gap-8">
                         <div className="hidden sm:block text-right pr-6 border-r">
                             <span className="text-[#1A5F7A] text-[13px] font-black uppercase block">{userName}</span>
@@ -1147,6 +1292,117 @@ export default function AdminDashboard() {
                     {activeTab === 'quizzes' && <QuizManager />}
                 </main>
             </div>
+
+            {/* --- NEURAL INTELLIGENCE TRACE DOSSIER & NETWORK DOSSIER MODAL --- */}
+            <AnimatePresence>{traceModal.show && (
+                <div className="fixed inset-0 z-[1100] bg-slate-900/80 backdrop-blur-xl flex items-center justify-center p-4">
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[3.5rem] p-10 max-w-2xl w-full border-t-[15px] border-[#1A5F7A] relative shadow-2xl max-h-[90vh] flex flex-col">
+                        <button onClick={() => setTraceModal({ show: false, phone: null, data: null, loading: false })} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-all"><FiX size={24} /></button>
+                        
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-orange-50 text-[#F37021] rounded-2xl"><FiCpu size={24}/></div>
+                            <div>
+                                <h3 className="text-xl font-black text-[#1A5F7A] uppercase italic leading-none">Neural Intelligence Tracer</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Target Identifier: {traceModal.phone}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto pr-2 space-y-6 no-scrollbar">
+                            {traceModal.loading ? (
+                                <div className="py-20 text-center font-black uppercase text-slate-400 animate-pulse text-xs">Tracing digital footprint and network across database...</div>
+                            ) : traceModal.data ? (
+                                <>
+                                    {/* Profile Summary Cards */}
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="bg-slate-50 p-4 rounded-2xl border">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase">Profile Name</span>
+                                            <div className="text-sm font-black text-[#1A5F7A] uppercase mt-1">{traceModal.data.profile.name}</div>
+                                        </div>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase">Deep ML Sentiment</span>
+                                            <div className="text-sm font-black text-green-600 uppercase mt-1">{traceModal.data.profile.sentiment || 'Neutral'}</div>
+                                        </div>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase">Conversion Score</span>
+                                            <div className="text-sm font-black text-[#F37021] uppercase mt-1">{traceModal.data.profile.conversionProbability || 50}%</div>
+                                        </div>
+                                    </div>
+
+                                    {/* --- TELECOM METADATA BADGE --- */}
+                                    {traceModal.data.metadata && (
+                                        <div className="p-4 bg-orange-50/50 rounded-2xl border border-orange-100 flex items-center justify-between text-[10px] font-bold text-slate-600">
+                                            <div>
+                                                <span className="text-[#F37021] font-black uppercase block">Telecom Circle</span>
+                                                <span className="text-[#1A5F7A] font-black">{traceModal.data.metadata.telecomCircle}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[#F37021] font-black uppercase block">Line Type</span>
+                                                <span className="text-[#1A5F7A] font-black">{traceModal.data.metadata.lineType}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[#F37021] font-black uppercase block">Formatted</span>
+                                                <span className="text-[#1A5F7A] font-black">{traceModal.data.metadata.formattedNumber}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* --- CLOSEST NETWORK & ASSOCIATED PERSONS --- */}
+                                    {traceModal.data.networkDossier && traceModal.data.networkDossier.length > 0 && (
+                                        <div>
+                                            <h4 className="text-xs font-black text-[#1A5F7A] uppercase tracking-wider mb-3 italic flex items-center gap-2">
+                                                <FiUsers className="text-[#F37021]"/> Closest Network & Associated Persons ({traceModal.data.networkDossier.length})
+                                            </h4>
+                                            <div className="space-y-3">
+                                                {traceModal.data.networkDossier.map((netMember, idx) => (
+                                                    <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-2 shadow-sm">
+                                                        <div className="flex justify-between items-center">
+                                                            <div>
+                                                                <span className="text-[8px] font-black bg-[#1A5F7A] text-white px-2 py-0.5 rounded uppercase">{netMember.course}</span>
+                                                                <span className="font-black text-[#1A5F7A] uppercase text-xs ml-2">{netMember.name}</span>
+                                                            </div>
+                                                            <span className="text-[10px] font-bold text-slate-500">📞 {netMember.phone}</span>
+                                                        </div>
+
+                                                        {netMember.closestPersons && netMember.closestPersons.length > 0 ? (
+                                                            <div className="mt-2 pt-2 border-t border-slate-200 text-[10px]">
+                                                                <span className="font-black text-[#F37021] uppercase block mb-1">Closest Connected Person(s):</span>
+                                                                {netMember.closestPersons.map((cp, cIdx) => (
+                                                                    <div key={cIdx} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 mb-1 shadow-xs">
+                                                                        <span className="font-bold uppercase text-slate-700">🔗 {cp.name} <span className="text-slate-400 font-normal">({cp.relationship})</span></span>
+                                                                        <span className="text-slate-500 font-bold">📞 {cp.phone}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-[9px] font-bold text-slate-400 italic">No secondary household matches linked.</div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Chronological Event Timeline */}
+                                    <div>
+                                        <h4 className="text-xs font-black text-[#1A5F7A] uppercase tracking-wider mb-4 italic">Complete Action Timeline</h4>
+                                        <div className="space-y-3 border-l-2 border-slate-100 pl-4 ml-2">
+                                            {traceModal.data.timeline.map((event, idx) => (
+                                                <div key={idx} className="relative pb-3">
+                                                    <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#F37021] ring-4 ring-white"></div>
+                                                    <div className="text-[9px] font-black text-slate-400 uppercase">{new Date(event.timestamp).toLocaleString()} • <span className="text-[#1A5F7A]">{event.type}</span></div>
+                                                    <div className="text-xs font-bold text-slate-700 mt-0.5 bg-slate-50 p-3 rounded-xl border border-slate-100">{event.content}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="py-20 text-center text-red-500 font-black uppercase text-xs">No trace records found.</div>
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+            )}</AnimatePresence>
 
             {/* QUICK LINK ACTION POP-UP MODAL PANEL */}
             <AnimatePresence>{batchModal.show && batchModal.student && (
