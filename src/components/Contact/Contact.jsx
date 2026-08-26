@@ -6,6 +6,48 @@ import {
     FiCheckCircle, FiClock, FiAlertCircle 
 } from "react-icons/fi";
 
+// --- LIVE ACADEMY STATUS INDICATOR (OPEN/CLOSED) ---
+const AcademyStatusIndicator = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [statusText, setStatusText] = useState("");
+
+    useEffect(() => {
+        const checkStatus = () => {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const currentTimeInMinutes = hours * 60 + minutes;
+
+            // Operating Hours: 8:00 AM (480 mins) to 8:00 PM (1200 mins)
+            const openingTime = 8 * 60; 
+            const closingTime = 20 * 60; 
+
+            if (currentTimeInMinutes >= openingTime && currentTimeInMinutes < closingTime) {
+                setIsOpen(true);
+                setStatusText("Closes at 8:00 PM");
+            } else {
+                setIsOpen(false);
+                setStatusText("Opens at 8:00 AM");
+            }
+        };
+
+        checkStatus();
+        const interval = setInterval(checkStatus, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="inline-flex items-center gap-2.5 bg-slate-900/80 border border-slate-700/60 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide shadow-inner backdrop-blur-md w-fit mb-6">
+            <span className={`flex h-2 w-2 rounded-full ${isOpen ? "bg-green-500 shadow-[0_0_8px_#22c55e] animate-pulse" : "bg-red-500 shadow-[0_0_8px_#ef4444]"}`} />
+            <span className={isOpen ? "text-green-400 uppercase tracking-widest" : "text-red-400 uppercase tracking-widest"}>
+                {isOpen ? "OPEN NOW" : "CLOSED"}
+            </span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-300">{statusText}</span>
+        </div>
+    );
+};
+
 export default function Contact() {
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -107,64 +149,69 @@ export default function Contact() {
     };
 
     return (
-        <div className="relative min-h-screen bg-white flex items-center justify-center py-12 md:py-20 overflow-x-hidden selection:bg-[#F37021] selection:text-white">
+        <div className="relative min-h-screen bg-[#070D1D] text-slate-100 antialiased font-sans overflow-x-hidden selection:bg-[#F37021]/30 selection:text-orange-200 flex items-center justify-center py-12 md:py-24">
             
-            {/* BACKGROUND DECORATION */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-0">
-                <div className="absolute -top-20 -left-20 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-[#F37021]/10 rounded-full blur-[80px] md:blur-[120px]" />
-                <div className="absolute bottom-0 -right-20 w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-[#1A5F7A]/10 rounded-full blur-[80px] md:blur-[120px]" />
-            </div>
+            {/* AMBIENT GLOWS & MESH BACKDROP */}
+            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-orange-600/10 via-blue-600/10 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />
+            <div className="absolute bottom-10 right-10 w-[500px] h-[700px] bg-indigo-900/15 rounded-full blur-[160px] pointer-events-none -z-10" />
 
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
                 <div className="max-w-6xl mx-auto">
                     
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10 md:mb-16">
-                        <span className="text-[#F37021] font-bold tracking-[0.2em] md:tracking-[0.3em] uppercase text-xs md:text-sm block mb-3">Contact Us</span>
-                        <h2 className="text-4xl md:text-6xl font-black text-[#1A5F7A] leading-tight">
-                            Let's Talk <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F37021] to-orange-400">Expertise</span>
+                        <span className="text-[#F37021] font-extrabold tracking-[0.2em] md:tracking-[0.3em] uppercase text-xs md:text-sm block mb-3">Contact Us</span>
+                        <h2 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tight">
+                            Let's Talk <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200">Expertise</span>
                         </h2>
                     </motion.div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-5 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 bg-white">
+                    <div className="grid grid-cols-1 lg:grid-cols-5 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-slate-800 bg-slate-900/40 backdrop-blur-md">
                         
                         {/* LEFT INFO PANEL */}
-                        <div className="lg:col-span-2 bg-[#1A5F7A] p-8 md:p-12 text-white flex flex-col justify-between">
-                            <div>
-                                <h3 className="text-2xl md:text-3xl font-bold mb-6 italic">Academy Hub</h3>
-                                <div className="space-y-6 md:space-y-8">
+                        <div className="lg:col-span-2 bg-gradient-to-br from-[#0A192F] to-[#070D1D] border-r border-slate-800 p-8 md:p-12 text-white flex flex-col justify-between relative">
+                            {/* Decorative element inside panel */}
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-[#F37021]/10 rounded-full blur-3xl pointer-events-none" />
+                            
+                            <div className="relative z-10">
+                                <h3 className="text-2xl md:text-3xl font-black mb-4 tracking-tight text-white">Academy Hub</h3>
+                                
+                                <AcademyStatusIndicator />
+
+                                <div className="space-y-6 md:space-y-8 mt-2">
                                     <ContactItem icon={<FiMapPin />} title="Campus" detail="Kumar Tower, 2nd Floor, Boring Road crossing, Patna - 800001" />
                                     <ContactItem icon={<FiPhone />} title="Support" detail="+91 7282983335" isLink="tel:+917282983335" />
                                     <ContactItem icon={<FiMail />} title="Email" detail="expertcomputeracademy@gmail.com" isLink="mailto:expertcomputeracademy@gmail.com" />
                                     <ContactItem icon={<FiClock />} title="Hours" detail="Mon - Sat: 8:00 AM - 8:00 PM" />
                                 </div>
                             </div>
-                            <div className="mt-12 md:mt-16 pt-8 border-t border-white/10 opacity-60">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Est. 1987</p>
-                                <p className="text-xs md:text-sm italic">"Bringing people and computers together."</p>
+                            
+                            <div className="mt-12 md:mt-16 pt-8 border-t border-slate-800/80 relative z-10">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#F37021]">Est. 1987</p>
+                                <p className="text-xs md:text-sm italic text-slate-400 mt-1 font-medium">"Bringing people and computers together."</p>
                             </div>
                         </div>
 
                         {/* RIGHT FORM PANEL */}
-                        <div className="lg:col-span-3 p-8 md:p-16">
-                            <form onSubmit={handleSubmit} className="space-y-8 md:space-y-10">
+                        <div className="lg:col-span-3 p-8 md:p-16 bg-slate-900/60 relative">
+                            <form onSubmit={handleSubmit} className="space-y-8 md:space-y-10 relative z-10">
                                 <AnimatePresence mode="wait">
                                     {status.success && (
                                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                                            className="p-4 bg-green-50 text-green-700 rounded-xl flex items-center gap-3 font-bold border border-green-100 text-sm">
-                                            <FiCheckCircle className="shrink-0" /> Message Sent Successfully!
+                                            className="p-4 bg-green-500/10 text-green-400 rounded-2xl flex items-center gap-3 font-bold border border-green-500/20 text-sm backdrop-blur-md">
+                                            <FiCheckCircle className="shrink-0 text-lg" /> Message Sent Successfully!
                                         </motion.div>
                                     )}
                                     {status.error && (
                                         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                                            className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 font-bold border border-red-100 text-sm">
-                                            <FiAlertCircle className="shrink-0" /> {status.error}
+                                            className="p-4 bg-red-500/10 text-red-400 rounded-2xl flex items-center gap-3 font-bold border border-red-500/20 text-sm backdrop-blur-md">
+                                            <FiAlertCircle className="shrink-0 text-lg" /> {status.error}
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-6">
                                     <InputField 
-                                        label="Full Name" name="name" placeholder="Name" 
+                                        label="Full Name" name="name" placeholder="John Doe" 
                                         value={formData.name} onChange={handleChange} 
                                         error={fieldErrors.name} errorMsg="Use only letters (min 2)"
                                     />
@@ -184,21 +231,21 @@ export default function Contact() {
                                 />
 
                                 <div className="flex flex-col">
-                                    <label className="text-[10px] font-black text-[#1A5F7A] mb-2 uppercase tracking-widest ml-1">Your Message</label>
+                                    <label className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em] ml-1">Your Message</label>
                                     <textarea 
                                         name="message" required rows="4" 
                                         value={formData.message} onChange={handleChange} 
                                         placeholder="How can we help?" 
-                                        className="py-4 px-6 rounded-2xl bg-slate-50 border border-slate-100 focus:border-[#F37021] outline-none transition-all resize-none font-medium text-sm md:text-base"
+                                        className="py-4 px-6 rounded-2xl bg-slate-950/50 border border-slate-800 text-white placeholder-slate-600 focus:border-[#F37021] focus:bg-slate-900/80 outline-none transition-all resize-none font-medium text-sm md:text-base shadow-inner"
                                     />
                                 </div>
 
                                 <button 
                                     type="submit" disabled={status.loading} 
-                                    className="w-full bg-[#F37021] text-white font-black py-4 md:py-5 rounded-2xl transition-all shadow-xl hover:bg-[#1A5F7A] flex items-center justify-center gap-3 disabled:opacity-50 text-sm md:text-base uppercase tracking-widest"
+                                    className="w-full bg-gradient-to-r from-[#F37021] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black py-4 md:py-5 rounded-2xl transition-all shadow-[0_10px_25px_rgba(243,112,33,0.3)] flex items-center justify-center gap-3 disabled:opacity-50 disabled:shadow-none text-sm md:text-base uppercase tracking-[0.2em]"
                                 >
                                     {status.loading ? <FiLoader className="animate-spin" /> : <FiSend />} 
-                                    {status.loading ? "Sending..." : "Submit Inquiry"}
+                                    {status.loading ? "Transmitting..." : "Submit Inquiry"}
                                 </button>
                             </form>
                         </div>
@@ -212,16 +259,16 @@ export default function Contact() {
 // --- SUB-COMPONENTS ---
 function ContactItem({ icon, title, detail, isLink }) {
     return (
-        <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/10 rounded-xl text-orange-400 shrink-0">{icon}</div>
+        <div className="flex items-start gap-4 group">
+            <div className="p-3 bg-slate-800/80 border border-slate-700/60 rounded-xl text-[#F37021] shrink-0 group-hover:scale-110 transition-transform shadow-inner">{icon}</div>
             <div className="min-w-0">
-                <p className="text-[9px] md:text-[10px] font-black text-white/40 uppercase tracking-widest">{title}</p>
+                <p className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</p>
                 {isLink ? (
-                    <a href={isLink} className="font-bold text-sm md:text-base hover:text-orange-400 transition-colors break-words block">
+                    <a href={isLink} className="font-bold text-sm md:text-base text-slate-200 hover:text-orange-400 transition-colors break-words block mt-0.5">
                         {detail}
                     </a>
                 ) : (
-                    <p className="font-bold text-sm md:text-base break-words">{detail}</p>
+                    <p className="font-bold text-sm md:text-base text-slate-200 break-words mt-0.5">{detail}</p>
                 )}
             </div>
         </div>
@@ -231,12 +278,12 @@ function ContactItem({ icon, title, detail, isLink }) {
 function InputField({ label, name, type = "text", placeholder, value, onChange, error, errorMsg }) {
     return (
         <div className="flex flex-col relative">
-            <label className="text-[10px] font-black text-[#1A5F7A] mb-2 uppercase tracking-widest ml-1">{label}</label>
+            <label className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em] ml-1">{label}</label>
             <div className="relative">
                 <input 
                     required type={type} name={name} value={value} onChange={onChange} placeholder={placeholder} 
-                    className={`w-full py-4 px-6 rounded-2xl bg-slate-50 border text-sm md:text-base font-medium outline-none transition-all ${
-                        error ? 'border-red-500 bg-red-50 text-red-900' : 'border-slate-100 focus:border-[#F37021]'
+                    className={`w-full py-4 px-6 rounded-2xl bg-slate-950/50 border text-white placeholder-slate-600 text-sm md:text-base font-medium outline-none transition-all shadow-inner ${
+                        error ? 'border-red-500/50 bg-red-500/5 focus:border-red-500' : 'border-slate-800 focus:border-[#F37021] focus:bg-slate-900/80'
                     }`}
                 />
                 <AnimatePresence>
@@ -245,9 +292,9 @@ function InputField({ label, name, type = "text", placeholder, value, onChange, 
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0 }}
-                            className="absolute -bottom-5 left-2 text-[9px] font-bold text-red-500 uppercase tracking-tighter flex items-center gap-1"
+                            className="absolute -bottom-6 left-2 text-[10px] font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5"
                         >
-                            <FiAlertCircle size={10} /> {errorMsg}
+                            <FiAlertCircle size={12} /> {errorMsg}
                         </motion.span>
                     )}
                 </AnimatePresence>
