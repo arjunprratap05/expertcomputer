@@ -21,7 +21,7 @@ import graduatesImg from '../../assets/ecosystem/graduatescourses.jpg';
 import workingImg from '../../assets/ecosystem/workingprofessional.jpeg';
 import homemakerImg from '../../assets/ecosystem/homemaker.jpeg';
 import retiredImg from '../../assets/ecosystem/retiredpersoncourse.jpg';
-import expertcomuteroffice from "../../assets/expertcomputerfrontoffice.jpeg";
+import expertcomuteroffice from '../../assets/expertcomuteroffice.png';
 import suruchiImg from "../../assets/student-suruchi.jpeg";
 import harshImg from "../../assets/student-harsh.jpeg";
 import ankitImg from "../../assets/student-ankit.jpeg";

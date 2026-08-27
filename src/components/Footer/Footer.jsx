@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaFacebookF, FaYoutube, FaLinkedinIn, FaInstagram, FaArrowRight } from 'react-icons/fa';
+import { FaFacebookF, FaYoutube, FaLinkedinIn, FaInstagram } from 'react-icons/fa';
+import { FiArrowRight } from 'react-icons/fi';
 import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker } from 'react-icons/hi';
-import expertcomputerlogo from '../../assets/expertcomputerlogo.jpeg'; 
+import expertcomputerlogo from '../../assets/expertcomputerlogo.png'; 
 
 const calculateYearsOfExperience = () => {
     const today = new Date();
@@ -59,32 +60,40 @@ export default function Footer() {
     };
 
     return (
-        <footer className="relative overflow-hidden bg-slate-950 text-slate-200">
-            <div className="h-[4px] w-full bg-gradient-to-r from-orange-500 via-amber-500 to-cyan-500" />
-            <div className="absolute top-0 right-0 -z-10 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 -z-10 h-72 w-72 rounded-full bg-orange-500/10 blur-[120px] pointer-events-none" />
+        <footer className="relative overflow-hidden bg-[#070D1D] text-slate-300 font-sans border-t border-slate-800/60 z-10 selection:bg-[#F37021]/30 selection:text-orange-200">
+            
+            {/* GLOWING TOP ACCENT LINE */}
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#F37021]/60 to-transparent opacity-70" />
 
-            <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
+            {/* AMBIENT GLOWS & MESH BACKDROP */}
+            <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+            <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-orange-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+
+            <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:px-8 lg:py-20 relative z-10">
                 <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
                     
+                    {/* BRAND & SOCIAL SECTION */}
                     <div className="space-y-6 lg:col-span-4">
-                        {/* ATTACHED TO FOOTER LOGO */}
                         <Link 
                             to="/"
                             onClick={handleLogoClick} 
-                            className="group block transition-transform duration-300 active:scale-95 w-max"
+                            className="group block w-max"
                         >
-                            <img 
-                                src={expertcomputerlogo} 
-                                className="h-14 w-auto rounded-xl bg-white p-1.5 shadow-md transition-all duration-300 group-hover:shadow-cyan-500/20" 
-                                alt="Expert Computer Logo" 
-                            />
+                            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 p-2.5 rounded-2xl shadow-lg group-hover:border-[#F37021]/40 group-hover:shadow-[0_0_20px_rgba(243,112,33,0.15)] transition-all duration-300">
+                                <img 
+                                    src={expertcomputerlogo} 
+                                    className="h-14 w-auto rounded-xl object-contain drop-shadow-md" 
+                                    alt="Expert Computer Logo" 
+                                />
+                            </div>
                         </Link>
+                        
                         <p className="max-w-sm text-sm font-normal leading-relaxed text-slate-400">
                             Empowering students in Patna with IT excellence since 1987. 
-                            Our <span className="font-semibold text-white">{yearsOfExperience}+ years legacy</span> is built entirely on hands-on, practical learning.
+                            Our <span className="font-bold text-slate-200">{yearsOfExperience}+ years legacy</span> is built entirely on hands-on, practical learning and industry alignment.
                         </p>
-                        <div className="flex flex-wrap gap-3">
+                        
+                        <div className="flex flex-wrap gap-3 pt-2">
                             {[
                                 { icon: <FaFacebookF />, url: "https://www.facebook.com/expertcomputeracademypat/" },
                                 { icon: <FaInstagram />, url: "https://www.instagram.com/expertcomputeracademypatna/" },
@@ -96,7 +105,7 @@ export default function Footer() {
                                     href={social.url} 
                                     target="_blank" 
                                     rel="noreferrer" 
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-slate-400 transition-all duration-300 hover:-translate-y-1 hover:border-orange-500 hover:bg-orange-500 hover:text-white hover:shadow-lg hover:shadow-orange-500/20"
+                                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900/50 backdrop-blur-sm border border-slate-800 text-slate-400 transition-all duration-300 hover:-translate-y-1 hover:border-[#F37021] hover:bg-gradient-to-br hover:from-[#F37021] hover:to-orange-600 hover:text-white hover:shadow-[0_8px_20px_rgba(243,112,33,0.3)]"
                                 >
                                     {social.icon}
                                 </a>
@@ -104,22 +113,23 @@ export default function Footer() {
                         </div>
                     </div>
 
+                    {/* PROGRAMS LINKS */}
                     <div className="lg:col-span-2 lg:pl-4">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-6 after:h-[2px] after:bg-orange-500">
-                            Programs
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#F37021] mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-2.5 after:left-0 after:w-8 after:h-[2px] after:bg-[#F37021]/50 after:rounded-full">
+                            Curriculums
                         </h4>
-                        <ul className="space-y-3.5">
+                        <ul className="space-y-4">
                             {footerLinks.programs.map((item, i) => (
                                 <li key={i}>
                                     <button 
                                         onClick={() => handleFooterLinkClick(item)} 
-                                        className="group flex items-center gap-2 text-left text-sm font-medium text-slate-400 transition-colors duration-200 hover:text-white"
+                                        className="group flex items-center gap-2.5 text-left text-sm font-medium text-slate-400 transition-colors duration-200 hover:text-white w-full"
                                     >
-                                        <FaArrowRight className="text-[10px] text-orange-500 transition-transform duration-200 group-hover:translate-x-1" />
+                                        <FiArrowRight className="text-xs text-slate-600 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-[#F37021]" />
                                         <span>
                                             {item.name} 
                                             {item.isPdf && (
-                                                <span className="ml-1.5 rounded bg-slate-900 border border-slate-800 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-cyan-400 uppercase">
+                                                <span className="ml-2 rounded-md bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 text-[9px] font-black tracking-widest text-blue-400 uppercase">
                                                     PDF
                                                 </span>
                                             )}
@@ -130,18 +140,19 @@ export default function Footer() {
                         </ul>
                     </div>
 
+                    {/* ACADEMY LINKS */}
                     <div className="lg:col-span-2 lg:pl-2">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-6 after:h-[2px] after:bg-orange-500">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#F37021] mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-2.5 after:left-0 after:w-8 after:h-[2px] after:bg-[#F37021]/50 after:rounded-full">
                             Academy
                         </h4>
-                        <ul className="space-y-3.5">
+                        <ul className="space-y-4">
                             {footerLinks.academy.map((item, i) => (
                                 <li key={i}>
                                     <button 
                                         onClick={() => handleFooterLinkClick(item)} 
-                                        className="group flex items-center gap-2 text-left text-sm font-medium text-slate-400 transition-colors duration-200 hover:text-white"
+                                        className="group flex items-center gap-2.5 text-left text-sm font-medium text-slate-400 transition-colors duration-200 hover:text-white w-full"
                                     >
-                                        <FaArrowRight className="text-[10px] text-orange-500 transition-transform duration-200 group-hover:translate-x-1" />
+                                        <FiArrowRight className="text-xs text-slate-600 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-[#F37021]" />
                                         <span>{item.name}</span>
                                     </button>
                                 </li>
@@ -149,54 +160,60 @@ export default function Footer() {
                         </ul>
                     </div>
 
+                    {/* VISIT US CONTACT CARDS */}
                     <div className="space-y-6 lg:col-span-4">
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-1.5 after:left-0 after:w-6 after:h-[2px] after:bg-orange-500">
-                            Visit Us
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#F37021] mb-6 relative inline-block after:content-[''] after:absolute after:-bottom-2.5 after:left-0 after:w-8 after:h-[2px] after:bg-[#F37021]/50 after:rounded-full">
+                            Visit Hub
                         </h4>
                         <div className="space-y-4">
-                            <a href="tel:+917282983335" className="group flex items-start gap-3.5 rounded-2xl border border-slate-900 bg-slate-900/50 p-3.5 backdrop-blur-md transition-all duration-300 hover:border-slate-800 hover:bg-slate-900">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 transition-colors duration-300 group-hover:bg-orange-500 group-hover:text-white">
-                                    <HiOutlinePhone className="text-xl" />
+                            {/* Phone Card */}
+                            <a href="tel:+917282983335" className="group flex items-center gap-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 backdrop-blur-md transition-all duration-300 hover:border-[#F37021]/40 hover:bg-slate-800/60 hover:shadow-[0_4px_20px_rgba(243,112,33,0.1)]">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/20 text-[#F37021] transition-all duration-300 group-hover:scale-110 group-hover:bg-[#F37021] group-hover:text-white shadow-inner">
+                                    <HiOutlinePhone className="text-2xl" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Admissions</p>
-                                    <p className="text-sm font-semibold text-slate-300 transition-colors duration-200 group-hover:text-white">+91 7282983335</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Admissions</p>
+                                    <p className="text-sm font-bold text-slate-200 transition-colors duration-200 group-hover:text-white mt-0.5">+91 7282983335</p>
                                 </div>
                             </a>
 
-                            <a href="mailto:expertcomputeracademypatna@gmail.com" className="group flex items-start gap-3.5 rounded-2xl border border-slate-900 bg-slate-900/50 p-3.5 backdrop-blur-md transition-all duration-300 hover:border-slate-800 hover:bg-slate-900 min-w-0">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 transition-colors duration-300 group-hover:bg-cyan-500 group-hover:text-white">
-                                    <HiOutlineMail className="text-xl" />
+                            {/* Email Card */}
+                            <a href="mailto:expertcomputeracademypatna@gmail.com" className="group flex items-center gap-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 backdrop-blur-md transition-all duration-300 hover:border-blue-500/40 hover:bg-slate-800/60 hover:shadow-[0_4px_20px_rgba(59,130,246,0.1)] min-w-0">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white shadow-inner">
+                                    <HiOutlineMail className="text-2xl" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Support Email</p>
-                                    <p className="text-sm font-semibold text-slate-300 truncate transition-colors duration-200 group-hover:text-white">expertcomputeracademypatna@gmail.com</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Support Desk</p>
+                                    <p className="text-sm font-bold text-slate-200 truncate transition-colors duration-200 group-hover:text-white mt-0.5">expertcomputeracademypatna@gmail.com</p>
                                 </div>
                             </a>
 
-                            <a href={mapUrl} target="_blank" rel="noreferrer" className="group flex items-start gap-3.5 rounded-2xl border border-slate-900 bg-slate-900/50 p-3.5 backdrop-blur-md transition-all duration-300 hover:border-slate-800 hover:bg-slate-900">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 transition-colors duration-300 group-hover:bg-amber-500 group-hover:text-white">
-                                    <HiOutlineLocationMarker className="text-xl" />
+                            {/* Location Card */}
+                            <a href={mapUrl} target="_blank" rel="noreferrer" className="group flex items-center gap-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 backdrop-blur-md transition-all duration-300 hover:border-teal-500/40 hover:bg-slate-800/60 hover:shadow-[0_4px_20px_rgba(20,184,166,0.1)]">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 transition-all duration-300 group-hover:scale-110 group-hover:bg-teal-500 group-hover:text-white shadow-inner">
+                                    <HiOutlineLocationMarker className="text-2xl" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Boring Road Campus</p>
-                                    <p className="text-sm font-medium leading-normal text-slate-300 transition-colors duration-200 group-hover:text-white">Kumar Tower, 2nd Floor, Boring Road crossing, Patna</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Boring Road Campus</p>
+                                    <p className="text-sm font-medium leading-snug text-slate-300 transition-colors duration-200 group-hover:text-white mt-0.5">Kumar Tower, 2nd Floor, Boring Road crossing, Patna</p>
                                 </div>
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-16 pt-8 border-t border-slate-900 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div className="text-[11px] font-medium tracking-widest text-slate-500 text-center sm:text-left">
+                {/* BOTTOM COPYRIGHT ROW */}
+                <div className="mt-16 pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="text-[10px] md:text-[11px] font-bold tracking-widest text-slate-500 text-center md:text-left uppercase">
                         © {new Date().getFullYear()} EXPERT COMPUTER ACADEMY. ALL RIGHTS RESERVED.
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest italic bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full">
+                    
+                    <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] bg-slate-900/60 backdrop-blur-sm border border-slate-800/80 px-4 py-2 rounded-full shadow-inner">
                         Handcrafted for Bihar
                         <motion.span 
-                            animate={{ scale: [1, 1.2, 1] }} 
-                            transition={{ repeat: Infinity, duration: 1.5 }} 
-                            className="text-red-500 inline-block"
+                            animate={{ scale: [1, 1.25, 1] }} 
+                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }} 
+                            className="text-red-500 inline-block drop-shadow-[0_0_5px_rgba(239,68,68,0.6)]"
                         >
                             ❤️
                         </motion.span>
