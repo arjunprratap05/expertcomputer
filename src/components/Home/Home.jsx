@@ -46,6 +46,7 @@ const AcademyStatusIndicator = () => {
     useEffect(() => {
         const checkStatus = () => {
             const now = new Date();
+            const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
             const hours = now.getHours();
             const minutes = now.getMinutes();
             const currentTimeInMinutes = hours * 60 + minutes;
@@ -54,12 +55,28 @@ const AcademyStatusIndicator = () => {
             const openingTime = 8 * 60; 
             const closingTime = 20 * 60; 
 
-            if (currentTimeInMinutes >= openingTime && currentTimeInMinutes < closingTime) {
+            if (day === 0) {
+                // Sunday (Closed all day)
+                setIsOpen(false);
+                setStatusText("Closed • Opens tomorrow at 8:00 AM");
+            } else if (currentTimeInMinutes >= openingTime && currentTimeInMinutes < closingTime) {
+                // Normal Operating Hours
                 setIsOpen(true);
                 setStatusText("Open Now • Closes at 8:00 PM");
-            } else {
+            } else if (currentTimeInMinutes < openingTime) {
+                // After midnight, but before 8:00 AM (e.g., 2:00 AM Tuesday)
                 setIsOpen(false);
-                setStatusText("Closed • Opens at 8:00 AM");
+                setStatusText("Closed • Opens today at 8:00 AM");
+            } else if (currentTimeInMinutes >= closingTime) {
+                // After 8:00 PM
+                setIsOpen(false);
+                if (day === 6) {
+                    // Saturday night -> Next open day is Monday
+                    setStatusText("Closed • Opens Monday at 8:00 AM");
+                } else {
+                    // Monday to Friday night -> Opens tomorrow
+                    setStatusText("Closed • Opens tomorrow at 8:00 AM");
+                }
             }
         };
 
