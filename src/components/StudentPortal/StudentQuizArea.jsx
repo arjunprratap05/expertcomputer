@@ -105,14 +105,19 @@ export default function StudentQuizArea({ quizId, studentId, onReturn }) {
 
     // --- ERROR / LOADING STATES ---
     if (fetchError) return (
-        <div className="p-10 text-center font-black text-red-500 uppercase italic mt-20 flex flex-col items-center gap-4">
-            <FiAlertTriangle size={48} />
-            Failed to load examination parameters. Invalid Exam ID.
-            <button onClick={onReturn} className="mt-4 px-6 py-2 bg-slate-100 text-[#1A5F7A] rounded-xl hover:bg-slate-200 transition-all">Go Back</button>
+        <div className="p-10 text-center font-black text-red-400 uppercase italic mt-20 flex flex-col items-center gap-4 bg-slate-900/40 rounded-[3rem] border border-slate-800 max-w-2xl mx-auto backdrop-blur-md">
+            <FiAlertTriangle size={48} className="text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+            <p>Failed to load examination parameters.<br/><span className="text-[10px] tracking-widest text-slate-500 mt-2 block">Invalid Exam ID or Session Expired.</span></p>
+            <button onClick={onReturn} className="mt-4 px-8 py-3 bg-slate-800 border border-slate-700 text-slate-300 rounded-2xl hover:bg-slate-700 hover:text-white transition-all text-xs tracking-widest uppercase">Go Back</button>
         </div>
     );
 
-    if (!quizData) return <div className="p-10 font-black text-[#1A5F7A] uppercase italic animate-pulse flex items-center justify-center h-full min-h-[400px]">Initializing Exam Environment...</div>;
+    if (!quizData) return (
+        <div className="p-10 font-black text-slate-500 uppercase italic animate-pulse flex flex-col items-center justify-center h-full min-h-[400px] gap-4 tracking-widest text-sm">
+            <div className="w-12 h-12 border-4 border-slate-800 border-t-[#F37021] rounded-full animate-spin" />
+            Initializing Secure Exam Environment...
+        </div>
+    );
 
     // --- SCORE RENDERER ---
     if (result) {
@@ -120,31 +125,36 @@ export default function StudentQuizArea({ quizId, studentId, onReturn }) {
         const isPassed = percentage >= 60; // Assuming 60% is the passing threshold
 
         return (
-            <div className="max-w-2xl mx-auto mt-10 bg-white p-10 rounded-[2.5rem] shadow-2xl text-center border-t-[15px] border-[#1A5F7A]">
+            <div className="max-w-2xl mx-auto mt-10 bg-slate-900/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.6)] text-center border border-slate-800 border-t-[12px] overflow-hidden relative"
+                 style={{ borderTopColor: isPassed ? '#10b981' : '#f37021' }}>
+                
+                {/* Ambient Glow */}
+                <div className={`absolute -top-20 left-1/2 -translate-x-1/2 w-60 h-60 rounded-full blur-[100px] opacity-20 pointer-events-none ${isPassed ? 'bg-emerald-500' : 'bg-orange-500'}`} />
+
                 {isPassed ? (
-                    <FiCheckCircle className="mx-auto text-green-500 mb-6" size={80} />
+                    <FiCheckCircle className="mx-auto text-emerald-400 mb-6 drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]" size={80} />
                 ) : (
-                    <FiAlertTriangle className="mx-auto text-orange-500 mb-6" size={80} />
+                    <FiAlertTriangle className="mx-auto text-orange-400 mb-6 drop-shadow-[0_0_15px_rgba(243,112,33,0.4)]" size={80} />
                 )}
                 
-                <h2 className="text-3xl font-black text-[#1A5F7A] uppercase italic mb-2">Examination Concluded</h2>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Results securely logged to your profile</p>
+                <h2 className="text-3xl font-black text-white uppercase italic mb-2 tracking-tight">Examination Concluded</h2>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">Results securely logged to your profile</p>
                 
-                <div className="bg-slate-50 border border-slate-100 rounded-[2rem] p-8 inline-block w-full max-w-md mb-8 shadow-inner">
-                    <div className={`text-6xl font-black italic tracking-tighter ${isPassed ? 'text-green-600' : 'text-[#F37021]'}`}>
-                        {result.score} <span className="text-2xl text-slate-300">/ {result.total}</span>
+                <div className="bg-slate-950/50 border border-slate-800 rounded-[2rem] p-8 inline-block w-full max-w-md mb-8 shadow-inner">
+                    <div className={`text-6xl font-black italic tracking-tighter ${isPassed ? 'text-emerald-400' : 'text-[#F37021]'}`}>
+                        {result.score} <span className="text-2xl text-slate-600">/ {result.total}</span>
                     </div>
-                    <div className="mt-4 text-[14px] font-black uppercase text-[#1A5F7A]">
+                    <div className="mt-4 text-[14px] font-black uppercase text-white tracking-widest">
                         Final Accuracy: {percentage.toFixed(1)}%
                     </div>
-                    <div className={`mt-2 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full inline-block border ${isPassed ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                    <div className={`mt-4 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full inline-block border ${isPassed ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border-orange-500/20'}`}>
                         {isPassed ? "STATUS: PASSED" : "STATUS: FAILED / RETAKE REQUIRED"}
                     </div>
                 </div>
 
                 <button 
                     onClick={onReturn}
-                    className="w-full bg-[#1A5F7A] text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 transition-all text-xs flex items-center justify-center gap-2"
+                    className="w-full bg-slate-800 border border-slate-700 text-slate-200 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-lg hover:bg-slate-700 hover:text-white active:scale-95 transition-all text-xs flex items-center justify-center gap-2"
                 >
                     Return to Vault
                 </button>
@@ -157,25 +167,30 @@ export default function StudentQuizArea({ quizId, studentId, onReturn }) {
 
     // --- QUIZ INTERFACE RENDERER ---
     return (
-        <div className="max-w-4xl mx-auto space-y-8 pb-20 relative">
+        <div className="max-w-4xl mx-auto space-y-8 pb-20 relative px-1 mt-4">
             
             {/* Exam Header & Timer */}
-            <div className="bg-[#1A5F7A] text-white p-8 rounded-[2.5rem] shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden gap-6 sticky top-20 z-[60]">
-                <div>
-                    <h2 className="text-3xl font-black uppercase italic tracking-wide leading-tight">{quizData.title}</h2>
-                    <p className="text-[11px] font-bold text-white/60 uppercase tracking-[0.2em] mt-2">{quizData.targetCourse}</p>
+            <div className="bg-[#0A192F]/90 backdrop-blur-md border border-slate-800 text-white p-6 md:p-8 rounded-[2.5rem] shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden gap-6 sticky top-20 z-[60]">
+                <div className="absolute top-0 right-0 w-60 h-60 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="relative z-10">
+                    <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight leading-tight">{quizData.title}</h2>
+                    <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
+                        {quizData.targetCourse}
+                    </p>
                 </div>
                 
                 {/* Timer Display Widget */}
                 <motion.div 
                     animate={isWarningState ? { scale: [1, 1.05, 1] } : {}}
                     transition={{ repeat: Infinity, duration: 1 }}
-                    className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-lg border-2 min-w-[180px] justify-center ${isWarningState ? 'bg-red-500 border-red-400 text-white animate-pulse' : 'bg-[#F37021] border-[#F37021] text-white'}`}
+                    className={`relative z-10 flex items-center gap-4 px-6 py-4 rounded-2xl shadow-inner border-2 min-w-[180px] justify-center transition-colors duration-300 ${isWarningState ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-slate-900/80 border-slate-700 text-[#F37021]'}`}
                 >
-                    {isWarningState ? <FiAlertCircle size={24} /> : <FiClock size={24} />}
+                    {isWarningState ? <FiAlertCircle size={24} className="animate-pulse" /> : <FiClock size={24} />}
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase tracking-widest opacity-80 leading-none">Time Remaining</span>
-                        <span className="font-black text-2xl uppercase italic leading-none mt-1">{formatTime(timeLeft)}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest opacity-80 leading-none text-slate-400">Time Remaining</span>
+                        <span className={`font-black text-2xl uppercase italic leading-none mt-1 ${isWarningState ? 'text-red-400' : 'text-white'}`}>{formatTime(timeLeft)}</span>
                     </div>
                 </motion.div>
             </div>
@@ -183,21 +198,22 @@ export default function StudentQuizArea({ quizId, studentId, onReturn }) {
             {/* 5-Minute Warning Banner */}
             <AnimatePresence>
                 {isWarningState && (
-                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="bg-red-50 border-2 border-red-200 text-red-600 p-4 rounded-2xl font-black text-xs uppercase italic tracking-widest flex items-center justify-center gap-3 shadow-sm mx-2">
-                        <FiAlertTriangle size={18}/> 5 Minutes Remaining. System will auto-submit when time expires.
+                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl font-black text-[10px] uppercase italic tracking-widest flex items-center justify-center gap-3 shadow-lg backdrop-blur-sm mx-2">
+                        <FiAlertTriangle size={18} className="animate-pulse"/> 5 Minutes Remaining. System will auto-submit when time expires.
                     </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Question List */}
-            <div className="space-y-6 px-2">
+            <div className="space-y-6">
                 {quizData.questions.map((q, qIndex) => (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: qIndex * 0.1 }} key={qIndex} className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200 relative hover:border-[#1A5F7A] transition-colors">
-                        <div className="absolute -top-4 left-8 bg-slate-100 px-4 py-1 border border-slate-200 text-[10px] font-black uppercase text-[#1A5F7A] rounded-full shadow-sm">
-                            Question {qIndex + 1} of {quizData.questions.length}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: qIndex * 0.05 }} key={qIndex} className="bg-slate-900/40 backdrop-blur-md p-6 md:p-8 rounded-[2rem] shadow-lg border border-slate-800 relative hover:border-[#F37021]/30 transition-colors group">
+                        
+                        <div className="absolute -top-3 left-6 md:left-8 bg-slate-950 px-4 py-1.5 border border-slate-700 text-[9px] font-black uppercase text-slate-400 tracking-widest rounded-full shadow-inner">
+                            Question {qIndex + 1} <span className="opacity-50 mx-1">of</span> {quizData.questions.length}
                         </div>
                         
-                        <h3 className="text-lg md:text-xl font-bold text-slate-800 mt-4 mb-6 leading-relaxed">{q.questionText}</h3>
+                        <h3 className="text-base md:text-lg font-bold text-white mt-4 mb-6 leading-relaxed tracking-wide">{q.questionText}</h3>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {q.options.map((opt, oIndex) => {
@@ -206,12 +222,12 @@ export default function StudentQuizArea({ quizId, studentId, onReturn }) {
                                     <button 
                                         key={oIndex}
                                         onClick={() => handleSelectOption(qIndex, oIndex)}
-                                        className={`p-5 text-left rounded-2xl border-2 transition-all font-bold text-sm flex items-center ${isSelected ? 'border-[#F37021] bg-orange-50 text-[#F37021] shadow-md' : 'border-slate-100 hover:border-slate-300 text-slate-600 bg-slate-50 hover:bg-white'}`}
+                                        className={`p-4 md:p-5 text-left rounded-2xl border transition-all duration-300 font-bold text-sm flex items-center shadow-sm ${isSelected ? 'border-[#F37021] bg-[#F37021]/10 text-[#F37021] shadow-[0_0_15px_rgba(243,112,33,0.15)]' : 'border-slate-800 hover:border-slate-600 text-slate-300 bg-slate-950/50 hover:bg-slate-800/50'}`}
                                     >
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-4 border-2 flex-shrink-0 ${isSelected ? 'border-[#F37021] bg-[#F37021] text-white' : 'border-slate-300 text-slate-400'}`}>
+                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center mr-4 border-2 flex-shrink-0 transition-colors duration-300 ${isSelected ? 'border-[#F37021] bg-[#F37021] text-white' : 'border-slate-700 text-slate-500'}`}>
                                             <span className="text-[10px] font-black">{String.fromCharCode(65 + oIndex)}</span>
                                         </div>
-                                        {opt}
+                                        <span className="leading-snug">{opt}</span>
                                     </button>
                                 );
                             })}
@@ -221,11 +237,11 @@ export default function StudentQuizArea({ quizId, studentId, onReturn }) {
             </div>
 
             {/* Submission Action */}
-            <div className="flex justify-end pt-8 px-2 border-t border-slate-200 mt-8">
+            <div className="flex justify-end pt-8 border-t border-slate-800 mt-8">
                 <button 
                     onClick={() => executeSubmission(false)}
                     disabled={isSubmitting}
-                    className="bg-[#1A5F7A] text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all text-xs disabled:opacity-50 disabled:translate-y-0 flex items-center gap-3 w-full md:w-auto justify-center"
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 border border-transparent text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.4)] hover:-translate-y-1 transition-all text-xs disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none flex items-center gap-3 w-full md:w-auto justify-center"
                 >
                     {isSubmitting ? "Transmitting Results..." : (
                         <>

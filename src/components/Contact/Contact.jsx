@@ -6,6 +6,9 @@ import {
     FiCheckCircle, FiClock, FiAlertCircle 
 } from "react-icons/fi";
 
+// --- IMPORT SEO COMPONENT ---
+import SEO from "../../components/SEO";
+
 // --- LIVE ACADEMY STATUS INDICATOR (OPEN/CLOSED) ---
 const AcademyStatusIndicator = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -150,6 +153,13 @@ export default function Contact() {
 
     return (
         <div className="relative min-h-screen bg-[#070D1D] text-slate-100 antialiased font-sans overflow-x-hidden selection:bg-[#F37021]/30 selection:text-orange-200 flex items-center justify-center py-12 md:py-24">
+            
+            {/* FULLY INTEGRATED SEO COMPONENT */}
+            <SEO 
+                title="Contact Us | Expert Computer Academy"
+                description="Get in touch with Expert Computer Academy in Patna. Visit our Boring Road campus, call our support team, or drop us an inquiry to start your tech journey."
+                url="https://expertcomputeracademy.in/contact"
+            />
             
             {/* AMBIENT GLOWS & MESH BACKDROP */}
             <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-orange-600/10 via-blue-600/10 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />

@@ -97,22 +97,22 @@ export default function StudyMaterial() {
     if (loading) return (
         <div className="h-96 flex flex-col justify-center items-center gap-4">
             <FiLoader className="animate-spin text-4xl text-[#F37021]" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Unlocking Course Vault...</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic">Unlocking Course Vault...</p>
         </div>
     );
 
     return (
-        <div className="w-full space-y-10 pb-20 text-left max-w-7xl mx-auto px-4 mt-20">
-            <header className="flex flex-col gap-2 px-1">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-blue-50 text-[#1A5F7A] rounded-2xl shadow-sm">
+        <div className="w-full space-y-10 pb-20 text-left max-w-7xl mx-auto px-1 mt-4">
+            <header className="flex flex-col gap-2">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-slate-900/80 border border-slate-700 text-[#F37021] rounded-2xl shadow-inner">
                         <FiShield size={24} />
                     </div>
                     <div>
-                        <h2 className="text-3xl font-black text-[#1A5F7A] uppercase italic leading-none tracking-tighter">
-                            Course <span className="text-[#F37021]">Vault</span>
+                        <h2 className="text-3xl font-black text-white uppercase italic leading-none tracking-tighter">
+                            Course <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200">Vault</span>
                         </h2>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">
                             {materials.length} Premium Learning Resources Synchronized
                         </p>
                     </div>
@@ -120,24 +120,32 @@ export default function StudyMaterial() {
             </header>
 
             {error && (
-                <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100 flex items-center gap-4 text-red-600 shadow-sm mx-1">
-                    <FiLock size={20} />
-                    <p className="text-[10px] font-black uppercase tracking-tight">{error}</p>
+                <div className="bg-red-500/10 p-5 rounded-[2rem] border border-red-500/20 flex items-center gap-4 text-red-400 shadow-sm backdrop-blur-md">
+                    <FiLock size={20} className="shrink-0" />
+                    <p className="text-[10px] font-black uppercase tracking-tight leading-relaxed">{error}</p>
                 </div>
             )}
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
                 {materials.map((item) => (
-                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} key={item._id} 
-                        className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-50 group hover:shadow-2xl transition-all duration-500"
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} key={item._id} viewport={{ once: true }}
+                        className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] md:rounded-[3rem] shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-slate-800 group hover:border-[#F37021]/50 hover:shadow-[0_10px_30px_rgba(243,112,33,0.15)] transition-all duration-500 flex flex-col h-full"
                     >
-                        <div className="bg-orange-50 p-5 rounded-[1.5rem] mb-8 group-hover:bg-[#1A5F7A] transition-all duration-500 w-fit shadow-inner">
-                            <FiFileText className="text-4xl text-[#F37021] group-hover:text-white transition-all duration-500" />
+                        <div className="w-14 h-14 bg-slate-950 border border-slate-700 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
+                            <FiFileText className="text-2xl text-[#F37021] group-hover:text-orange-400 transition-colors duration-500" />
                         </div>
-                        <h3 className="font-black text-[#1A5F7A] mb-2 uppercase text-[15px] italic leading-tight group-hover:text-[#F37021]">{item.title}</h3>
-                        <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest mb-10">{item.course}</p>
+                        
+                        <div className="flex-1 flex flex-col">
+                            <h3 className="font-black text-white mb-2 uppercase text-[15px] italic leading-tight group-hover:text-orange-300 transition-colors line-clamp-3">
+                                {item.title}
+                            </h3>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-10 line-clamp-1">
+                                {item.course}
+                            </p>
+                        </div>
+                        
                         <button onClick={() => handlePreview(item._id, item.title)} 
-                            className="w-full py-5 bg-slate-50 hover:bg-[#F37021] hover:text-white text-[#1A5F7A] rounded-2xl font-black text-[10px] uppercase transition-all flex items-center justify-center gap-3"
+                            className="w-full py-4 bg-slate-800/80 hover:bg-gradient-to-r hover:from-[#F37021] hover:to-orange-600 text-slate-300 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 border border-slate-700 hover:border-transparent shadow-sm hover:shadow-[0_8px_20px_rgba(243,112,33,0.3)] shrink-0"
                         >
                             <FiEye size={16} /> Open Resource
                         </button>
@@ -149,24 +157,34 @@ export default function StudyMaterial() {
             <AnimatePresence>
                 {previewUrl && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-                        className="fixed inset-0 z-[1000] bg-black flex flex-col"
+                        className="fixed inset-0 z-[1000] bg-[#070D1D]/95 backdrop-blur-xl flex flex-col"
                     >
-                        <div className="flex justify-between items-center p-6 text-white w-full">
-                            <h3 className="font-black uppercase italic text-lg">{previewTitle}</h3>
+                        <div className="flex justify-between items-center p-4 md:p-6 text-white w-full border-b border-slate-800 bg-slate-900/50">
+                            <div className="flex items-center gap-3 min-w-0 pr-4">
+                                <div className="p-2 bg-orange-500/10 border border-orange-500/20 text-[#F37021] rounded-lg shrink-0">
+                                    <FiDownloadCloud size={18} />
+                                </div>
+                                <h3 className="font-black uppercase italic text-sm md:text-lg tracking-tight truncate">{previewTitle}</h3>
+                            </div>
                             <button onClick={() => { window.URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
-                                className="p-4 bg-white/10 hover:bg-red-500 rounded-full transition-all"
+                                className="p-2.5 md:p-3 bg-slate-800 border border-slate-700 text-slate-400 hover:text-red-400 hover:bg-slate-800 hover:border-red-900/50 rounded-xl transition-colors shadow-sm shrink-0"
                             >
-                                <FiX size={24} />
+                                <FiX size={20} />
                             </button>
                         </div>
-                        <div className="flex-1 w-full h-full" onContextMenu={(e) => e.preventDefault()}>
-                            <object 
-                                data={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
-                                type="application/pdf" 
-                                className="w-full h-full"
-                            >
-                                <p>Browser does not support PDF embedding.</p>
-                            </object>
+                        <div className="flex-1 w-full h-full p-2 md:p-8" onContextMenu={(e) => e.preventDefault()}>
+                            <div className="w-full h-full md:rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-800 bg-slate-900">
+                                <object 
+                                    data={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                                    type="application/pdf" 
+                                    className="w-full h-full"
+                                >
+                                    <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-4">
+                                        <FiFileText size={48} className="opacity-50" />
+                                        <p className="text-sm font-bold uppercase tracking-widest text-center px-4">Browser does not support direct PDF embedding.</p>
+                                    </div>
+                                </object>
+                            </div>
                         </div>
                     </motion.div>
                 )}

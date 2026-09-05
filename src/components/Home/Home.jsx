@@ -9,6 +9,7 @@ import {
 // --- DATA & MODAL IMPORTS ---
 import { techCoursesData, universityPrograms } from "../../data/courses";
 import SyllabusModal from "../Modals/SyllabusModal";
+import SEO from "../../components/SEO";
 
 // --- ASSET IMPORTS ---
 import javaPoster from "../../assets/posters/java.png";
@@ -46,7 +47,7 @@ const AcademyStatusIndicator = () => {
     useEffect(() => {
         const checkStatus = () => {
             const now = new Date();
-            const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            const day = now.getDay(); 
             const hours = now.getHours();
             const minutes = now.getMinutes();
             const currentTimeInMinutes = hours * 60 + minutes;
@@ -56,32 +57,26 @@ const AcademyStatusIndicator = () => {
             const closingTime = 20 * 60; 
 
             if (day === 0) {
-                // Sunday (Closed all day)
                 setIsOpen(false);
                 setStatusText("Closed • Opens tomorrow at 8:00 AM");
             } else if (currentTimeInMinutes >= openingTime && currentTimeInMinutes < closingTime) {
-                // Normal Operating Hours
                 setIsOpen(true);
                 setStatusText("Open Now • Closes at 8:00 PM");
             } else if (currentTimeInMinutes < openingTime) {
-                // After midnight, but before 8:00 AM (e.g., 2:00 AM Tuesday)
                 setIsOpen(false);
                 setStatusText("Closed • Opens today at 8:00 AM");
             } else if (currentTimeInMinutes >= closingTime) {
-                // After 8:00 PM
                 setIsOpen(false);
                 if (day === 6) {
-                    // Saturday night -> Next open day is Monday
                     setStatusText("Closed • Opens Monday at 8:00 AM");
                 } else {
-                    // Monday to Friday night -> Opens tomorrow
                     setStatusText("Closed • Opens tomorrow at 8:00 AM");
                 }
             }
         };
 
         checkStatus();
-        const interval = setInterval(checkStatus, 60000); // Check every minute
+        const interval = setInterval(checkStatus, 60000); 
         return () => clearInterval(interval);
     }, []);
 
@@ -105,7 +100,8 @@ const RunningTicker = () => {
         "MSME RECOGNIZED INSTITUTE", "39+ YEARS OF EXCELLENCE", "DSA IN C++"
     ];
 
-    const duplicatedItems = [...tickerItems, ...tickerItems];
+    // Safely duplicate items to ensure seamless percentage-based scrolling on all viewports
+    const duplicatedItems = [...tickerItems, ...tickerItems, ...tickerItems];
 
     return (
         <div className="w-full bg-[#0A192F] text-slate-200 py-5 overflow-hidden relative flex items-center border-y border-slate-800/60 shadow-2xl select-none backdrop-blur-md">
@@ -113,8 +109,8 @@ const RunningTicker = () => {
             <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#0A192F] to-transparent z-10 pointer-events-none hidden sm:block" />
 
             <motion.div 
-                className="flex whitespace-nowrap gap-12 text-xs md:text-sm font-black tracking-[0.2em] uppercase items-center text-slate-300"
-                animate={{ x: [0, -1000] }}
+                className="flex whitespace-nowrap gap-12 text-xs md:text-sm font-black tracking-[0.2em] uppercase items-center text-slate-300 w-max"
+                animate={{ x: ["0%", "-33.33%"] }}
                 transition={{
                     ease: "linear",
                     duration: 30,
@@ -151,8 +147,8 @@ const PremiumTiltCard = ({ children, className }) => {
         <motion.div 
             onMouseMove={handleMouse} 
             onMouseLeave={handleLeave}
-            style={{ rotateY: x, rotateX: y, transformStyle: "preserve-3d" }}
-            className={`transition-all duration-300 ${className}`}
+            style={{ rotateY: x, rotateX: y }}
+            className={`transition-all duration-300 transform-gpu ${className}`}
         >
             {children}
         </motion.div>
@@ -163,9 +159,9 @@ const PremiumTiltCard = ({ children, className }) => {
 const OptimizedImage = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     return (
-        <div className={`relative overflow-hidden bg-slate-950 ${className}`}>
+        <div className={`relative overflow-hidden ${className}`}>
             {!isLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5 backdrop-blur-sm animate-pulse">
+                <div className="absolute inset-0 flex items-center justify-center bg-[#0A192F] animate-pulse rounded-t-2xl">
                     <FiLoader className="text-[#F37021] animate-spin text-xl" />
                 </div>
             )}
@@ -258,12 +254,19 @@ export default function Home() {
     );
 
     return (
-        <div ref={targetRef} className="relative min-h-screen bg-[#070D1D] text-slate-100 antialiased font-sans overflow-x-hidden selection:bg-[#F37021]/30 selection:text-orange-200">
+        <div ref={targetRef} className="relative min-h-[100dvh] bg-[#070D1D] text-slate-100 antialiased font-sans overflow-x-hidden selection:bg-[#F37021]/30 selection:text-orange-200">
             
+            {/* FULLY INTEGRATED SEO COMPONENT */}
+            <SEO 
+                title="Expert Computer Academy | Patna's Premier IT Institute"
+                description="Empowering students in Patna with IT excellence since 1987. 100% practical labs, ISO 9001:2015 certified, offering ADCA, Python, Java, and Full Stack Development."
+                url="https://expertcomputeracademy.in"
+            />
+
             {/* AMBIENT GLOWS & MESH BACKDROP */}
-            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-orange-600/10 via-blue-600/10 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />
-            <div className="absolute top-[45%] right-0 w-[500px] h-[700px] bg-indigo-900/15 rounded-full blur-[160px] pointer-events-none -z-10" />
-            <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-teal-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+            <div className="absolute top-0 left-1/4 w-[400px] md:w-[600px] h-[400px] md:h-[600px] bg-gradient-to-tr from-orange-600/15 via-blue-600/10 to-transparent rounded-full blur-[80px] md:blur-[140px] pointer-events-none -z-10 transform-gpu backface-visibility-hidden" />
+            <div className="absolute top-[45%] right-0 w-[300px] md:w-[500px] h-[500px] md:h-[700px] bg-indigo-900/20 rounded-full blur-[90px] md:blur-[160px] pointer-events-none -z-10 transform-gpu backface-visibility-hidden" />
+            <div className="absolute bottom-10 left-10 w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-teal-600/15 rounded-full blur-[80px] md:blur-[120px] pointer-events-none -z-10 transform-gpu backface-visibility-hidden" />
 
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
                 
@@ -279,31 +282,30 @@ export default function Home() {
                 </AnimatePresence>
 
                 {/* 1. HERO SECTION */}
-                <section className="pt-10 pb-16 md:pt-24 md:pb-20 lg:pt-28">
+                <section className="pt-24 pb-16 md:pt-28 md:pb-20 lg:pt-32">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
                         <div className="lg:col-span-7 space-y-6 md:space-y-8 text-center lg:text-left order-2 lg:order-1">
                             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                                <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
                                     className="inline-flex items-center gap-2.5 bg-gradient-to-r from-blue-950/80 to-slate-900/80 border border-slate-700/60 text-slate-300 px-4 py-2 rounded-full text-xs md:text-sm font-semibold tracking-wide shadow-inner backdrop-blur-md">
                                     <span className="flex h-2 w-2 rounded-full bg-[#F37021] animate-ping" />
                                     <FiShield className="text-sm text-[#F37021]" /> ISO 9001:2015 & MSME Certified Group
                                 </motion.div>
 
-                                {/* --- LIVE ACADEMY STATUS BADGE --- */}
                                 <AcademyStatusIndicator />
                             </div>
                             
-                            <motion.h1 initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
+                            <motion.h1 initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }}
                                 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.08]">
                                 Build your <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200 relative inline-block">tech future<span className="absolute bottom-1 left-0 w-full h-[3px] bg-[#F37021]/40 rounded-full" /></span> with absolute clarity.
                             </motion.h1>
                             
-                            <motion.p initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+                            <motion.p initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.2 }}
                                 className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
                                 Patna's premier destination for computing proficiency since 1987. Transition safely from zero engineering literacy to industry-ready deployment.
                             </motion.p>
                             
-                            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
+                            <motion.div initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.3 }}
                                 className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
                                 <button onClick={() => navigate('/about')} className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#F37021] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-2xl shadow-[0_10px_25px_rgba(243,112,33,0.3)] transition-all flex items-center justify-center gap-3 group">
                                     Explore Academy Path <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
@@ -386,7 +388,7 @@ export default function Home() {
                         </p>
                     </div>
 
-                    <div className="flex items-center lg:justify-center gap-2.5 overflow-x-auto pb-4 pt-2 mask-linear-right lg:overflow-visible no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <div className="flex items-center lg:justify-center gap-2.5 overflow-x-auto pb-4 pt-2 lg:overflow-visible no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
                         <button 
                             onClick={() => setActiveSegment("All")}
                             className={`px-5 py-3 rounded-full text-sm font-bold transition-all shrink-0 border backdrop-blur-md ${
@@ -441,11 +443,11 @@ export default function Home() {
                                     onClick={() => handleOpenModal(course)}
                                     className="group bg-slate-900/70 backdrop-blur-md rounded-2xl overflow-hidden border border-slate-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_30px_rgba(243,112,33,0.15)] hover:border-slate-700 transition-all cursor-pointer flex flex-col h-full"
                                 >
-                                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-950 flex items-center justify-center p-2">
+                                    <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-950 flex items-center justify-center p-3 border-b border-slate-800/80">
                                         <OptimizedImage 
                                             src={posterMap[course.id] || javaPoster} 
                                             alt={`${course.title} Syllabus Catalog Cover`} 
-                                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
+                                            className="w-full h-full object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-500" 
                                         />
                                     </div>
                                     <div className="p-5 flex flex-col flex-1 justify-between bg-gradient-to-b from-slate-900/50 to-slate-900">

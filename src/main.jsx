@@ -2,6 +2,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
 import { Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'; // <-- 1. CRITICAL: Imported HelmetProvider here
+
 import Layout from './Layout.jsx'
 import Home from './components/Home/Home.jsx'
 import About from './components/About/About.jsx'
@@ -19,10 +21,8 @@ import ProtectedRoute from './components/Admin/ProtectedRoute.jsx';
 import AlumniSuccessGallery from "./components/AlumniSuccessGallery";
 import StudentLogin from './components/StudentPortal/StudentLogin.jsx';
 import ForgotPassword from './components/StudentPortal/ForgotPassword.jsx';
-//import StudentDashboard from './components/StudentPortal/StudentDashboard.jsx';
 import StudentLayout from './components/StudentPortal/StudentLayout.jsx';
 import LiveLectures from './components/StudentPortal/LiveLectures.jsx';
-//import ERPSidebar from './components/StudentPortal/ERPSidebar.jsx';
 import ERPLayout from './components/StudentPortal/ERPLayout';
 import StudentProfile from './components/StudentPortal/StudentProfile';
 import FeeLedger from './components/StudentPortal/FeeLedger';
@@ -59,7 +59,6 @@ const router = createBrowserRouter(
         <Route path="live-lectures" element={<LiveLectures />} />
         <Route path="fee-ledger" element={<FeeLedger />} />
         <Route path="/erp/exams" element={<StudentQuizHub />} />
-        
       </Route>
 
       {/* Admin and Other Routes */}
@@ -68,7 +67,6 @@ const router = createBrowserRouter(
       <Route 
         path='admin/dashboard' 
         element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} 
-        
       />
       <Route path="add-lecture" element={<AddLecture />} />
     </Route>
@@ -77,6 +75,9 @@ const router = createBrowserRouter(
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    {/* 2. CRITICAL: Wrapped RouterProvider inside HelmetProvider */}
+    <HelmetProvider>
+      <RouterProvider router={router} />
+    </HelmetProvider>
   </React.StrictMode>,
 )

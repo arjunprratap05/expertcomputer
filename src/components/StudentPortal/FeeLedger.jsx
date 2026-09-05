@@ -59,22 +59,29 @@ export default function FeeLedger() {
     if (!student || !ledger) return null;
 
     return (
-        <div className="p-6 md:p-12 font-sans bg-[#F8FAFC] min-h-screen text-left">
+        <div className="w-full pb-20 text-left max-w-6xl mx-auto mt-4 px-1">
             {/* HEADER */}
             <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
-                    <h2 className="text-3xl font-black text-[#1A5F7A] uppercase tracking-tighter italic">
-                        Fee <span className="text-[#F37021]">Ledger</span>
-                    </h2>
-                    <div className="flex flex-wrap items-center gap-3 mt-3">
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                            <FiActivity className="text-green-500" /> ID: {student.email || student.registrationId}
-                        </p>
-                        {student.appliedCoupon?.code && (
-                            <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1.5 border border-orange-200">
-                                <FiTag size={10} /> Institutional Scholarship Applied
-                            </span>
-                        )}
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-slate-900/80 border border-slate-700 text-[#F37021] rounded-2xl shadow-inner">
+                            <FiDollarSign size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black text-white uppercase italic leading-none tracking-tighter">
+                                Fee <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200">Ledger</span>
+                            </h2>
+                            <div className="flex flex-wrap items-center gap-3 mt-3">
+                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <FiActivity className="text-emerald-400" /> ID: {student.email || student.registrationId}
+                                </p>
+                                {student.appliedCoupon?.code && (
+                                    <span className="bg-orange-500/10 text-[#F37021] px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1.5 border border-orange-500/20 backdrop-blur-sm">
+                                        <FiTag size={10} /> Institutional Scholarship Applied
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -82,14 +89,14 @@ export default function FeeLedger() {
                     <motion.div 
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="bg-white border-l-4 border-orange-500 p-4 rounded-xl shadow-sm flex items-center gap-4"
+                        className="bg-slate-900/40 backdrop-blur-md border border-slate-800 border-l-[6px] border-l-[#F37021] p-5 rounded-2xl shadow-lg flex items-center gap-5"
                     >
-                        <div className="bg-orange-100 p-2 rounded-lg text-orange-600">
+                        <div className="bg-orange-500/10 p-2.5 rounded-xl text-[#F37021] shadow-inner border border-orange-500/20">
                             <FiClock size={20} />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase">Next Installment Due</p>
-                            <p className="text-sm font-black text-[#1A5F7A]">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Next Installment Due</p>
+                            <p className="text-sm font-black text-white tracking-wide mt-1">
                                 {ledger.nextInstallmentDate?.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
                             </p>
                         </div>
@@ -103,59 +110,63 @@ export default function FeeLedger() {
                     label="Contracted Total" 
                     value={`₹${ledger.totalPackage.toLocaleString('en-IN')}`} 
                     icon={<FiDollarSign />} 
-                    color="text-[#1A5F7A]"
+                    color="text-white"
+                    iconColor="text-blue-500"
+                    bg="bg-slate-900/40"
                 />
                 <SummaryCard 
                     label="Net Payable Remaining" 
                     value={`₹${ledger.due.toLocaleString('en-IN')}`} 
                     icon={<FiAlertCircle />} 
-                    color={ledger.due > 0 ? "text-red-500" : "text-green-600"}
-                    bg={ledger.due > 0 ? "bg-red-50/50" : "bg-green-50/50"}
+                    color={ledger.due > 0 ? "text-red-400" : "text-emerald-400"}
+                    iconColor={ledger.due > 0 ? "text-red-500" : "text-emerald-500"}
+                    bg={ledger.due > 0 ? "bg-red-500/5 border-red-500/20" : "bg-emerald-500/5 border-emerald-500/20"}
                 />
                 <SummaryCard 
                     label="Cleared History" 
                     value={`₹${ledger.paid.toLocaleString('en-IN')}`} 
                     icon={<FiCheckCircle />} 
-                    color="text-green-600"
-                    bg="bg-green-50/50"
+                    color="text-emerald-400"
+                    iconColor="text-emerald-500"
+                    bg="bg-emerald-500/5 border-emerald-500/20"
                 />
             </div>
 
             {/* TRANSACTION HISTORY */}
-            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/20">
-                    <h3 className="font-black text-[#1A5F7A] uppercase text-xs tracking-widest italic flex items-center gap-2">
+            <div className="bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-slate-800 overflow-hidden">
+                <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+                    <h3 className="font-black text-white uppercase text-xs tracking-widest italic flex items-center gap-2">
                         <FiCreditCard className="text-[#F37021]" /> Statement of Account
                     </h3>
-                    <div className="text-[9px] font-black uppercase text-slate-400">
-                        Method: {student.paymentOption || "Full Payment"}
+                    <div className="text-[9px] font-black uppercase text-slate-500 tracking-widest bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                        Method: <span className="text-white">{student.paymentOption || "Full Payment"}</span>
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50/30">
-                                <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Date</th>
-                                <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Transaction Description</th>
-                                <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Status</th>
-                                <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Credit</th>
+                            <tr className="bg-slate-900/80 border-b border-slate-800">
+                                <th className="p-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Date</th>
+                                <th className="p-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Transaction Description</th>
+                                <th className="p-6 text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Status</th>
+                                <th className="p-6 text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Credit</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-800/50">
                             {/* Registration Payment */}
-                            <tr className="hover:bg-slate-50/50 transition-colors">
-                                <td className="p-6 text-sm font-bold text-slate-600 italic">
+                            <tr className="hover:bg-slate-800/30 transition-colors">
+                                <td className="p-6 text-sm font-bold text-slate-400 italic">
                                     {new Date(student.createdAt).toLocaleDateString('en-IN')}
                                 </td>
                                 <td className="p-6">
-                                    <p className="text-xs font-black text-[#1A5F7A] uppercase">Registration Commitment</p>
-                                    <p className="text-[10px] text-slate-400 font-bold">Initial payment received via {student.paymentMethod || 'CASH/UPI'}</p>
+                                    <p className="text-xs font-black text-white uppercase tracking-tight">Registration Commitment</p>
+                                    <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-1">Initial payment received via {student.paymentMethod || 'CASH/UPI'}</p>
                                 </td>
                                 <td className="p-6 text-right">
-                                    <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded text-[8px] font-black uppercase">Cleared</span>
+                                    <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest">Cleared</span>
                                 </td>
-                                <td className="p-6 text-sm font-black text-green-600 italic text-right">
+                                <td className="p-6 text-sm font-black text-emerald-400 italic text-right">
                                     {/* Dynamically calculate initial payment if log exists, else use total paid */}
                                     + ₹{((student.paymentLog && student.paymentLog.length > 0) 
                                         ? Number(student.amountPaid - student.paymentLog.reduce((a,b) => a + Number(b.amount), 0)) 
@@ -165,18 +176,18 @@ export default function FeeLedger() {
 
                             {/* Additional Payment Logs */}
                             {student.paymentLog?.map((log, index) => (
-                                <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="p-6 text-sm font-bold text-slate-600 italic">
+                                <tr key={index} className="hover:bg-slate-800/30 transition-colors">
+                                    <td className="p-6 text-sm font-bold text-slate-400 italic">
                                         {new Date(log.date).toLocaleDateString('en-IN')}
                                     </td>
                                     <td className="p-6">
-                                        <p className="text-xs font-black text-[#1A5F7A] uppercase">Ledger Adjustment</p>
-                                        <p className="text-[10px] text-slate-400 font-bold">Payment sync via Admin Central</p>
+                                        <p className="text-xs font-black text-white uppercase tracking-tight">Ledger Adjustment</p>
+                                        <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-1">Payment sync via Admin Central</p>
                                     </td>
                                     <td className="p-6 text-right">
-                                        <span className="bg-green-100 text-green-600 px-2 py-0.5 rounded text-[8px] font-black uppercase">Cleared</span>
+                                        <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest">Cleared</span>
                                     </td>
-                                    <td className="p-6 text-sm font-black text-green-600 italic text-right">
+                                    <td className="p-6 text-sm font-black text-emerald-400 italic text-right">
                                         + ₹{Number(log.amount).toLocaleString('en-IN')}
                                     </td>
                                 </tr>
@@ -184,18 +195,18 @@ export default function FeeLedger() {
 
                             {/* Future Projected Row */}
                             {ledger.due > 0 && (
-                                <tr className="bg-orange-50/30 border-t-2 border-dashed border-orange-100">
-                                    <td className="p-6 text-sm font-bold text-orange-600 italic">
+                                <tr className="bg-slate-900/60 border-t border-slate-700">
+                                    <td className="p-6 text-sm font-bold text-orange-400 italic">
                                         {ledger.nextInstallmentDate?.toLocaleDateString('en-IN')}
                                     </td>
                                     <td className="p-6">
-                                        <p className="text-xs font-black text-orange-700 uppercase">Upcoming Installment</p>
-                                        <p className="text-[10px] text-orange-500 font-bold italic">Estimated next payable cycle</p>
+                                        <p className="text-xs font-black text-[#F37021] uppercase tracking-tight">Upcoming Installment</p>
+                                        <p className="text-[10px] text-slate-500 font-bold italic tracking-widest mt-1">Estimated next payable cycle</p>
                                     </td>
                                     <td className="p-6 text-right">
-                                        <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-[8px] font-black uppercase">Pending</span>
+                                        <span className="bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest">Pending</span>
                                     </td>
-                                    <td className="p-6 text-sm font-black text-slate-300 italic text-right">
+                                    <td className="p-6 text-sm font-black text-slate-600 italic text-right">
                                         --
                                     </td>
                                 </tr>
@@ -208,14 +219,14 @@ export default function FeeLedger() {
     );
 }
 
-function SummaryCard({ label, value, icon, color, bg = "bg-white" }) {
+function SummaryCard({ label, value, icon, color, iconColor, bg }) {
     return (
-        <div className={`${bg} p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center justify-between relative overflow-hidden group`}>
+        <div className={`${bg} p-8 rounded-[2rem] border border-slate-800 shadow-lg flex items-center justify-between relative overflow-hidden group backdrop-blur-md`}>
             <div className="z-10">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-                <p className={`text-2xl font-black italic tracking-tighter ${color}`}>{value}</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
+                <p className={`text-3xl font-black italic tracking-tighter ${color}`}>{value}</p>
             </div>
-            <div className={`text-5xl ${color} opacity-[0.08] absolute -right-3 -bottom-3 group-hover:scale-110 transition-transform`}>
+            <div className={`text-6xl ${iconColor} opacity-10 absolute -right-4 -bottom-4 group-hover:scale-110 group-hover:opacity-20 transition-all duration-500`}>
                 {icon}
             </div>
         </div>

@@ -37,7 +37,6 @@ export default function Layout() {
         if (isLoading) {
             document.body.style.overflow = 'hidden';
             
-            // Increased timer slightly to allow text animation to finish
             const timer = setTimeout(() => {
                 setIsLoading(false);
                 document.body.style.overflow = 'unset';
@@ -51,18 +50,20 @@ export default function Layout() {
         }
     }, [isLoading]);
 
+    // Changed bg-white to bg-[#070D1D] to prevent white bleeds at the bottom of the screen
     return (
-        <div className="relative min-h-screen bg-white selection:bg-[#F37021]/20">
+        <div className="relative min-h-screen bg-[#070D1D] selection:bg-[#F37021]/20">
+            
+            {/* INITIAL SPLASH SCREEN LOADER */}
             <AnimatePresence mode="wait">
                 {isLoading && (
                     <motion.div 
                         key="global-loader"
                         initial={{ opacity: 1 }}
-                        exit={{ opacity: 0, filter: "blur(10px)" }}
+                        exit={{ opacity: 0 }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
                         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white"
                     >
-                        {/* Spinner & Logo Group */}
                         <div className="relative mb-8">
                             <motion.div 
                                 animate={{ rotate: 360 }} 
@@ -82,7 +83,6 @@ export default function Layout() {
                             </div>
                         </div>
 
-                        {/* Animated Text Content */}
                         <motion.div 
                             variants={textContainerVariants}
                             initial="hidden"
@@ -111,11 +111,26 @@ export default function Layout() {
                 )}
             </AnimatePresence>
 
+            {/* MAIN APP LAYOUT WITH ROUTE TRANSITIONS */}
             <div className={`flex flex-col min-h-screen transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
                 {!isERPPage && <Header />}
-                <main className="flex-grow">
-                    <Outlet /> 
+                
+                <main className="flex-grow flex flex-col relative w-full overflow-hidden">
+                    <AnimatePresence mode="wait">
+                        {/* Removed filter blur from animations to prevent mobile Safari crashes */}
+                        <motion.div
+                            key={location.pathname}
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -15 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="flex-grow flex flex-col w-full"
+                        >
+                            <Outlet /> 
+                        </motion.div>
+                    </AnimatePresence>
                 </main>
+
                 {!isERPPage && <Footer />}
                 {!isLoading && !isERPPage && <DelayedChatBot />}
             </div>

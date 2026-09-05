@@ -6,6 +6,10 @@ import {
 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
+// --- IMPORT SEO COMPONENT ---
+// Adjust path if your SEO component is in a different relative location
+import SEO from "../components/SEO"; 
+
 // ASSET IMPORTS
 import suruchiImg from "../assets/student-suruchi.jpeg";
 import harshImg from "../assets/student-harsh.jpeg";
@@ -41,13 +45,20 @@ export default function AlumniSuccessGallery() {
     const filteredAlumni = alumniData.filter(item => {
         const matchesFilter = filter === 'All' || item.cat === filter;
         const matchesSearch = item.regNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                             item.name.toLowerCase().includes(searchQuery.toLowerCase());
+                              item.name.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesFilter && matchesSearch;
     });
 
     return (
         <div className="min-h-screen bg-[#070D1D] text-slate-100 py-12 md:py-20 px-4 md:px-6 font-sans relative scroll-smooth overflow-x-hidden selection:bg-[#F37021]/30 selection:text-orange-200">
             
+            {/* FULLY INTEGRATED SEO COMPONENT */}
+            <SEO 
+                title="Hall of Fame & Alumni | Expert Computer Academy"
+                description="Explore the verified placement records and success stories of Expert Computer Academy alumni. Celebrating over 39 years of technical excellence in Patna."
+                url="https://expertcomputeracademy.in/halloffame"
+            />
+
             {/* AMBIENT GLOWS & MESH BACKDROP */}
             <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-orange-600/10 via-blue-600/10 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />
             <div className="absolute top-[45%] right-0 w-[500px] h-[700px] bg-indigo-900/15 rounded-full blur-[160px] pointer-events-none -z-10" />
@@ -60,7 +71,7 @@ export default function AlumniSuccessGallery() {
                         The Hall of <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200">Fame</span>
                     </h1>
                     <p className="text-slate-400 max-w-2xl mx-auto font-medium mb-12 px-4 text-base md:text-lg">
-                        Celebrating Patna's 38-years technical legacy through our certified alumni
+                        Celebrating Patna's 39-years technical legacy through our certified alumni
                     </p>
 
                     {/* SEARCH BAR */}

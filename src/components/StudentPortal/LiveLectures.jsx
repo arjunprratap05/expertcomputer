@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiVideo, FiLoader, FiLock, FiClock, FiAlertCircle, FiExternalLink, FiPlayCircle } from 'react-icons/fi';
+import { FiVideo, FiLoader, FiLock, FiClock, FiAlertCircle, FiExternalLink, FiPlayCircle, FiShield } from 'react-icons/fi';
 import axios from 'axios';
 
 export default function LiveLectures() {
@@ -117,22 +117,22 @@ export default function LiveLectures() {
     if (loading) return (
         <div className="h-96 flex flex-col justify-center items-center gap-4">
             <FiLoader className="animate-spin text-4xl text-[#F37021]" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Synchronizing Stream Gateways...</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Synchronizing Stream Gateways...</p>
         </div>
     );
 
     return (
-        <div className="w-full space-y-10 pb-20 text-left max-w-5xl mx-auto px-4 mt-24">
+        <div className="w-full space-y-10 pb-20 text-left max-w-5xl mx-auto px-1 mt-4">
             <header className="flex flex-col gap-2">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-orange-50 text-[#F37021] rounded-2xl shadow-sm">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-slate-900/80 border border-slate-700 text-[#F37021] rounded-2xl shadow-inner">
                         <FiVideo size={24} />
                     </div>
                     <div>
-                        <h2 className="text-3xl font-black text-[#1A5F7A] uppercase italic leading-none tracking-tighter">
-                            Live <span className="text-[#F37021]">Classroom</span>
+                        <h2 className="text-3xl font-black text-white uppercase italic leading-none tracking-tighter">
+                            Live <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200">Classroom</span>
                         </h2>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">
                             {lectures.length} Academic Streams Identified
                         </p>
                     </div>
@@ -140,9 +140,9 @@ export default function LiveLectures() {
             </header>
 
             {error && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 p-6 rounded-[2rem] border border-red-100 flex items-center gap-4 text-red-600 shadow-sm">
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 p-5 rounded-[2rem] border border-red-500/20 flex items-center gap-4 text-red-400 shadow-sm backdrop-blur-md">
                     <FiAlertCircle size={20} className="shrink-0" />
-                    <p className="text-[10px] font-black uppercase tracking-tight">{error}</p>
+                    <p className="text-[10px] font-black uppercase tracking-tight leading-relaxed">{error}</p>
                 </motion.div>
             )}
 
@@ -158,33 +158,34 @@ export default function LiveLectures() {
                                     initial={{ opacity: 0, y: 20 }} 
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    className={`relative bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 overflow-hidden flex flex-col lg:flex-row justify-between items-center gap-8 group hover:shadow-2xl transition-all duration-500 ${
-                                        status === 'LIVE' ? 'ring-2 ring-red-500/20' : ''
+                                    className={`relative bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-6 md:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-slate-800 overflow-hidden flex flex-col lg:flex-row justify-between items-center gap-8 group hover:shadow-[0_10px_30px_rgba(243,112,33,0.1)] transition-all duration-500 ${
+                                        status === 'LIVE' ? 'hover:border-red-500/50' : 'hover:border-[#F37021]/50'
                                     }`}
                                 >
-                                    <div className={`absolute left-0 top-0 bottom-0 w-3 ${
-                                        status === 'LIVE' ? 'bg-red-500' : status === 'UPCOMING' ? 'bg-[#1A5F7A]' : 'bg-slate-200'
+                                    {/* Indicator Strip */}
+                                    <div className={`absolute left-0 top-0 bottom-0 w-2 ${
+                                        status === 'LIVE' ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.6)]' : status === 'UPCOMING' ? 'bg-blue-500/50' : 'bg-slate-700'
                                     }`} />
 
-                                    <div className="flex flex-col gap-4 w-full">
+                                    <div className="flex flex-col gap-4 w-full pl-2">
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                                                status === 'LIVE' ? 'bg-red-500 text-white animate-pulse' : 
-                                                status === 'UPCOMING' ? 'bg-[#1A5F7A] text-white' : 'bg-slate-100 text-slate-400'
+                                            <span className={`px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                                                status === 'LIVE' ? 'bg-red-500/10 text-red-400 border-red-500/30 animate-pulse' : 
+                                                status === 'UPCOMING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800/80 text-slate-500 border-slate-700'
                                             }`}>
                                                 {status === "LIVE" ? "• Broadcasting" : status === "UPCOMING" ? "Scheduled" : "Archive"}
                                             </span>
-                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                                                <FiClock size={10}/> {lecture.time || lecture.startTime}
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                <FiClock size={12} className="text-[#F37021]"/> {lecture.time || lecture.startTime}
                                             </span>
                                         </div>
 
                                         <div className="space-y-1">
-                                            <h3 className="text-2xl font-black uppercase text-[#1A5F7A] italic leading-tight group-hover:text-[#F37021] transition-colors">
+                                            <h3 className="text-xl md:text-2xl font-black uppercase text-white italic leading-tight group-hover:text-orange-300 transition-colors line-clamp-2">
                                                 {lecture.title}
                                             </h3>
-                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                Prof. {lecture.teacher} • <span className="text-[#1A5F7A] opacity-70">Batch {lecture.batchId?.batchCode || "General Stream"}</span>
+                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter mt-1 flex flex-wrap gap-1.5">
+                                                <span>Prof. {lecture.teacher}</span> <span className="hidden sm:inline">•</span> <span className="text-teal-400 opacity-90">Batch {lecture.batchId?.batchCode || "General Stream"}</span>
                                             </p>
                                         </div>
                                     </div>
@@ -192,12 +193,12 @@ export default function LiveLectures() {
                                     <button 
                                         onClick={() => lecture.link && window.open(lecture.link, '_blank')}
                                         disabled={status === 'UPCOMING'}
-                                        className={`w-full lg:w-auto px-12 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-sm active:scale-95 ${
+                                        className={`w-full lg:w-auto px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-95 border shrink-0 ${
                                             status === 'LIVE' 
-                                            ? 'bg-[#F37021] text-white hover:bg-[#e0651c] shadow-orange-200' 
+                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 border-transparent shadow-[0_8px_20px_rgba(239,68,68,0.3)]' 
                                             : status === 'UPCOMING' 
-                                            ? 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100' 
-                                            : 'bg-[#1A5F7A] text-white hover:bg-[#144d63]'
+                                            ? 'bg-slate-900/50 text-slate-600 cursor-not-allowed border-slate-800' 
+                                            : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border-slate-700 hover:border-slate-600 shadow-sm'
                                         }`}
                                     >
                                         {status === 'LIVE' ? (
@@ -212,12 +213,12 @@ export default function LiveLectures() {
                             );
                         })
                     ) : (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center p-24 bg-white rounded-[3rem] border-4 border-dashed border-slate-100 flex flex-col items-center">
-                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                                <FiLock className="text-slate-200" size={40} />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-24 px-4 bg-slate-900/40 backdrop-blur-md rounded-[3rem] border-2 border-dashed border-slate-800 flex flex-col items-center">
+                            <div className="w-20 h-20 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                                <FiShield className="text-slate-500" size={32} />
                             </div>
-                            <h4 className="text-[#1A5F7A] font-black uppercase italic text-xl">Curriculum Standby</h4>
-                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-2 max-w-xs leading-relaxed">
+                            <h4 className="text-white font-black uppercase italic text-xl">Curriculum Standby</h4>
+                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-3 max-w-sm leading-relaxed">
                                 No active sessions scheduled for your batches at this time. Please check your timetable for specific timings.
                             </p>
                         </motion.div>

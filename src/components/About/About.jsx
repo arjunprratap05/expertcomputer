@@ -3,6 +3,9 @@ import { motion, useInView, useMotionValue, useTransform, animate } from "framer
 import { FiCheckCircle, FiTarget, FiEye, FiUsers, FiBriefcase, FiCalendar, FiShield, FiZap } from "react-icons/fi";
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
 
+// --- IMPORT SEO COMPONENT ---
+import SEO from "../../components/SEO";
+
 // --- Animated Counter Sub-Component ---
 const Counter = ({ value, duration = 2 }) => {
     const count = useMotionValue(0);
@@ -63,6 +66,13 @@ export default function About() {
 
     return (
         <div className="relative min-h-screen bg-[#070D1D] text-slate-100 antialiased font-sans overflow-x-hidden selection:bg-[#F37021]/30 selection:text-orange-200">
+            
+            {/* FULLY INTEGRATED SEO COMPONENT */}
+            <SEO 
+                title="About Us | Expert Computer Academy"
+                description={`Discover the ${yearsOfExperience}+ year legacy of Expert Computer Academy. Established in 1987, we have trained over 2 Lakh alumni and placed 1 Lakh+ students in top tech roles.`}
+                url="https://expertcomputeracademy.in/about"
+            />
             
             {/* AMBIENT GLOWS & MESH BACKDROP */}
             <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-orange-600/10 via-blue-600/10 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />

@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiChevronDown, FiBook, FiX, FiMenu, 
-    FiUser, FiArrowRight, FiLock, FiLayers, FiCompass
+    FiUser, FiLock, FiLayers
 } from 'react-icons/fi';
 import { techCoursesData } from '../../data/courses';
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
@@ -98,7 +98,7 @@ export default function Header() {
                             ))}
                             
                             <div className="relative group/menu">
-                                <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold tracking-wide text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent hover:border-slate-700/50 transition-all">
+                                <button aria-haspopup="true" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold tracking-wide text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent hover:border-slate-700/50 transition-all">
                                     <span>Courses</span>
                                     <FiChevronDown size={15} className="text-slate-500 group-hover/menu:text-[#F37021] group-hover/menu:rotate-180 transition-all duration-300" />
                                 </button>
@@ -139,14 +139,6 @@ export default function Header() {
                             <FiUser className="text-slate-400 group-hover:text-[#F37021] transition-colors" /> 
                             <span>ERP Portal</span>
                         </Link>
-                        
-                        <button 
-                            onClick={() => scrollToSection('signature-courses')} 
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#F37021] to-orange-600 text-white font-black text-sm shadow-[0_4px_15px_rgba(243,112,33,0.3)] hover:from-orange-600 hover:to-orange-700 transition-all hover:shadow-[0_6px_25px_rgba(243,112,33,0.4)] group tracking-wide uppercase"
-                        >
-                            <span>Explore Tracks</span>
-                            <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
-                        </button>
                     </div>
 
                     <div className="flex lg:hidden">
@@ -154,6 +146,7 @@ export default function Header() {
                             className="p-2.5 rounded-xl transition-all text-slate-300 bg-slate-900/60 border border-slate-700/80 backdrop-blur-md hover:bg-slate-800 hover:text-white shadow-lg"
                             onClick={() => setIsMobileMenuOpen(true)}
                             aria-label="Open Menu"
+                            aria-expanded={isMobileMenuOpen}
                         >
                             <FiMenu size={22} />
                         </button>
@@ -189,6 +182,7 @@ export default function Header() {
                                 <button 
                                     className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-slate-700" 
                                     onClick={() => setIsMobileMenuOpen(false)}
+                                    aria-label="Close Menu"
                                 >
                                     <FiX size={22} />
                                 </button>
@@ -218,6 +212,7 @@ export default function Header() {
                                         <button 
                                             className="w-full flex justify-between items-center px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent hover:border-slate-700 transition-all" 
                                             onClick={() => setActiveMobileDropdown(!activeMobileDropdown)}
+                                            aria-expanded={activeMobileDropdown}
                                         >
                                             <span>Our Programs</span>
                                             <FiChevronDown className={`transform transition-transform duration-300 ${activeMobileDropdown ? 'rotate-180 text-[#F37021]' : 'text-slate-500'}`} size={18} />
@@ -249,31 +244,24 @@ export default function Header() {
                                         </AnimatePresence>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="px-6 pb-8 pt-4 space-y-4 border-t border-slate-800">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Link 
-                                            to="/admin/login" 
-                                            onClick={() => setIsMobileMenuOpen(false)} 
-                                            className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-bold text-xs shadow-inner hover:bg-slate-800 hover:text-white transition-all"
-                                        >
-                                            <FiLock size={14} className="text-slate-500" /> Admin
-                                        </Link>
-                                        <Link 
-                                            to="/student-login" 
-                                            onClick={() => setIsMobileMenuOpen(false)} 
-                                            className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 font-bold text-xs shadow-inner hover:border-[#F37021] hover:text-white transition-all"
-                                        >
-                                            <FiUser size={14} className="text-[#F37021]" /> ERP Portal
-                                        </Link>
-                                    </div>
-                                    <button 
-                                        onClick={() => scrollToSection('signature-courses')} 
-                                        className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-gradient-to-r from-[#F37021] to-orange-600 text-white font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(243,112,33,0.3)] hover:from-orange-600 hover:to-orange-700 transition-all"
+                            <div className="px-6 pb-8 pt-4 border-t border-slate-800">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Link 
+                                        to="/admin/login" 
+                                        onClick={() => setIsMobileMenuOpen(false)} 
+                                        className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-bold text-xs shadow-inner hover:bg-slate-800 hover:text-white transition-all"
                                     >
-                                        <span>Get Started</span>
-                                        <FiCompass size={16} />
-                                    </button>
+                                        <FiLock size={14} className="text-slate-500" /> Admin
+                                    </Link>
+                                    <Link 
+                                        to="/student-login" 
+                                        onClick={() => setIsMobileMenuOpen(false)} 
+                                        className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 font-bold text-xs shadow-inner hover:border-[#F37021] hover:text-white transition-all"
+                                    >
+                                        <FiUser size={14} className="text-[#F37021]" /> ERP Portal
+                                    </Link>
                                 </div>
                             </div>
                         </motion.div>

@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiArrowLeft, FiAward, FiShield, FiExternalLink, FiX, FiDownload, FiLayers } from 'react-icons/fi';
 
+// --- DATA & MODAL IMPORTS ---
+import SEO from "../../components/SEO";
+
 // Assets
 import founder1Img from '../../assets/founder1.png'; 
 import founder2Img from '../../assets/founder2.png';
@@ -78,6 +81,13 @@ export default function Founder() {
 
     return (
         <div className="min-h-screen bg-[#070D1D] text-slate-100 py-12 md:py-24 px-4 sm:px-6 lg:px-8 font-sans overflow-x-hidden relative selection:bg-[#F37021]/30 selection:text-orange-200">
+            
+            {/* FULLY INTEGRATED SEO COMPONENT */}
+            <SEO 
+                title="Leadership & Faculty | Expert Computer Academy"
+                description="Meet the visionary founders and elite faculty of Expert Computer Academy in Patna. Industry veterans shaping tech leaders since 1987."
+                url="https://expertcomputeracademy.in/founder"
+            />
             
             {/* AMBIENT GLOWS & MESH BACKDROP */}
             <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-orange-600/10 via-blue-600/10 to-transparent rounded-full blur-[140px] pointer-events-none -z-10" />
