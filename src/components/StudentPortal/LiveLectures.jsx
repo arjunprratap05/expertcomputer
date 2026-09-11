@@ -1,20 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiVideo, FiLoader, FiLock, FiClock, FiAlertCircle, FiExternalLink, FiPlayCircle, FiShield } from 'react-icons/fi';
+import { 
+    FiVideo, FiLoader, FiLock, FiClock, FiAlertCircle, 
+    FiExternalLink, FiShield, FiRefreshCw 
+} from 'react-icons/fi';
 import axios from 'axios';
 
 export default function LiveLectures() {
     const [lectures, setLectures] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currentTimeTick, setCurrentTimeTick] = useState(Date.now());
     const API_BASE = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
 
-    // Real-time calculation loop matching student dashboard parameters
+    // Real-time status determination (LIVE, UPCOMING, FINISHED)
     const getStatus = useCallback((lectureTime) => {
         if (!lectureTime) return "UPCOMING";
         
         try {
-            // Regex handles "14:30", "2:30 PM", "02:30AM" seamlessly
             const timeMatch = lectureTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
             if (!timeMatch) return "UPCOMING";
 
@@ -22,7 +25,6 @@ export default function LiveLectures() {
             const minutes = parseInt(timeMatch[2], 10);
             const period = timeMatch[3]?.toUpperCase();
 
-            // Normalize to 24-hour clock for accurate JS Date manipulation
             if (period === 'PM' && hours < 12) hours += 12;
             if (period === 'AM' && hours === 12) hours = 0;
 
@@ -32,12 +34,12 @@ export default function LiveLectures() {
             
             const diffInMinutes = (now - lectureDate) / (1000 * 60);
 
-            // Window logic: Active classrooms remain live for 2 hours (120 minutes)
+            // Active live window: from scheduled start up to 120 minutes (2 hrs)
             if (diffInMinutes >= 0 && diffInMinutes <= 120) return "LIVE";
             if (diffInMinutes < 0) return "UPCOMING";
             return "FINISHED";
-        } catch (error) {
-            return "UPCOMING"; // Fallback to safe state instead of crashing
+        } catch {
+            return "UPCOMING";
         }
     }, []);
 
@@ -50,33 +52,58 @@ export default function LiveLectures() {
             const token = localStorage.getItem("studentToken");
 
             if (!studentRaw || !token) {
-                setError("Authentication missing. Please login again.");
+                setError("Session expired or unverified. Please log in again.");
                 return;
             }
 
             const student = JSON.parse(studentRaw);
             const collectedIds = [];
 
-            // Robust dynamic collection mapping tracking polymorphic array architectures
+            // 1. Direct activeBatches check
             if (Array.isArray(student.activeBatches)) {
                 student.activeBatches.forEach(b => {
                     if (!b) return;
                     if (typeof b === 'string') collectedIds.push(b);
-                    else if (b._id) collectedIds.push(b._id);
+                    else if (b._id) collectedIds.push(b._id.toString());
                 });
             }
 
-            // Fallback catch to resolve flat field references string values
+            // 2. Singular batchId check
             if (student.batchId) {
                 const flatId = typeof student.batchId === 'object' ? student.batchId._id : student.batchId;
-                if (flatId) collectedIds.push(flatId);
+                if (flatId) collectedIds.push(flatId.toString());
             }
 
-            // De-duplicate final batch array parameters safely
-            const batchIds = [...new Set(collectedIds)].filter(Boolean);
+            // 3. Multi-course enrollments check
+            if (Array.isArray(student.enrollments)) {
+                student.enrollments.forEach(en => {
+                    if (en.batchId) {
+                        const enBatch = typeof en.batchId === 'object' ? en.batchId._id : en.batchId;
+                        if (enBatch) collectedIds.push(enBatch.toString());
+                    }
+                });
+            }
 
+            let batchIds = [...new Set(collectedIds)].filter(Boolean);
+
+            // Fallback: If no direct batches, search by enrolled courses
             if (batchIds.length === 0) {
-                setLectures([]);
+                const fallbackRes = await axios.get(`${API_BASE}/lms/add-lecture`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                const allLectures = fallbackRes.data?.data || fallbackRes.data?.lectures || [];
+                const studentCourses = [
+                    student.course,
+                    ...(student.enrollments || []).map(e => e.course)
+                ].filter(Boolean).map(c => c.toLowerCase());
+
+                const matched = allLectures.filter(lec => {
+                    const lecCourse = (lec.course || lec.courseId || "").toLowerCase();
+                    return studentCourses.some(sc => sc.includes(lecCourse) || lecCourse.includes(sc));
+                });
+
+                setLectures(matched.length > 0 ? matched : allLectures);
                 return;
             }
 
@@ -85,141 +112,179 @@ export default function LiveLectures() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            if (res.data.success) {
+            if (res.data?.success) {
                 setLectures(res.data.data?.lectures || []);
             } else {
-                setError("Failed to synchronize curriculum links.");
+                setError("Failed to synchronize active academic streams.");
             }
         } catch (err) {
             console.error("LMS Sync Error:", err);
-            setError("Network error: Learning portal is unreachable.");
+            setError("Unable to establish link with classroom broadcasting gateway.");
         } finally {
             if (showLoader) setLoading(false);
         }
     }, [API_BASE]);
 
     useEffect(() => {
-        fetchLectures();
+        fetchLectures(true);
         
-        const ticker = setInterval(() => {
-            setLectures(prev => [...prev]); 
+        // Advance clock every 60 seconds to automatically recalculate and remove expired lectures
+        const intervalId = setInterval(() => {
+            setCurrentTimeTick(Date.now());
         }, 60000);
 
-        const handleSync = () => fetchLectures(false);
-        window.addEventListener("profileSynced", handleSync);
-        
-        return () => {
-            window.removeEventListener("profileSynced", handleSync);
-            clearInterval(ticker);
-        };
+        return () => clearInterval(intervalId);
     }, [fetchLectures]);
 
-    if (loading) return (
-        <div className="h-96 flex flex-col justify-center items-center gap-4">
-            <FiLoader className="animate-spin text-4xl text-[#F37021]" />
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Synchronizing Stream Gateways...</p>
-        </div>
-    );
+    // Filter to only retain time-relevant lectures (LIVE or UPCOMING today)
+    const activeSchedule = useMemo(() => {
+        return lectures
+            .map(lec => ({
+                ...lec,
+                status: getStatus(lec.time || lec.startTime)
+            }))
+            .filter(lec => lec.status === 'LIVE' || lec.status === 'UPCOMING')
+            .sort((a, b) => (a.status === 'LIVE' ? -1 : 1)); // Show LIVE broadcasts on top
+    }, [lectures, getStatus, currentTimeTick]);
+
+    if (loading) {
+        return (
+            <div className="h-96 flex flex-col justify-center items-center gap-3">
+                <FiLoader className="animate-spin text-3xl text-[#F37021]" />
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest italic">
+                    Connecting to Academic Streams...
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <div className="w-full space-y-10 pb-20 text-left max-w-5xl mx-auto px-1 mt-4">
-            <header className="flex flex-col gap-2">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-slate-900/80 border border-slate-700 text-[#F37021] rounded-2xl shadow-inner">
+        <div className="w-full space-y-8 pb-16 text-left max-w-5xl mx-auto px-2">
+            
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-6">
+                <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-orange-50 text-[#F37021] rounded-2xl border border-orange-100 shadow-xs">
                         <FiVideo size={24} />
                     </div>
                     <div>
-                        <h2 className="text-3xl font-black text-white uppercase italic leading-none tracking-tighter">
-                            Live <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200">Classroom</span>
+                        <h2 className="text-2xl sm:text-3xl font-black text-[#1A5F7A] uppercase italic leading-none tracking-tight">
+                            Live <span className="text-[#F37021]">Classroom</span>
                         </h2>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">
-                            {lectures.length} Academic Streams Identified
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                            {activeSchedule.length} Active Timetabled Session{activeSchedule.length === 1 ? '' : 's'}
                         </p>
                     </div>
                 </div>
-            </header>
 
+                <button 
+                    onClick={() => fetchLectures(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95"
+                >
+                    <FiRefreshCw size={13} /> Refresh Stream
+                </button>
+            </div>
+
+            {/* Error Banner */}
             {error && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 p-5 rounded-[2rem] border border-red-500/20 flex items-center gap-4 text-red-400 shadow-sm backdrop-blur-md">
-                    <FiAlertCircle size={20} className="shrink-0" />
-                    <p className="text-[10px] font-black uppercase tracking-tight leading-relaxed">{error}</p>
-                </motion.div>
+                <div className="bg-red-50 p-4 rounded-2xl border border-red-200 flex items-center gap-3 text-red-600 shadow-xs">
+                    <FiAlertCircle size={18} className="shrink-0" />
+                    <p className="text-xs font-bold uppercase tracking-wide leading-relaxed">{error}</p>
+                </div>
             )}
 
-            <div className="grid grid-cols-1 gap-6">
+            {/* Timetabled Lectures List */}
+            <div className="grid grid-cols-1 gap-5">
                 <AnimatePresence mode="popLayout">
-                    {lectures.length > 0 ? (
-                        lectures.map((lecture) => {
-                            const status = getStatus(lecture.time || lecture.startTime);
+                    {activeSchedule.length > 0 ? (
+                        activeSchedule.map((lecture) => {
+                            const isLive = lecture.status === 'LIVE';
+
                             return (
                                 <motion.div 
                                     layout
                                     key={lecture._id} 
-                                    initial={{ opacity: 0, y: 20 }} 
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className={`relative bg-slate-900/40 backdrop-blur-md rounded-[2.5rem] p-6 md:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-slate-800 overflow-hidden flex flex-col lg:flex-row justify-between items-center gap-8 group hover:shadow-[0_10px_30px_rgba(243,112,33,0.1)] transition-all duration-500 ${
-                                        status === 'LIVE' ? 'hover:border-red-500/50' : 'hover:border-[#F37021]/50'
+                                    initial={{ opacity: 0, y: 15 }} 
+                                    animate={{ opacity: 1, y: 0 }} 
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    className={`relative bg-white rounded-3xl p-6 sm:p-7 shadow-xs border transition-all duration-300 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 overflow-hidden ${
+                                        isLive 
+                                            ? 'border-red-300 shadow-red-100/50 ring-2 ring-red-100' 
+                                            : 'border-slate-200 hover:border-slate-300'
                                     }`}
                                 >
-                                    {/* Indicator Strip */}
-                                    <div className={`absolute left-0 top-0 bottom-0 w-2 ${
-                                        status === 'LIVE' ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.6)]' : status === 'UPCOMING' ? 'bg-blue-500/50' : 'bg-slate-700'
+                                    {/* Status Color Strip */}
+                                    <div className={`absolute left-0 top-0 bottom-0 w-2.5 ${
+                                        isLive ? 'bg-red-500 shadow-sm' : 'bg-sky-500'
                                     }`} />
 
-                                    <div className="flex flex-col gap-4 w-full pl-2">
+                                    <div className="flex flex-col gap-3 w-full pl-2">
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <span className={`px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                                                status === 'LIVE' ? 'bg-red-500/10 text-red-400 border-red-500/30 animate-pulse' : 
-                                                status === 'UPCOMING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800/80 text-slate-500 border-slate-700'
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border inline-flex items-center gap-1.5 ${
+                                                isLive 
+                                                    ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' 
+                                                    : 'bg-sky-50 text-sky-700 border-sky-200'
                                             }`}>
-                                                {status === "LIVE" ? "• Broadcasting" : status === "UPCOMING" ? "Scheduled" : "Archive"}
+                                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                                    isLive ? 'bg-red-500' : 'bg-sky-500'
+                                                }`} />
+                                                {isLive ? "Broadcasting Now" : "Upcoming Session"}
                                             </span>
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                <FiClock size={12} className="text-[#F37021]"/> {lecture.time || lecture.startTime}
+
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-lg">
+                                                <FiClock size={12} className="text-[#F37021]"/> 
+                                                {lecture.time || lecture.startTime || "Scheduled Time"}
                                             </span>
                                         </div>
 
                                         <div className="space-y-1">
-                                            <h3 className="text-xl md:text-2xl font-black uppercase text-white italic leading-tight group-hover:text-orange-300 transition-colors line-clamp-2">
+                                            <h3 className="text-lg sm:text-xl font-black uppercase text-[#1A5F7A] italic leading-tight">
                                                 {lecture.title}
                                             </h3>
-                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter mt-1 flex flex-wrap gap-1.5">
-                                                <span>Prof. {lecture.teacher}</span> <span className="hidden sm:inline">•</span> <span className="text-teal-400 opacity-90">Batch {lecture.batchId?.batchCode || "General Stream"}</span>
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-tight flex flex-wrap items-center gap-2 pt-0.5">
+                                                <span>Faculty: {lecture.teacher || "Faculty Incharge"}</span>
+                                                <span className="text-slate-300">•</span>
+                                                <span className="text-[#F37021] font-bold">
+                                                    Batch: {lecture.batchId?.batchCode || lecture.batchCode || "General Session"}
+                                                </span>
                                             </p>
                                         </div>
                                     </div>
 
+                                    {/* Action Button */}
                                     <button 
-                                        onClick={() => lecture.link && window.open(lecture.link, '_blank')}
-                                        disabled={status === 'UPCOMING'}
-                                        className={`w-full lg:w-auto px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-95 border shrink-0 ${
-                                            status === 'LIVE' 
-                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 border-transparent shadow-[0_8px_20px_rgba(239,68,68,0.3)]' 
-                                            : status === 'UPCOMING' 
-                                            ? 'bg-slate-900/50 text-slate-600 cursor-not-allowed border-slate-800' 
-                                            : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border-slate-700 hover:border-slate-600 shadow-sm'
+                                        onClick={() => lecture.link && window.open(lecture.link, '_blank', 'noopener,noreferrer')}
+                                        disabled={!isLive}
+                                        className={`w-full lg:w-auto px-8 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2.5 shrink-0 active:scale-95 shadow-xs ${
+                                            isLive 
+                                                ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-200 cursor-pointer' 
+                                                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                                         }`}
                                     >
-                                        {status === 'LIVE' ? (
-                                            <>Enter Studio <FiExternalLink size={14}/></>
-                                        ) : status === 'UPCOMING' ? (
-                                            <>Gateway Locked <FiLock size={14}/></>
+                                        {isLive ? (
+                                            <>Join Classroom <FiExternalLink size={13}/></>
                                         ) : (
-                                            <>Watch Recording <FiPlayCircle size={16}/></>
+                                            <>Available At Scheduled Time <FiLock size={13}/></>
                                         )}
                                     </button>
                                 </motion.div>
                             );
                         })
                     ) : (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-24 px-4 bg-slate-900/40 backdrop-blur-md rounded-[3rem] border-2 border-dashed border-slate-800 flex flex-col items-center">
-                            <div className="w-20 h-20 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                                <FiShield className="text-slate-500" size={32} />
+                        /* Standby View when no live or upcoming session matches */
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            className="text-center py-20 px-6 bg-white rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center shadow-xs"
+                        >
+                            <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center mb-4 text-[#1A5F7A]">
+                                <FiShield size={28} />
                             </div>
-                            <h4 className="text-white font-black uppercase italic text-xl">Curriculum Standby</h4>
-                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-3 max-w-sm leading-relaxed">
-                                No active sessions scheduled for your batches at this time. Please check your timetable for specific timings.
+                            <h4 className="text-[#1A5F7A] font-black uppercase italic text-lg tracking-tight">
+                                Curriculum Standby
+                            </h4>
+                            <p className="text-slate-400 font-bold text-xs uppercase tracking-wider mt-2 max-w-sm leading-relaxed">
+                                No active broadcast sessions are scheduled for your batches right now. Your lectures will appear automatically once your scheduled class hour arrives.
                             </p>
                         </motion.div>
                     )}

@@ -44,11 +44,16 @@ export default function Header() {
     // UNIVERSAL LOGO ROUTING & SCROLL LOGIC
     const handleLogoClick = (e) => {
         setIsMobileMenuOpen(false);
+        
+        // Ensure splash screen remains suppressed when navigating home
+        sessionStorage.setItem("hasSeenLoader", "true");
+        localStorage.setItem("hasSeenLoader", "true");
+
         if (location.pathname === '/') {
-            e.preventDefault(); // Stop routing, just scroll up smoothly
+            e.preventDefault(); // Stay on page and scroll up smoothly
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            // Let the <Link> handle routing, but force window to top instantly
+            // Let the <Link> handle routing and reset scroll position
             window.scrollTo({ top: 0, behavior: 'instant' });
         }
     };
@@ -69,7 +74,7 @@ export default function Header() {
                 <div className="flex justify-between items-center h-14 lg:h-16">
                     
                     <div className="flex items-center gap-8">
-                        {/* ATTACHED TO DESKTOP LOGO */}
+                        {/* DESKTOP LOGO */}
                         <Link to="/" onClick={handleLogoClick} className="flex items-center shrink-0 transition-transform hover:scale-[1.02] group">
                             <div className="bg-slate-900/60 backdrop-blur-md border border-slate-700/60 p-1.5 md:p-2 rounded-xl shadow-lg group-hover:border-[#F37021]/50 group-hover:shadow-[0_0_15px_rgba(243,112,33,0.2)] transition-all duration-300">
                                 <img 
@@ -171,6 +176,7 @@ export default function Header() {
                 </div>
             </div>
 
+            {/* MOBILE DRAWER */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <>
@@ -178,7 +184,7 @@ export default function Header() {
                             initial={{ opacity: 0 }} 
                             animate={{ opacity: 1 }} 
                             exit={{ opacity: 0 }} 
-                            onClick={() => setIsMobileMenuOpen(false)}
+                            onClick={() => setIsMobileMenuOpen(false)} 
                             className="fixed inset-0 z-[200] lg:hidden bg-[#070D1D]/80 backdrop-blur-sm"
                         />
                         
@@ -190,7 +196,7 @@ export default function Header() {
                             className="fixed right-0 top-0 bottom-0 h-screen w-full sm:w-[380px] z-[201] lg:hidden bg-[#0A192F] shadow-2xl flex flex-col border-l border-slate-800"
                         >
                             <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800 shrink-0 bg-[#070D1D]">
-                                {/* ATTACHED TO MOBILE DRAWER LOGO */}
+                                {/* MOBILE DRAWER LOGO */}
                                 <Link to="/" onClick={handleLogoClick}>
                                     <div className="bg-slate-900/80 border border-slate-700 p-1.5 rounded-lg shadow-inner">
                                         <img src={expertcomputerlogo} className="h-8 w-auto rounded object-contain" alt="Logo" />
@@ -198,7 +204,7 @@ export default function Header() {
                                 </Link>
                                 <button 
                                     className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-slate-700" 
-                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    onClick={() => setIsMobileMenuOpen(false)} 
                                     aria-label="Close Menu"
                                 >
                                     <FiX size={22} />
@@ -238,10 +244,10 @@ export default function Header() {
                                         <AnimatePresence initial={false}>
                                             {activeMobileDropdown && (
                                                 <motion.div 
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    transition={{ duration: 0.2 }}
+                                                    initial={{ height: 0, opacity: 0 }} 
+                                                    animate={{ height: 'auto', opacity: 1 }} 
+                                                    exit={{ height: 0, opacity: 0 }} 
+                                                    transition={{ duration: 0.2 }} 
                                                     className="overflow-hidden bg-[#070D1D]/50 border border-slate-800 rounded-xl mt-2 mx-1 shadow-inner"
                                                 >
                                                     <div className="p-2 grid grid-cols-1 gap-1">

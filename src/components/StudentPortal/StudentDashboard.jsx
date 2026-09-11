@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiUser, FiMail, FiRefreshCw, FiArrowRight, FiCheckCircle, 
     FiBook, FiActivity, FiLayers, FiChevronRight, FiTrendingUp, FiTarget,
-    FiCpu, FiSend, FiLoader
+    FiCpu, FiSend, FiLoader, FiShield
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -17,6 +17,15 @@ export default function StudentDashboard() {
     
     const navigate = useNavigate();
     const API_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || 'http://localhost:5000';
+
+    // --- MASK SENSITIVE DOCUMENT IDENTIFIER (XXXX-XXXX-1234) ---
+    const maskGovDocument = (docNumber) => {
+        if (!docNumber) return "Document Not Linked";
+        const cleaned = String(docNumber).replace(/[^0-9a-zA-Z]/g, '');
+        if (cleaned.length < 4) return "XXXX-XXXX-XXXX";
+        const last4 = cleaned.slice(-4);
+        return `XXXX-XXXX-${last4}`;
+    };
 
     // --- PROD LOGIC: AGGREGATE PROGRESS CALCULATION ---
     const calculateProgress = () => {
@@ -58,9 +67,13 @@ export default function StudentDashboard() {
         const storedData = localStorage.getItem("studentData");
         
         if (!token || !storedData) {
-            // Fallback for development if no token (remove in pure prod)
             if (import.meta.env.MODE === 'development') {
-                setStudentData({ name: "Dev User", course: "Development Mode", enrollments: [{course: "Development Mode", status: "Active"}] });
+                setStudentData({ 
+                    name: "Dev User", 
+                    course: "Development Mode", 
+                    aadhaarNo: "123456789012",
+                    enrollments: [{ course: "Development Mode", status: "Active" }] 
+                });
                 setLoading(false);
             } else {
                 return navigate('/student-login');
@@ -81,6 +94,8 @@ export default function StudentDashboard() {
         </div>
     );
 
+    const maskedDocId = maskGovDocument(studentData.aadhaarNo || studentData.aadhar);
+
     return (
         <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-10 text-left overflow-x-hidden">
             
@@ -98,9 +113,20 @@ export default function StudentDashboard() {
                         </div>
                         <div className="flex-1 text-center md:text-left">
                             <h1 className="text-4xl font-black text-[#1A5F7A] uppercase italic tracking-tighter">{studentData.name}</h1>
-                            <p className="text-slate-400 font-bold mt-1 uppercase text-[10px] tracking-widest">
-                                {studentData.enrollments?.length || 0} Active Programs Linked
-                            </p>
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-1.5">
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                                    {studentData.enrollments?.length || 0} Active Programs Linked
+                                </p>
+                                <span className="text-slate-300 hidden md:inline">•</span>
+                                
+                                {/* MASKED SENSITIVE DOCUMENT BADGE */}
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded-xl text-slate-600">
+                                    <FiShield className={studentData.aadhaarNo || studentData.aadhar ? "text-emerald-500" : "text-slate-400"} size={12} />
+                                    <span className="text-[10px] font-black tracking-wider uppercase">
+                                        ID: {maskedDocId}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div className="bg-[#1A5F7A] p-6 rounded-3xl min-w-[240px] text-white shadow-xl text-center md:text-left">
                             <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Active View</p>
@@ -176,7 +202,7 @@ export default function StudentDashboard() {
                                         <div className="h-3 bg-white/10 rounded-full overflow-hidden mb-10">
                                             <motion.div 
                                                 initial={{ width: 0 }} 
-                                                animate={{ width: `${calculateProgress()}%` }}
+                                                animate={{ width: `${calculateProgress()}%` }} 
                                                 className="h-full bg-gradient-to-r from-orange-500 to-[#F37021]"
                                             />
                                         </div>
@@ -197,6 +223,7 @@ export default function StudentDashboard() {
                                     <div className="space-y-4">
                                         <StatRow label="Authorized Batches" value={studentData.activeBatches?.length || 0} />
                                         <StatRow label="Pending Batches" value={(studentData.enrollments?.length || 0) - (studentData.activeBatches?.length || 0)} />
+                                        <StatRow label="Government Record" value={maskedDocId} />
                                     </div>
                                 </div>
                             </aside>
@@ -225,14 +252,13 @@ function ResearchTab() {
         setIsLoading(true);
         
         try {
-            // Replace with your actual backend /api/chat endpoint
             const res = await axios.post('/api/chat', { message: searchQuery });
             setAiResponse(res.data.response || "Research complete. No specific data returned.");
-        } catch (err) {
+        } catch (err) { 
             console.error(err);
             setAiResponse("Connection to AI Engine failed. Ensure backend service is active.");
-        } finally {
-            setIsLoading(false);
+        } finally { 
+            setIsLoading(false); 
         }
     };
 
@@ -359,7 +385,7 @@ function StudyLabTab() {
 function TabButton({ active, onClick, icon, label }) {
     return (
         <button 
-            onClick={onClick}
+            onClick={onClick} 
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                 active ? 'bg-[#1A5F7A] text-white shadow-md' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
             }`}
@@ -383,8 +409,8 @@ function QuizOption({ label, correct }) {
     const [selected, setSelected] = useState(false);
     return (
         <button 
-            onClick={() => setSelected(true)}
-            disabled={selected}
+            onClick={() => setSelected(true)} 
+            disabled={selected} 
             className={`w-full text-left px-5 py-4 rounded-xl text-sm font-bold border-2 transition-all ${
                 selected 
                     ? correct ? 'border-green-400 bg-green-500 text-white shadow-lg' : 'border-red-400 bg-red-500 text-white shadow-lg'

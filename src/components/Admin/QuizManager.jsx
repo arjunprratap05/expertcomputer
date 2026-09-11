@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiX, FiCheckCircle, FiEdit3, FiSave, FiList, FiUsers, FiAward, FiTrash2, FiLock, FiUnlock, FiUploadCloud, FiCpu, FiLoader, FiAlertCircle } from 'react-icons/fi';
+import { 
+    FiPlus, FiX, FiCheckCircle, FiEdit3, FiSave, FiList, 
+    FiUsers, FiAward, FiTrash2, FiLock, FiUnlock, FiUploadCloud, 
+    FiCpu, FiLoader, FiAlertCircle 
+} from 'react-icons/fi';
 import axios from 'axios';
-
 import { techCoursesData, universityPrograms } from '../../data/courses';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
+// Normalizes API base URL to prevent missing or duplicated '/api' paths
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_BASE = rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`;
 
 export default function QuizManager() {
     const [quizzes, setQuizzes] = useState([]); 
@@ -16,19 +21,21 @@ export default function QuizManager() {
     const [pdfFile, setPdfFile] = useState(null);
     const [notification, setNotification] = useState('');
     const fileInputRef = useRef(null);
+
+    const token = localStorage.getItem("adminToken");
+
+    const fetchQuizzes = async () => {
+        try {
+            const res = await axios.get(`${API_BASE}/admin/quizzes`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setQuizzes(res.data.data || []);
+        } catch (err) {
+            console.error("Failed to fetch quizzes:", err);
+        }
+    };
     
     useEffect(() => {
-        const fetchQuizzes = async () => {
-            try {
-                const token = localStorage.getItem("adminToken");
-                const res = await axios.get(`${API_URL}/admin/quizzes`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setQuizzes(res.data.data);
-            } catch (err) {
-                console.error("Failed to fetch quizzes:", err);
-            }
-        };
         fetchQuizzes();
     }, []);
 
@@ -66,12 +73,11 @@ export default function QuizManager() {
         if (!pdfFile) return showNotification('Please upload a PDF document first.');
         
         setIsGenerating(true);
-        const formData = new FormData();
-        formData.append('document', pdfFile);
+        const uploadData = new FormData();
+        uploadData.append('document', pdfFile);
 
         try {
-            const token = localStorage.getItem("adminToken");
-            const res = await axios.post(`${API_URL}/quizzes/generate-from-pdf`, formData, {
+            const res = await axios.post(`${API_BASE}/quizzes/generate-from-pdf`, uploadData, {
                 headers: { 
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${token}` 
@@ -79,7 +85,6 @@ export default function QuizManager() {
             });
 
             if (res.data.success && res.data.questions) {
-                // Map AI's "question" property to your state's "questionText" property
                 const formattedQuestions = res.data.questions.map(q => ({
                     questionText: q.question,
                     options: q.options,
@@ -104,7 +109,9 @@ export default function QuizManager() {
     };
 
     const handleAddQuestion = () => {
-        if (!currentQuestion.questionText) return alert("Question text required!");
+        if (!currentQuestion.questionText.trim()) return alert("Question text required!");
+        if (currentQuestion.options.some(opt => !opt.trim())) return alert("All 4 options must be filled!");
+        
         setQuizForm({
             ...quizForm,
             questions: [...quizForm.questions, currentQuestion]
@@ -127,33 +134,35 @@ export default function QuizManager() {
 
     const handleSaveQuiz = async (e) => {
         e.preventDefault();
+        if (quizForm.questions.length === 0) {
+            return alert("Add at least one question before deploying.");
+        }
+
         try {
-            const token = localStorage.getItem("adminToken");
-            const res = await axios.post(`${API_URL}/admin/quizzes`, quizForm, {
+            const res = await axios.post(`${API_BASE}/admin/quizzes`, quizForm, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            // New quizzes default to LOCKED on the backend
             setQuizzes([res.data.data, ...quizzes]);
             setIsCreating(false);
             setQuizForm({ title: "", targetCourse: "ALL", durationMins: 30, questions: [] });
-            alert("Quiz drafted successfully! It is currently LOCKED and hidden from students.");
+            showNotification("Quiz created! It is currently locked.");
         } catch (err) {
             console.error("Failed to deploy quiz:", err);
-            alert("Deployment failed. Check console.");
+            alert(err.response?.data?.message || "Deployment failed.");
         }
     };
 
     const handleDeleteQuiz = async (id, title) => {
-        const confirmDelete = window.confirm(`WARNING: Are you sure you want to permanently delete the "${title}" exam?`);
+        const confirmDelete = window.confirm(`Permanently delete the exam: "${title}"?`);
         if (!confirmDelete) return;
 
         try {
-            const token = localStorage.getItem("adminToken");
-            await axios.delete(`${API_URL}/admin/quizzes/${id}`, {
+            await axios.delete(`${API_BASE}/admin/quizzes/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setQuizzes(quizzes.filter(q => q._id !== id));
+            showNotification("Exam removed from registry.");
         } catch (err) {
             console.error("Failed to delete quiz:", err);
             alert("Failed to delete exam.");
@@ -162,150 +171,184 @@ export default function QuizManager() {
 
     const handleToggleStatus = async (id) => {
         try {
-            const token = localStorage.getItem("adminToken");
-            const res = await axios.post(`${API_URL}/admin/quizzes/generate-from-pdf`, formData, {
-                headers: { 
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${token}` 
+            const res = await axios.patch(
+                `${API_BASE}/admin/quizzes/${id}/status`,
+                {},
+                {
+                    headers: { Authorization: `Bearer ${token}` }
                 }
-            });
-            // Update the UI instantly
-            setQuizzes(quizzes.map(q => q._id === id ? { ...q, status: res.data.status } : q));
+            );
+    
+            const updatedStatus = res.data?.status || res.data?.data?.status;
+            setQuizzes(quizzes.map(q => q._id === id ? { ...q, status: updatedStatus } : q));
+            showNotification(`Quiz status set to ${updatedStatus}`);
         } catch (err) {
             console.error("Failed to toggle status:", err);
-            alert("Failed to change quiz visibility.");
+            alert(err.response?.data?.message || "Failed to update quiz visibility.");
         }
     };
 
     return (
-        <div className="space-y-10 relative">
-            
-            {/* AI Notification Toast */}
+        <div className="space-y-8 relative text-left">
+            {/* Notification Toast */}
             <AnimatePresence>
                 {notification && (
-                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl flex items-center gap-2 z-[9999]">
-                        <FiAlertCircle className="text-[#F37021]" /> {notification}
+                    <motion.div 
+                        initial={{ y: -40, opacity: 0, x: "-50%" }} 
+                        animate={{ y: 20, opacity: 1, x: "-50%" }} 
+                        exit={{ y: -40, opacity: 0, x: "-50%" }} 
+                        className="fixed top-6 left-1/2 bg-[#0A192F] text-white px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-2 z-[9999] border border-slate-700 border-b-4 border-b-[#F37021]"
+                    >
+                        <FiAlertCircle className="text-[#F37021] text-sm" /> {notification}
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Header & Controls */}
-            <div className="flex justify-between items-end">
+            {/* Header & Deploy Button */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-5">
                 <div>
-                    <h3 className="text-3xl font-black text-[#1A5F7A] uppercase italic">Examination Engine</h3>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase mt-1">Manage Quizzes & Analytics</p>
+                    <h3 className="text-2xl font-black text-white uppercase italic leading-none tracking-tight">
+                        Examination <span className="text-[#F37021]">Engine</span>
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">
+                        Manage Assessments, Status & Real-time Metrics
+                    </p>
                 </div>
                 <button 
                     onClick={() => setIsCreating(true)}
-                    className="bg-[#F37021] text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 transition-all flex items-center gap-2"
+                    className="bg-[#F37021] hover:bg-orange-600 text-white px-5 py-3 rounded-2xl font-black uppercase text-xs tracking-wider shadow-lg shadow-orange-950/40 active:scale-95 transition-all flex items-center gap-2"
                 >
                     <FiPlus size={16}/> Deploy New Quiz
                 </button>
             </div>
 
-            {/* Active Quizzes Registry */}
-            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden text-left">
-                <table className="w-full text-[11px]">
-                    <thead className="bg-slate-50 text-[10px] font-black uppercase border-b p-8 text-slate-400">
-                        <tr>
-                            <th className="p-8">Quiz Identity</th>
-                            <th>Target Scope</th>
-                            <th>Engagement Analytics</th>
-                            <th>Duration</th>
-                            <th className="pr-8 text-right">Status / Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 font-bold text-[11px]">
-                        {quizzes.length === 0 && (
-                            <tr><td colSpan="5" className="p-10 text-center text-slate-300 italic uppercase">No active quizzes deployed</td></tr>
-                        )}
-                        {quizzes.map((q) => {
-                            // Determine visual state based on lock status
-                            const isActive = q.status === 'ACTIVE';
-
-                            return (
-                                <tr key={q._id} className="hover:bg-slate-50 transition-all">
-                                    <td className="p-8">
-                                        <div className={`font-black uppercase italic text-[14px] ${isActive ? 'text-[#1A5F7A]' : 'text-slate-400 line-through decoration-slate-300'}`}>{q.title}</div>
-                                        <div className="text-[9px] text-slate-400 uppercase tracking-widest mt-1">
-                                            {q.questions.length} Items Total
-                                        </div>
-                                    </td>
-                                    <td className="uppercase opacity-80">{q.targetCourse}</td>
-                                    
-                                    <td>
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="flex items-center gap-2 text-[#1A5F7A]">
-                                                <FiUsers size={12}/> 
-                                                <span>{q.studentsAttempted || 0} Student(s) Attempted</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-green-600">
-                                                <FiAward size={12}/> 
-                                                <span>{q.studentsPassed || 0} Student(s) Passed</span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <td>{q.durationMins} Mins</td>
-                                    
-                                    <td className="pr-8 text-right">
-                                        <div className="flex items-center justify-end gap-3">
-                                            
-                                            {/* VISIBILITY BADGE */}
-                                            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase border flex items-center gap-1 shadow-sm ${isActive ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                {isActive ? <FiCheckCircle size={12}/> : <FiLock size={12}/>} {q.status || 'LOCKED'}
-                                            </div>
-
-                                            {/* TOGGLE LOCK BUTTON */}
-                                            <button 
-                                                onClick={() => handleToggleStatus(q._id)}
-                                                className={`p-2 rounded-xl transition-all shadow-sm ${isActive ? 'bg-orange-50 text-orange-500 hover:bg-orange-500 hover:text-white' : 'bg-[#1A5F7A] text-white hover:bg-[#124256]'}`}
-                                                title={isActive ? "Lock Quiz (Hide from students)" : "Unlock Quiz (Publish to students)"}
-                                            >
-                                                {isActive ? <FiLock size={14} /> : <FiUnlock size={14} />}
-                                            </button>
-
-                                            {/* DELETE BUTTON */}
-                                            <button 
-                                                onClick={() => handleDeleteQuiz(q._id, q.title)}
-                                                className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm"
-                                                title="Terminate Exam"
-                                            >
-                                                <FiTrash2 size={14} />
-                                            </button>
-                                        </div>
+            {/* Quizzes Registry Table */}
+            <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs min-w-[780px]">
+                        <thead className="bg-slate-950 font-black uppercase border-b border-slate-800 text-slate-400 text-[10px] tracking-wider">
+                            <tr>
+                                <th className="p-5 pl-7">Quiz Identity</th>
+                                <th>Target Scope</th>
+                                <th>Engagement Analytics</th>
+                                <th>Duration</th>
+                                <th className="pr-7 text-right">Visibility / Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/80 font-bold">
+                            {quizzes.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="p-12 text-center text-slate-500 uppercase tracking-widest text-[10px]">
+                                        No active quizzes deployed in registry
                                     </td>
                                 </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                            ) : (
+                                quizzes.map((q) => {
+                                    const isActive = q.status === 'ACTIVE';
+
+                                    return (
+                                        <tr key={q._id} className="hover:bg-slate-900/50 transition-colors">
+                                            <td className="p-5 pl-7">
+                                                <div className={`font-black uppercase italic text-sm ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                                                    {q.title}
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">
+                                                    {q.questions?.length || 0} Questions Total
+                                                </div>
+                                            </td>
+                                            <td className="uppercase text-slate-300">{q.targetCourse}</td>
+                                            
+                                            <td>
+                                                <div className="flex flex-col gap-1 text-[11px]">
+                                                    <span className="flex items-center gap-1.5 text-sky-400">
+                                                        <FiUsers size={12}/> {q.studentsAttempted || 0} Attempted
+                                                    </span>
+                                                    <span className="flex items-center gap-1.5 text-emerald-400">
+                                                        <FiAward size={12}/> {q.studentsPassed || 0} Passed
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            <td className="text-slate-300">{q.durationMins} Mins</td>
+                                            
+                                            <td className="pr-7 text-right">
+                                                <div className="flex items-center justify-end gap-2.5">
+                                                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${
+                                                        isActive 
+                                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                                                            : 'bg-slate-900 text-slate-500 border-slate-750'
+                                                    }`}>
+                                                        {isActive ? <FiCheckCircle size={11}/> : <FiLock size={11}/>} 
+                                                        {q.status || 'LOCKED'}
+                                                    </span>
+
+                                                    <button 
+                                                        onClick={() => handleToggleStatus(q._id)}
+                                                        className={`p-2 rounded-xl transition-all border ${
+                                                            isActive 
+                                                                ? 'bg-orange-500/10 text-[#F37021] border-orange-500/30 hover:bg-orange-500/20' 
+                                                                : 'bg-[#1A5F7A] text-white border-[#1A5F7A] hover:bg-[#14475c]'
+                                                        }`}
+                                                        title={isActive ? "Lock Exam (Hide from Students)" : "Unlock Exam (Make Active)"}
+                                                    >
+                                                        {isActive ? <FiLock size={14} /> : <FiUnlock size={14} />}
+                                                    </button>
+
+                                                    <button 
+                                                        onClick={() => handleDeleteQuiz(q._id, q.title)}
+                                                        className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 rounded-xl transition-all"
+                                                        title="Delete Assessment"
+                                                    >
+                                                        <FiTrash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* QUIZ BUILDER MODAL */}
+            {/* Create Assessment Modal */}
             <AnimatePresence>
                 {isCreating && (
-                    <div className="fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-xl flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[3.5rem] p-10 max-w-4xl w-full shadow-2xl relative border-t-[15px] border-[#1A5F7A] max-h-[90vh] overflow-y-auto no-scrollbar">
-                            <button onClick={() => setIsCreating(false)} className="absolute top-8 right-8 text-slate-300 hover:text-red-500 transition-colors"><FiX size={24} /></button>
+                    <div className="fixed inset-0 z-[1000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            exit={{ scale: 0.95, opacity: 0 }} 
+                            className="bg-[#0A192F] text-white rounded-3xl p-7 md:p-8 max-w-3xl w-full shadow-2xl relative border border-slate-750 border-t-8 border-t-[#1A5F7A] max-h-[90vh] overflow-y-auto no-scrollbar"
+                        >
+                            <button onClick={() => setIsCreating(false)} className="absolute top-6 right-6 text-slate-400 hover:text-red-400">
+                                <FiX size={20} />
+                            </button>
                             
-                            <h3 className="text-2xl font-black text-[#1A5F7A] uppercase italic mb-8 border-b pb-4 flex items-center gap-3">
-                                <FiEdit3 className="text-[#F37021]"/> Quiz Build Environment
+                            <h3 className="text-xl font-black text-white uppercase italic mb-6 border-b border-slate-800 pb-3 flex items-center gap-2">
+                                <FiEdit3 className="text-[#F37021]"/> Quiz Creation Environment
                             </h3>
 
-                            <form onSubmit={handleSaveQuiz} className="space-y-8">
-                                {/* Quiz Meta Config */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-[#1A5F7A] ml-4 italic">Assessment Title</label>
-                                        <input required className="w-full p-4 bg-white border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-[#F37021]" placeholder="e.g., React JS Mid-Term" value={quizForm.title} onChange={e => setQuizForm({...quizForm, title: e.target.value})} />
+                            <form onSubmit={handleSaveQuiz} className="space-y-6 text-left">
+                                {/* Basic Form Details */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-900/70 p-5 rounded-2xl border border-slate-800 shadow-inner">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Assessment Title</label>
+                                        <input 
+                                            required 
+                                            className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl font-bold text-xs text-white outline-none focus:border-[#F37021] placeholder:text-slate-600 shadow-inner" 
+                                            placeholder="e.g. Node.js Exam" 
+                                            value={quizForm.title} 
+                                            onChange={e => setQuizForm({...quizForm, title: e.target.value})} 
+                                        />
                                     </div>
                                     
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-[#1A5F7A] ml-4 italic">Target Program</label>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Target Course</label>
                                         <select 
                                             required 
-                                            className="w-full p-4 bg-white border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-[#F37021] cursor-pointer appearance-none truncate text-[13px]"
+                                            className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl font-bold text-xs text-white outline-none focus:border-[#F37021] cursor-pointer shadow-inner"
                                             value={quizForm.targetCourse} 
                                             onChange={e => setQuizForm({...quizForm, targetCourse: e.target.value})}
                                         >
@@ -318,54 +361,68 @@ export default function QuizManager() {
                                         </select>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-[#1A5F7A] ml-4 italic">Duration (Mins)</label>
-                                        <input required type="number" min="1" className="w-full p-4 bg-white border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-[#F37021]" value={quizForm.durationMins} onChange={e => setQuizForm({...quizForm, durationMins: e.target.value})} />
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Duration (Mins)</label>
+                                        <input 
+                                            required 
+                                            type="number" 
+                                            min="1" 
+                                            className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl font-bold text-xs text-white outline-none focus:border-[#F37021] shadow-inner text-center" 
+                                            value={quizForm.durationMins} 
+                                            onChange={e => setQuizForm({...quizForm, durationMins: Number(e.target.value)})} 
+                                        />
                                     </div>
                                 </div>
 
-                                {/* --- NEW: AI AUTO-GENERATOR MODULE --- */}
-                                <div className="bg-gradient-to-br from-[#1A5F7A] to-slate-900 rounded-[2.5rem] p-8 shadow-xl text-white relative overflow-hidden">
-                                    <FiCpu className="absolute -right-10 -bottom-10 text-9xl opacity-10" />
-                                    
-                                    <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
-                                        <div className="flex-1">
-                                            <h3 className="font-black uppercase italic text-xl flex items-center gap-2 mb-2"><FiCpu className="text-[#F37021]"/> AI Auto-Generate</h3>
-                                            <p className="text-xs text-blue-100/70 font-medium leading-relaxed">Upload a syllabus or study material in PDF format. The Neural Engine will extract the context and inject 5 automated questions directly into this assessment.</p>
-                                        </div>
-                                        
-                                        <div className="w-full md:w-auto flex flex-col gap-3">
-                                            <input type="file" accept="application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-                                            
-                                            <button type="button" onClick={() => fileInputRef.current.click()} className="bg-white/10 border border-white/20 hover:bg-white/20 px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all w-full md:w-64">
-                                                <FiUploadCloud size={16} /> {pdfFile ? pdfFile.name.substring(0, 20) + '...' : 'Select PDF Document'}
-                                            </button>
-
-                                            <button 
-                                                type="button"
-                                                disabled={!pdfFile || isGenerating} 
-                                                onClick={generateFromPdf}
-                                                className={`px-6 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all w-full md:w-64 shadow-lg
-                                                    ${!pdfFile ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#F37021] text-white hover:bg-orange-600'}`}
-                                            >
-                                                {isGenerating ? <><FiLoader className="animate-spin" /> Processing Data...</> : <><FiCpu /> Generate Questions</>}
-                                            </button>
-                                        </div>
+                                {/* AI Auto-Generation Module */}
+                                <div className="bg-gradient-to-br from-[#1A5F7A] to-[#0A192F] border border-slate-700/60 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                                    <div className="relative z-10">
+                                        <h4 className="font-black uppercase italic text-base flex items-center gap-2">
+                                            <FiCpu className="text-[#F37021]" /> AI Extraction Engine
+                                        </h4>
+                                        <p className="text-xs text-slate-300 mt-1 max-w-md leading-relaxed">
+                                            Upload a syllabus or study material in PDF format. The extraction engine will automatically compile multiple-choice questions into this draft.
+                                        </p>
+                                    </div>
+                                    <div className="w-full md:w-auto flex flex-col sm:flex-row gap-2 shrink-0 relative z-10">
+                                        <input type="file" accept="application/pdf" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => fileInputRef.current?.click()} 
+                                            className="bg-slate-900/60 hover:bg-slate-900/90 border border-slate-700 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 text-slate-200 transition-colors"
+                                        >
+                                            <FiUploadCloud size={14} className="text-[#F37021]" /> 
+                                            {pdfFile ? `${pdfFile.name.substring(0, 15)}...` : 'Select Document'}
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            disabled={!pdfFile || isGenerating} 
+                                            onClick={generateFromPdf}
+                                            className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all ${
+                                                !pdfFile 
+                                                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-750' 
+                                                    : 'bg-[#F37021] hover:bg-orange-600 text-white shadow-orange-950/40'
+                                            }`}
+                                        >
+                                            {isGenerating ? <><FiLoader className="animate-spin" /> Compiling...</> : <><FiCpu /> Compile AI</>}
+                                        </button>
                                     </div>
                                 </div>
 
-                                {/* Active Question Roster (Shows what is in the bank so far) */}
+                                {/* Active Question Bank List */}
                                 {quizForm.questions.length > 0 && (
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase text-[#F37021] ml-4 italic">Active Question Bank ({quizForm.questions.length})</label>
-                                        <div className="max-h-[250px] overflow-y-auto pr-2 space-y-2 no-scrollbar">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-[#F37021] ml-1">
+                                            Questions Added ({quizForm.questions.length})
+                                        </label>
+                                        <div className="max-h-48 overflow-y-auto space-y-2 pr-1 no-scrollbar">
                                             {quizForm.questions.map((q, idx) => (
-                                                <div key={idx} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex justify-between items-center group">
-                                                    <div className="truncate font-bold text-[13px] text-[#1A5F7A] pr-4 flex-1">
-                                                        <span className="opacity-50 mr-2">{idx + 1}.</span>{q.questionText}
-                                                    </div>
-                                                    <button type="button" onClick={() => removeQuestion(idx)} className="text-slate-300 hover:text-red-500 transition-colors p-2 bg-white rounded-xl shadow-sm group-hover:shadow-md">
-                                                        <FiTrash2 size={16}/>
+                                                <div key={idx} className="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center justify-between gap-3">
+                                                    <span className="text-xs font-bold text-slate-200 truncate flex-1">
+                                                        {idx + 1}. {q.questionText}
+                                                    </span>
+                                                    <button type="button" onClick={() => removeQuestion(idx)} className="text-slate-500 hover:text-red-400 p-1">
+                                                        <FiTrash2 size={14} />
                                                     </button>
                                                 </div>
                                             ))}
@@ -373,47 +430,63 @@ export default function QuizManager() {
                                     </div>
                                 )}
 
-                                {/* Manual Question Builder Sub-Module */}
-                                <div className="border-2 border-dashed border-slate-200 rounded-3xl p-6 relative bg-white">
-                                    <div className="absolute -top-3 left-6 bg-white px-2 text-[10px] font-black uppercase text-slate-400 italic flex items-center gap-1"><FiList size={12}/> Manual Compiler</div>
-                                    
-                                    <div className="space-y-4">
-                                        <textarea className="w-full p-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] font-bold outline-none focus:border-[#F37021] min-h-[80px] resize-none" placeholder="Enter manual question text here..." value={currentQuestion.questionText} onChange={e => setCurrentQuestion({...currentQuestion, questionText: e.target.value})} />
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {currentQuestion.options.map((opt, idx) => (
-                                                <div key={idx} className={`flex items-center p-2 rounded-2xl border-2 transition-all ${currentQuestion.correctIndex === idx ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-white'}`}>
-                                                    <input 
-                                                        type="radio" 
-                                                        name="correctAnswer" 
-                                                        checked={currentQuestion.correctIndex === idx} 
-                                                        onChange={() => setCurrentQuestion({...currentQuestion, correctIndex: idx})} 
-                                                        className="mx-4 accent-green-600 w-4 h-4 cursor-pointer" 
-                                                        title="Mark as correct answer"
-                                                    />
-                                                    <input 
-                                                        className="flex-1 bg-transparent border-none outline-none font-bold text-xs p-2" 
-                                                        placeholder={`Option ${idx + 1}`} 
-                                                        value={opt} 
-                                                        onChange={(e) => handleOptionChange(idx, e.target.value)} 
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        
-                                        <button type="button" onClick={handleAddQuestion} className="w-full py-4 border-2 border-[#1A5F7A] text-[#1A5F7A] rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#1A5F7A] hover:text-white transition-all flex items-center justify-center gap-2">
-                                            <FiPlus size={16}/> Commit Manual Question to Bank
-                                        </button>
+                                {/* Manual Question Entry Form */}
+                                <div className="p-5 border-2 border-dashed border-slate-850 rounded-2xl bg-slate-900/40 space-y-4">
+                                    <div className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                                        <FiList size={12} className="text-[#F37021]" /> Add Manual Question
                                     </div>
+                                    <textarea 
+                                        className="w-full p-3.5 bg-slate-900 border border-slate-800 rounded-xl font-bold text-xs text-white outline-none focus:border-[#F37021] min-h-[70px] resize-none placeholder:text-slate-600 shadow-inner" 
+                                        placeholder="Enter question statement..." 
+                                        value={currentQuestion.questionText} 
+                                        onChange={e => setCurrentQuestion({...currentQuestion, questionText: e.target.value})} 
+                                    />
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {currentQuestion.options.map((opt, idx) => (
+                                            <div key={idx} className={`flex items-center p-2 rounded-xl border transition-all ${
+                                                currentQuestion.correctIndex === idx 
+                                                    ? 'border-emerald-500/60 bg-emerald-500/10' 
+                                                    : 'border-slate-800 bg-slate-900'
+                                            }`}>
+                                                <input 
+                                                    type="radio" 
+                                                    name="correctAnswer" 
+                                                    checked={currentQuestion.correctIndex === idx} 
+                                                    onChange={() => setCurrentQuestion({...currentQuestion, correctIndex: idx})} 
+                                                    className="mx-2 accent-emerald-500 cursor-pointer"
+                                                    title="Mark this option as correct"
+                                                />
+                                                <input 
+                                                    className="flex-1 bg-transparent border-none outline-none font-bold text-xs py-1 text-white placeholder:text-slate-600" 
+                                                    placeholder={`Option ${idx + 1}`} 
+                                                    value={opt} 
+                                                    onChange={e => handleOptionChange(idx, e.target.value)} 
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button 
+                                        type="button" 
+                                        onClick={handleAddQuestion} 
+                                        className="w-full py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-sm active:scale-95"
+                                    >
+                                        + Append Question to Bank
+                                    </button>
                                 </div>
 
-                                {/* Pre-flight checklist & Submit */}
-                                <div className="flex items-center justify-between pt-6 border-t border-slate-100">
-                                    <div className="text-[10px] font-black uppercase text-slate-400 italic">
-                                        Questions in Bank: <span className="text-[#F37021] text-lg">{quizForm.questions.length}</span>
+                                {/* Save/Deploy Action */}
+                                <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                                    <div className="text-xs font-black uppercase text-slate-400">
+                                        Total Questions: <span className="text-[#F37021]">{quizForm.questions.length}</span>
                                     </div>
-                                    <button type="submit" disabled={quizForm.questions.length === 0} className="bg-[#1A5F7A] disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-8 py-4 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center gap-2 text-xs transition-all hover:scale-105">
-                                        <FiSave size={18}/> Authorize Deployment
+                                    <button 
+                                        type="submit" 
+                                        disabled={quizForm.questions.length === 0} 
+                                        className="bg-[#F37021] hover:bg-orange-600 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-2xl font-black uppercase tracking-wider text-xs shadow-lg shadow-orange-950/40 active:scale-95 transition-all flex items-center gap-2"
+                                    >
+                                        <FiSave size={16} /> Deploy to Registry
                                     </button>
                                 </div>
                             </form>

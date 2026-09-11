@@ -3,201 +3,295 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FiClock, FiPlus, FiCheckCircle, FiLoader, FiLayers, 
-    FiTrash2, FiUser, FiBook 
+    FiTrash2, FiUser, FiBook, FiAlertCircle 
 } from 'react-icons/fi';
 import { techCoursesData, universityPrograms } from '../../data/courses';
+
+// URL normalization helper to prevent double '/api' issues
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_BASE = rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`;
 
 export default function BatchScheduler() {
     const [status, setStatus] = useState('idle');
     const [activeBatches, setActiveBatches] = useState([]);
     const [isFetching, setIsFetching] = useState(false);
     
-    // Combine all course data for the dropdown
+    // Combine all course data for the selector
     const allAvailableCourses = [...techCoursesData, ...universityPrograms];
 
     const [batch, setBatch] = useState({
         batchCode: '', 
-        courseId: allAvailableCourses[0]?.id || '', // Default to first course ID
+        courseId: allAvailableCourses[0]?.id || '',
         startTime: '', 
         endTime: '', 
         days: []
     });
 
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
     const token = localStorage.getItem('adminToken');
 
     const fetchBatches = async () => {
         setIsFetching(true);
         try {
-            const res = await axios.get(`${API_URL}/admin/batches/active`, {
+            const res = await axios.get(`${API_BASE}/admin/batches/active`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setActiveBatches(res.data.data || []);
-        } catch (err) { console.error("Sync Error"); }
-        finally { setIsFetching(false); }
+        } catch (err) { 
+            console.error("Batch Sync Error:", err); 
+        } finally { 
+            setIsFetching(false); 
+        }
     };
 
-    useEffect(() => { fetchBatches(); }, []);
+    useEffect(() => { 
+        fetchBatches(); 
+    }, []);
 
     const toggleDay = (day) => {
         const updatedDays = batch.days.includes(day) 
             ? batch.days.filter(d => d !== day) 
             : [...batch.days, day];
-        setBatch({...batch, days: updatedDays});
+        setBatch({ ...batch, days: updatedDays });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (batch.days.length === 0) return alert("Select active days!");
+        if (batch.days.length === 0) return alert("Select active weekly days!");
         setStatus('loading');
         try {
-            await axios.post(`${API_URL}/admin/batches/create`, batch, {
+            await axios.post(`${API_BASE}/admin/batches/create`, batch, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setStatus('success');
-            // Reset form
-            setBatch({ batchCode: '', courseId: allAvailableCourses[0].id, startTime: '', endTime: '', days: [] });
+            setBatch({ 
+                batchCode: '', 
+                courseId: allAvailableCourses[0]?.id || '', 
+                startTime: '', 
+                endTime: '', 
+                days: [] 
+            });
             fetchBatches();
             setTimeout(() => setStatus('idle'), 3000);
         } catch (err) { 
             setStatus('idle'); 
-            alert(err.response?.data?.message || "Error creating batch"); 
+            alert(err.response?.data?.message || "Error creating timetable batch"); 
         }
     };
 
     const handleDeleteBatch = async (id) => {
-        if (!window.confirm("Are you sure you want to remove this batch timetable?")) return;
+        if (!window.confirm("Are you sure you want to remove this academic batch timetable?")) return;
         
         try {
-            // Ensure API_URL includes /api if your backend requires it
-            // Based on your console: http://localhost:5000/api/admin/batches/...
-            await axios.delete(`${API_URL}/admin/batches/${id}`, {
+            await axios.delete(`${API_BASE}/admin/batches/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
-            // Refresh the list after successful delete
             fetchBatches();
         } catch (err) {
-            console.error(err);
-            alert("Delete failed: Route not found on server.");
+            console.error("Delete Error:", err);
+            alert("Delete failed: Route not found or server rejected.");
         }
     };
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-500">
-            {/* FORM SECTION */}
-            <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-100 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#F37021]/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+        <div className="space-y-8 text-left max-w-6xl mx-auto">
+            
+            {/* FORM CARD */}
+            <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-8 md:p-10 shadow-xl border border-slate-800 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#F37021]/5 rounded-full -mr-28 -mt-28 blur-3xl pointer-events-none" />
                 
-                <header className="mb-10 flex items-center gap-4 relative z-10">
-                    <div className="bg-[#1A5F7A] p-4 rounded-2xl text-white shadow-lg shadow-blue-900/20"><FiClock size={28} /></div>
-                    <div className="text-left">
-                        <h2 className="text-2xl font-black text-[#1A5F7A] uppercase italic leading-none">Batch <span className="text-[#F37021]">Master</span></h2>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Create Academic Timetables</p>
+                <header className="mb-8 flex items-center gap-4 relative z-10 border-b border-slate-800 pb-5">
+                    <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-2xl text-[#F37021] shadow-inner">
+                        <FiClock size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black text-white uppercase italic leading-none tracking-tight">
+                            Batch <span className="text-[#F37021]">Master</span>
+                        </h2>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                            Configure Class Timetables & Live Stream Windows
+                        </p>
                     </div>
                 </header>
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left relative z-10">
-                    <div className="space-y-6">
-                        <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Batch Identity (Unique Code)</label>
-                            <input required className="w-full p-5 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#F37021]/30" placeholder="e.g. PY-MORN-MAR" value={batch.batchCode} onChange={e => setBatch({...batch, batchCode: e.target.value.toUpperCase()})} />
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                    <div className="space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                Unique Batch Code
+                            </label>
+                            <input 
+                                required 
+                                className="w-full p-4 bg-slate-900/90 rounded-2xl font-black uppercase text-white outline-none border border-slate-800 focus:border-[#F37021] transition-all placeholder:text-slate-600 shadow-inner" 
+                                placeholder="e.g. PY-MORN-MAR" 
+                                value={batch.batchCode} 
+                                onChange={e => setBatch({ ...batch, batchCode: e.target.value.toUpperCase() })} 
+                            />
                         </div>
                         
-                        <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Select Target Course</label>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                Select Target Course
+                            </label>
                             <div className="relative">
                                 <select 
-                                    className="w-full p-5 bg-slate-50 rounded-2xl font-bold text-[#1A5F7A] outline-none border-2 border-transparent focus:border-[#F37021]/30 appearance-none cursor-pointer" 
+                                    className="w-full p-4 bg-slate-900/90 rounded-2xl font-bold text-white outline-none border border-slate-800 focus:border-[#F37021] appearance-none cursor-pointer pr-12 shadow-inner" 
                                     value={batch.courseId} 
-                                    onChange={e => setBatch({...batch, courseId: e.target.value})}
+                                    onChange={e => setBatch({ ...batch, courseId: e.target.value })}
                                 >
                                     {allAvailableCourses.map(c => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.title} {/* Shows Title, saves ID */}
+                                        <option key={c.id} value={c.id} className="bg-slate-900 text-white">
+                                            {c.title}
                                         </option>
                                     ))}
                                 </select>
-                                <FiBook className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                                <FiBook className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Start Time</label>
-                                <input required type="time" className="w-full p-5 bg-slate-50 rounded-2xl font-bold outline-none" value={batch.startTime} onChange={e => setBatch({...batch, startTime: e.target.value})} />
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    Start Time
+                                </label>
+                                <input 
+                                    required 
+                                    type="time" 
+                                    className="w-full p-4 bg-slate-900/90 rounded-2xl font-bold text-white outline-none border border-slate-800 focus:border-[#F37021] shadow-inner" 
+                                    value={batch.startTime} 
+                                    onChange={e => setBatch({ ...batch, startTime: e.target.value })} 
+                                />
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase ml-4">End Time</label>
-                                <input required type="time" className="w-full p-5 bg-slate-50 rounded-2xl font-bold outline-none" value={batch.endTime} onChange={e => setBatch({...batch, endTime: e.target.value})} />
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                    End Time
+                                </label>
+                                <input 
+                                    required 
+                                    type="time" 
+                                    className="w-full p-4 bg-slate-900/90 rounded-2xl font-bold text-white outline-none border border-slate-800 focus:border-[#F37021] shadow-inner" 
+                                    value={batch.endTime} 
+                                    onChange={e => setBatch({ ...batch, endTime: e.target.value })} 
+                                />
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Active Days (Weekly Schedule)</label>
-                        <div className="grid grid-cols-3 gap-3">
-                            {daysOfWeek.map(d => (
-                                <button key={d} type="button" onClick={() => toggleDay(d)} className={`py-4 rounded-xl font-black text-[10px] border-2 transition-all uppercase tracking-widest ${batch.days.includes(d) ? 'bg-[#1A5F7A] border-[#1A5F7A] text-white shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}>{d}</button>
-                            ))}
+                    <div className="space-y-6 flex flex-col justify-between">
+                        <div>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-3">
+                                Weekly Schedule (Active Days)
+                            </label>
+                            <div className="grid grid-cols-3 gap-2.5">
+                                {daysOfWeek.map(d => {
+                                    const isSelected = batch.days.includes(d);
+                                    return (
+                                        <button 
+                                            key={d} 
+                                            type="button" 
+                                            onClick={() => toggleDay(d)} 
+                                            className={`py-3.5 rounded-xl font-black text-[10px] border transition-all uppercase tracking-wider ${
+                                                isSelected 
+                                                    ? 'bg-[#1A5F7A] border-[#1A5F7A] text-white shadow-md' 
+                                                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
+                                            }`}
+                                        >
+                                            {d}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                        <button type="submit" disabled={status === 'loading'} className="w-full py-6 bg-[#F37021] text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-orange-200 transition-all hover:bg-[#1A5F7A] active:scale-95 flex items-center justify-center gap-3">
-                            {status === 'loading' ? <FiLoader className="animate-spin" /> : status === 'success' ? <FiCheckCircle /> : <FiPlus />}
-                            {status === 'loading' ? 'Processing...' : status === 'success' ? 'Batch Initialized' : 'Initialize Batch'}
+
+                        <button 
+                            type="submit" 
+                            disabled={status === 'loading'} 
+                            className="w-full py-4 bg-[#F37021] hover:bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-orange-950/40 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {status === 'loading' ? (
+                                <><FiLoader className="animate-spin text-base" /> Initializing...</>
+                            ) : status === 'success' ? (
+                                <><FiCheckCircle size={16} /> Batch Created!</>
+                            ) : (
+                                <><FiPlus size={16} /> Initialize Timetable</>
+                            )}
                         </button>
                     </div>
                 </form>
             </div>
 
-            {/* DIRECTORY SECTION */}
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden text-left">
-                <div className="p-8 border-b bg-slate-50/50 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <FiLayers className="text-[#1A5F7A]" />
-                        <h3 className="text-xs font-black text-[#1A5F7A] uppercase tracking-widest">Active Timetables</h3>
+            {/* DIRECTORY LISTING */}
+            <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden text-left">
+                <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+                    <div className="flex items-center gap-2.5">
+                        <FiLayers className="text-[#F37021]" size={18} />
+                        <h3 className="text-xs font-black text-white uppercase tracking-widest italic">
+                            Live Academic Timetables ({activeBatches.length})
+                        </h3>
                     </div>
                     {isFetching && <FiLoader className="animate-spin text-[#F37021]" />}
                 </div>
+
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="text-[10px] font-black text-slate-400 uppercase bg-slate-50/80 border-b tracking-widest">
-                            <tr><th className="p-6">Batch Details</th><th>Schedule</th><th>Days</th><th>Modified By</th><th className="text-center">Action</th></tr>
+                    <table className="w-full min-w-[750px] text-xs">
+                        <thead className="text-[9px] font-black text-slate-400 uppercase bg-slate-950 border-b border-slate-800 tracking-wider">
+                            <tr>
+                                <th className="p-5 pl-7">Batch Code & Course</th>
+                                <th>Timing Window</th>
+                                <th>Active Days</th>
+                                <th>Last Synchronized</th>
+                                <th className="text-center pr-7">Action</th>
+                            </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {activeBatches.length > 0 ? activeBatches.map(b => (
-                                <tr key={b._id} className="hover:bg-slate-50/50 transition-colors text-[11px]">
-                                    <td className="p-6">
-                                        <div className="font-black text-[#1A5F7A] uppercase">{b.batchCode}</div>
-                                        <div className="text-[9px] font-bold text-[#F37021] uppercase mt-1 tracking-tighter">
-                                            {/* Logic to find Title from ID in existing list */}
-                                            {allAvailableCourses.find(c => c.id === b.courseId)?.title || b.courseId}
-                                        </div>
-                                    </td>
-                                    <td className="font-black text-slate-600">{b.startTime} - {b.endTime}</td>
-                                    <td>
-                                        <div className="flex flex-wrap gap-1">
-                                            {b.days.map(d => <span key={d} className="px-2 py-0.5 bg-blue-50 text-[#1A5F7A] rounded font-black text-[8px] border border-blue-100 uppercase">{d}</span>)}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center text-[9px] font-black text-[#1A5F7A] uppercase">{b.lastModifiedBy?.charAt(0) || 'A'}</div>
-                                            <div>
-                                                <p className="font-black text-slate-600 uppercase text-[9px]">{b.lastModifiedBy || 'Admin'}</p>
-                                                <p className="text-[8px] text-slate-400 font-bold">{new Date(b.updatedAt).toLocaleDateString()}</p>
+                        <tbody className="divide-y divide-slate-800/80 font-bold">
+                            {activeBatches.length > 0 ? (
+                                activeBatches.map(b => (
+                                    <tr key={b._id} className="hover:bg-slate-900/50 transition-colors">
+                                        <td className="p-5 pl-7">
+                                            <div className="font-black text-white uppercase italic text-sm">{b.batchCode}</div>
+                                            <div className="text-[10px] font-black text-[#F37021] uppercase mt-0.5 tracking-tight">
+                                                {allAvailableCourses.find(c => c.id === b.courseId)?.title || b.courseId}
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="text-center">
-                                        <button onClick={() => handleDeleteBatch(b._id)} className="text-slate-300 hover:text-red-500 transition-colors p-2">
-                                            <FiTrash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            )) : (
+                                        </td>
+                                        <td className="font-black text-slate-200">
+                                            {b.startTime} - {b.endTime}
+                                        </td>
+                                        <td>
+                                            <div className="flex flex-wrap gap-1">
+                                                {b.days.map(d => (
+                                                    <span key={d} className="px-2 py-0.5 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded font-black text-[8px] uppercase">
+                                                        {d}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 bg-slate-900 border border-slate-700 rounded-full flex items-center justify-center text-[9px] font-black text-white uppercase">
+                                                    {b.lastModifiedBy?.charAt(0) || 'A'}
+                                                </div>
+                                                <div>
+                                                    <p className="font-black text-slate-300 uppercase text-[9px] leading-tight">{b.lastModifiedBy || 'Admin'}</p>
+                                                    <p className="text-[8px] text-slate-500 font-bold">{new Date(b.updatedAt || b.createdAt).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="text-center pr-7">
+                                            <button 
+                                                onClick={() => handleDeleteBatch(b._id)} 
+                                                className="p-2 text-slate-500 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10"
+                                                title="Delete Timetable"
+                                            >
+                                                <FiTrash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
                                 <tr>
-                                    <td colSpan="5" className="p-20 text-center text-slate-300 font-bold uppercase italic tracking-widest">No Scheduled Batches Found</td>
+                                    <td colSpan="5" className="p-16 text-center text-slate-500 font-black uppercase italic tracking-widest">
+                                        No Scheduled Academic Batches Found
+                                    </td>
                                 </tr>
                             )}
                         </tbody>

@@ -32,6 +32,15 @@ export default function StudentProfile() {
         });
     };
 
+    // --- MASK IDENTIFIER: ONLY REVEAL LAST 4 DIGITS ---
+    const maskDocNumber = (val) => {
+        if (!val) return "Not Provided";
+        const cleaned = String(val).replace(/[^0-9a-zA-Z]/g, '');
+        if (cleaned.length < 4) return "•••• •••• ••••";
+        const last4 = cleaned.slice(-4);
+        return `•••• •••• ${last4}`;
+    };
+
     return (
         <div className="w-full pb-12 font-sans">
             <div className="max-w-6xl mx-auto px-4 pt-4">
@@ -126,7 +135,11 @@ export default function StudentProfile() {
                                 <InfoItem icon={<FiHash />} label="Registration ID" value={student?.registrationId} />
                                 <InfoItem icon={<FiMail />} label="Official Email" value={student?.email} />
                                 <InfoItem icon={<FiCalendar />} label="Member Since" value={formatDate(student?.createdAt)} />
-                                <InfoItem icon={<FiShield />} label="Identity Doc" value={student?.aadhaarNo} />
+                                <InfoItem 
+                                    icon={<FiShield />} 
+                                    label="Identity Doc" 
+                                    value={maskDocNumber(student?.aadhaarNo || student?.aadhar)} 
+                                />
                             </div>
                         </div>
 

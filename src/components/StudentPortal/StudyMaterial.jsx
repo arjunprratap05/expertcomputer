@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiEye, FiFileText, FiLoader, FiLock, FiX, FiShield, FiDownloadCloud } from 'react-icons/fi';
+import { 
+    FiEye, FiFileText, FiLoader, FiLock, FiX, 
+    FiShield, FiDownloadCloud, FiRefreshCw, FiBookOpen 
+} from 'react-icons/fi';
 import axios from 'axios';
 
 export default function StudyMaterial() {
@@ -14,67 +17,106 @@ export default function StudyMaterial() {
     const loadMaterials = useCallback(async (showLoader = true) => {
         if (showLoader) setLoading(true);
         setError(null);
+
         try {
             const studentRaw = localStorage.getItem("studentData");
             const token = localStorage.getItem("studentToken");
             
             if (!studentRaw || !token) {
-                setError("Session expired. Please login again.");
+                setError("Session expired or missing. Please log in again.");
                 return;
             }
 
             const student = JSON.parse(studentRaw);
             const collectedIds = [];
 
+            // 1. Extract batch IDs from activeBatches (handles ObjectIds and populated objects)
             if (Array.isArray(student.activeBatches)) {
                 student.activeBatches.forEach(b => {
                     if (!b) return;
                     if (typeof b === 'string') collectedIds.push(b);
-                    else if (b._id) collectedIds.push(b._id);
+                    else if (b._id) collectedIds.push(b._id.toString());
                 });
             }
 
+            // 2. Extract from singular batchId field
             if (student.batchId) {
                 const flatId = typeof student.batchId === 'object' ? student.batchId._id : student.batchId;
-                if (flatId) collectedIds.push(flatId);
+                if (flatId) collectedIds.push(flatId.toString());
+            }
+
+            // 3. Extract batch IDs from multi-course enrollments
+            if (Array.isArray(student.enrollments)) {
+                student.enrollments.forEach(e => {
+                    if (e.batchId) {
+                        const enBatch = typeof e.batchId === 'object' ? e.batchId._id : e.batchId;
+                        if (enBatch) collectedIds.push(enBatch.toString());
+                    }
+                });
             }
 
             const batchIds = [...new Set(collectedIds)].filter(Boolean);
-            if (batchIds.length === 0) { setLoading(false); return; }
 
+            // 4. Collect student courses (both primary and multi-enrollments)
             const studentAssignedCourses = [];
-            if (student.course) studentAssignedCourses.push(student.course.toLowerCase().trim());
+            if (student.course) {
+                studentAssignedCourses.push(student.course);
+                studentAssignedCourses.push(student.course.toLowerCase().trim());
+            }
             
             if (Array.isArray(student.enrollments)) {
                 student.enrollments.forEach(e => {
-                    if (e.course) studentAssignedCourses.push(e.course.toLowerCase().trim());
+                    if (e.course) {
+                        studentAssignedCourses.push(e.course);
+                        studentAssignedCourses.push(e.course.toLowerCase().trim());
+                    }
                 });
             }
 
+            // 5. Query LMS Multi-Sync Route
             const res = await axios.post(`${API_BASE}/lms/sync-multi`, { 
                 batchIds, 
-                explicitCourses: studentAssignedCourses 
+                explicitCourses: [...new Set(studentAssignedCourses)]
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (res.data.success) {
-                const serverMaterials = res.data.data?.materials || [];
-                setMaterials(serverMaterials);
+            let serverMaterials = res.data?.data?.materials || [];
+
+            // 6. Safe Student Fallback (only triggered if sync returns zero items)
+            if (serverMaterials.length === 0) {
+                try {
+                    const fallbackRes = await axios.get(`${API_BASE}/lms/student/materials`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    
+                    const allDocs = fallbackRes.data?.data || fallbackRes.data?.materials || [];
+                    const normalizedCourses = studentAssignedCourses.map(c => c.toLowerCase());
+                    
+                    serverMaterials = allDocs.filter(doc => {
+                        const docCourse = (doc.course || "").toLowerCase();
+                        return normalizedCourses.some(sc => sc.includes(docCourse) || docCourse.includes(sc));
+                    });
+
+                    if (serverMaterials.length === 0 && allDocs.length > 0) {
+                        serverMaterials = allDocs;
+                    }
+                } catch {
+                    // Gracefully handle if route is not enabled on backend
+                }
             }
+
+            setMaterials(serverMaterials);
         } catch (err) { 
-            console.error("Vault sync failed", err);
-            setError("Unable to sync vault. Check connection.");
+            console.error("Vault sync error:", err);
+            setError("Unable to sync vault. Verify network connection.");
         } finally { 
-            setLoading(false); 
+            if (showLoader) setLoading(false); 
         }
     }, [API_BASE]);
 
     useEffect(() => {
-        loadMaterials();
-        const handleSync = () => loadMaterials(false);
-        window.addEventListener("profileSynced", handleSync);
-        return () => window.removeEventListener("profileSynced", handleSync);
+        loadMaterials(true);
     }, [loadMaterials]);
 
     const handlePreview = async (id, title) => {
@@ -90,101 +132,149 @@ export default function StudyMaterial() {
             setPreviewTitle(title);
             setPreviewUrl(url); 
         } catch (err) { 
-            setError("Permission Denied: Unable to fetch resource."); 
+            console.error("Preview error:", err);
+            setError("Permission denied: Unable to access protected document."); 
         }
     };
 
-    if (loading) return (
-        <div className="h-96 flex flex-col justify-center items-center gap-4">
-            <FiLoader className="animate-spin text-4xl text-[#F37021]" />
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic">Unlocking Course Vault...</p>
-        </div>
-    );
+    if (loading) {
+        return (
+            <div className="h-96 flex flex-col justify-center items-center gap-3">
+                <FiLoader className="animate-spin text-3xl text-[#F37021]" />
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest italic">
+                    Unlocking Resource Vault...
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <div className="w-full space-y-10 pb-20 text-left max-w-7xl mx-auto px-1 mt-4">
-            <header className="flex flex-col gap-2">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-slate-900/80 border border-slate-700 text-[#F37021] rounded-2xl shadow-inner">
-                        <FiShield size={24} />
+        <div className="w-full space-y-8 pb-16 text-left max-w-7xl mx-auto px-2">
+            
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-6">
+                <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-orange-50 text-[#F37021] rounded-2xl border border-orange-100 shadow-xs">
+                        <FiBookOpen size={24} />
                     </div>
                     <div>
-                        <h2 className="text-3xl font-black text-white uppercase italic leading-none tracking-tighter">
-                            Course <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-[#F37021] to-amber-200">Vault</span>
+                        <h2 className="text-2xl sm:text-3xl font-black text-[#1A5F7A] uppercase italic leading-none tracking-tight">
+                            Course <span className="text-[#F37021]">Vault</span>
                         </h2>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">
-                            {materials.length} Premium Learning Resources Synchronized
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                            {materials.length} Verified Document{materials.length === 1 ? '' : 's'} Synchronized
                         </p>
                     </div>
                 </div>
-            </header>
 
+                <button 
+                    onClick={() => loadMaterials(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95"
+                >
+                    <FiRefreshCw size={13} /> Sync Vault
+                </button>
+            </div>
+
+            {/* Error Banner */}
             {error && (
-                <div className="bg-red-500/10 p-5 rounded-[2rem] border border-red-500/20 flex items-center gap-4 text-red-400 shadow-sm backdrop-blur-md">
-                    <FiLock size={20} className="shrink-0" />
-                    <p className="text-[10px] font-black uppercase tracking-tight leading-relaxed">{error}</p>
+                <div className="bg-red-50 p-4 rounded-2xl border border-red-200 flex items-center gap-3 text-red-600 shadow-xs">
+                    <FiLock size={18} className="shrink-0" />
+                    <p className="text-xs font-bold uppercase tracking-wide leading-relaxed">{error}</p>
                 </div>
             )}
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+            {/* Materials Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {materials.map((item) => (
-                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} key={item._id} viewport={{ once: true }}
-                        className="bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] md:rounded-[3rem] shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-slate-800 group hover:border-[#F37021]/50 hover:shadow-[0_10px_30px_rgba(243,112,33,0.15)] transition-all duration-500 flex flex-col h-full"
+                    <motion.div 
+                        initial={{ opacity: 0, y: 15 }} 
+                        whileInView={{ opacity: 1, y: 0 }} 
+                        key={item._id} 
+                        viewport={{ once: true }}
+                        className="bg-white p-6 rounded-3xl shadow-xs border border-slate-200 hover:border-orange-300 hover:shadow-md transition-all duration-300 flex flex-col justify-between h-full group"
                     >
-                        <div className="w-14 h-14 bg-slate-950 border border-slate-700 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
-                            <FiFileText className="text-2xl text-[#F37021] group-hover:text-orange-400 transition-colors duration-500" />
-                        </div>
-                        
-                        <div className="flex-1 flex flex-col">
-                            <h3 className="font-black text-white mb-2 uppercase text-[15px] italic leading-tight group-hover:text-orange-300 transition-colors line-clamp-3">
+                        <div>
+                            <div className="w-12 h-12 bg-orange-50 border border-orange-100 text-[#F37021] rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                                <FiFileText size={22} />
+                            </div>
+                            
+                            <h3 className="font-black text-[#1A5F7A] text-sm sm:text-base uppercase italic leading-tight group-hover:text-[#F37021] transition-colors line-clamp-2">
                                 {item.title}
                             </h3>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-10 line-clamp-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1.5 line-clamp-1">
                                 {item.course}
                             </p>
                         </div>
                         
-                        <button onClick={() => handlePreview(item._id, item.title)} 
-                            className="w-full py-4 bg-slate-800/80 hover:bg-gradient-to-r hover:from-[#F37021] hover:to-orange-600 text-slate-300 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 border border-slate-700 hover:border-transparent shadow-sm hover:shadow-[0_8px_20px_rgba(243,112,33,0.3)] shrink-0"
-                        >
-                            <FiEye size={16} /> Open Resource
-                        </button>
+                        <div className="mt-6 pt-4 border-t border-slate-100">
+                            <button 
+                                onClick={() => handlePreview(item._id, item.title)} 
+                                className="w-full py-3 bg-slate-50 hover:bg-[#1A5F7A] text-[#1A5F7A] hover:text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 border border-slate-200 hover:border-transparent active:scale-95 shadow-xs"
+                            >
+                                <FiEye size={14} /> Open Document
+                            </button>
+                        </div>
                     </motion.div>
                 ))}
             </div>
 
-            {/* PREVIEW CONTAINER OVERLAY */}
+            {/* Empty State */}
+            {materials.length === 0 && !error && (
+                <div className="text-center py-20 px-6 bg-white rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center shadow-xs">
+                    <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center mb-4 text-[#1A5F7A]">
+                        <FiShield size={28} />
+                    </div>
+                    <h4 className="text-[#1A5F7A] font-black uppercase italic text-lg tracking-tight">
+                        Vault Standing By
+                    </h4>
+                    <p className="text-slate-400 font-bold text-xs uppercase tracking-wider mt-2 max-w-sm leading-relaxed">
+                        No instructional resources or syllabi have been published for your enrolled tracks yet.
+                    </p>
+                </div>
+            )}
+
+            {/* PDF Embedded Modal */}
             <AnimatePresence>
                 {previewUrl && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-                        className="fixed inset-0 z-[1000] bg-[#070D1D]/95 backdrop-blur-xl flex flex-col"
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        className="fixed inset-0 z-[1000] bg-slate-900/70 backdrop-blur-sm flex flex-col p-4 md:p-8"
                     >
-                        <div className="flex justify-between items-center p-4 md:p-6 text-white w-full border-b border-slate-800 bg-slate-900/50">
+                        <div className="bg-white rounded-t-2xl px-6 py-4 border-b border-slate-200 flex justify-between items-center shadow-sm">
                             <div className="flex items-center gap-3 min-w-0 pr-4">
-                                <div className="p-2 bg-orange-500/10 border border-orange-500/20 text-[#F37021] rounded-lg shrink-0">
+                                <div className="p-2 bg-orange-50 text-[#F37021] rounded-lg shrink-0">
                                     <FiDownloadCloud size={18} />
                                 </div>
-                                <h3 className="font-black uppercase italic text-sm md:text-lg tracking-tight truncate">{previewTitle}</h3>
+                                <h3 className="font-black text-[#1A5F7A] uppercase italic text-sm md:text-base truncate">
+                                    {previewTitle}
+                                </h3>
                             </div>
-                            <button onClick={() => { window.URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} 
-                                className="p-2.5 md:p-3 bg-slate-800 border border-slate-700 text-slate-400 hover:text-red-400 hover:bg-slate-800 hover:border-red-900/50 rounded-xl transition-colors shadow-sm shrink-0"
+                            <button 
+                                onClick={() => { 
+                                    window.URL.revokeObjectURL(previewUrl); 
+                                    setPreviewUrl(null); 
+                                }} 
+                                className="p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-slate-50 transition-colors"
                             >
                                 <FiX size={20} />
                             </button>
                         </div>
-                        <div className="flex-1 w-full h-full p-2 md:p-8" onContextMenu={(e) => e.preventDefault()}>
-                            <div className="w-full h-full md:rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-800 bg-slate-900">
-                                <object 
-                                    data={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
-                                    type="application/pdf" 
-                                    className="w-full h-full"
-                                >
-                                    <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-4">
-                                        <FiFileText size={48} className="opacity-50" />
-                                        <p className="text-sm font-bold uppercase tracking-widest text-center px-4">Browser does not support direct PDF embedding.</p>
-                                    </div>
-                                </object>
-                            </div>
+
+                        <div className="flex-1 w-full bg-slate-100 rounded-b-2xl overflow-hidden border border-t-0 border-slate-200 shadow-2xl" onContextMenu={(e) => e.preventDefault()}>
+                            <object 
+                                data={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                                type="application/pdf" 
+                                className="w-full h-full"
+                            >
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-3 p-6">
+                                    <FiFileText size={42} className="opacity-40" />
+                                    <p className="text-xs font-bold uppercase tracking-wider text-center">
+                                        Browser does not support direct PDF embedding.
+                                    </p>
+                                </div>
+                            </object>
                         </div>
                     </motion.div>
                 )}
