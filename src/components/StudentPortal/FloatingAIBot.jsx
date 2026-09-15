@@ -5,11 +5,23 @@ import { FiMessageSquare, FiX, FiSend, FiCpu, FiLoader, FiMinimize2, FiImage } f
 export default function FloatingAIBot() {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState('');
+    
+    // Minor update: Let the student know they can ask for images!
     const [messages, setMessages] = useState([
-        { role: 'ai', text: 'Hi! I am your Expert Academy AI Assistant. Need help with your syllabus or code?' }
+        { role: 'ai', text: 'Hi! I am your Expert Academy AI Assistant. Need help with your syllabus, code, or want me to generate an image?' }
     ]);
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
+
+    // 1. ADDED: Generate a persistent Session ID so the backend remembers the chat
+    const [sessionId] = useState(() => {
+        let sid = localStorage.getItem('student_chat_session');
+        if (!sid) {
+            sid = Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('student_chat_session', sid);
+        }
+        return sid;
+    });
 
     // Auto-scroll to the bottom when a new message appears
     const scrollToBottom = () => {
@@ -35,10 +47,14 @@ export default function FloatingAIBot() {
             // BEST PRACTICE: Dynamically fetch the Base URL from Vite's environment variables
             const API_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:5000";
 
+            // 2. FIXED: Included sessionId in the payload!
             const response = await fetch(`${API_URL}/lms/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMessage })
+                body: JSON.stringify({ 
+                    message: userMessage,
+                    sessionId: sessionId 
+                })
             });
 
             const data = await response.json();

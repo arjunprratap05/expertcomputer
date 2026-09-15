@@ -5,8 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiMessageSquare, FiX, FiSend } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 
-// PROD TIP: Use a simple random string or install 'uuid'
 const generateSessionId = () => Math.random().toString(36).substring(2, 15);
+
+// Helper to get formatted current time (e.g., "10:26 AM")
+const getCurrentTime = () => {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 import expertcomputerlogo from '../assets/expertcomputerlogo.png'; 
 
@@ -14,19 +18,16 @@ export default function ChatBot() {
     const location = useLocation();
     const path = location.pathname;
 
-    // Define paths where the chatbot should NOT appear (prevents overlapping admin/student logins)
     const hideChatPaths = ['/admin', '/student', '/login', '/dashboard'];
     const shouldHideChat = hideChatPaths.some((restrictedRoute) => 
         path.startsWith(restrictedRoute)
     );
 
-    // If on admin or student portals, do not render the widget at all
     if (shouldHideChat) {
         return null;
     }
 
     const [isOpen, setIsOpen] = useState(false);
-    // Persist sessionId for the duration of the browser tab
     const [sessionId] = useState(() => {
         const saved = sessionStorage.getItem("eca_ai_session");
         if (saved) return saved;
@@ -35,8 +36,13 @@ export default function ChatBot() {
         return newId;
     });
 
+    // Added timestamp to initial state
     const [messages, setMessages] = useState([
-        { sender: "bot", text: "Hi! I'm Expert Academy AI. What course would you like to learn about today?" }
+        { 
+            sender: "bot", 
+            text: "Hi! I'm Expert Academy AI. What course would you like to learn about today?",
+            timestamp: getCurrentTime()
+        }
     ]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
@@ -52,42 +58,58 @@ export default function ChatBot() {
         if (!msg.trim()) return;
         const API_URL = import.meta.env.VITE_API_BASE_URL;
         
-        setMessages(prev => [...prev, { sender: "user", text: msg }]);
+        // Save user message with current time
+        setMessages(prev => [...prev, { sender: "user", text: msg, timestamp: getCurrentTime() }]);
         setInput("");
         setIsTyping(true);
 
         try {
-            // SYNCED WITH BACKEND: Added sessionId to the payload
-            const { data } = await axios.post(`${API_URL}/assistant/process`, { 
+            const { data } = await axios.post(`${API_URL}/assistant/chat`, { 
                 type: 'chat', 
                 message: msg,
-                sessionId: sessionId // CRITICAL: Keeps the Name -> Email flow alive
+                sessionId: sessionId 
             });
             
             setIsTyping(false);
             
+            // Save bot response with current time
             if (data.reply === "HANDOVER_TRIGGER") {
                 setMessages(prev => [...prev, { 
                     sender: "bot", 
                     text: "Connecting you to our senior counselor...", 
-                    isHandover: true 
+                    isHandover: true,
+                    timestamp: getCurrentTime()
                 }]);
             } else {
-                setMessages(prev => [...prev, { sender: "bot", text: data.reply }]);
+                setMessages(prev => [...prev, { 
+                    sender: "bot", 
+                    text: data.reply,
+                    timestamp: getCurrentTime()
+                }]);
             }
         } catch (error) {
             setIsTyping(false);
-            setMessages(prev => [...prev, { sender: "bot", text: "Expert AI is syncing. Please try again or visit us at our Patna center." }]);
+            setMessages(prev => [...prev, { 
+                sender: "bot", 
+                text: "Expert AI is syncing. Please try again or visit us at our Patna center.",
+                timestamp: getCurrentTime()
+            }]);
         }
     };
 
     const secureRedirect = async () => {
         const API_URL = import.meta.env.VITE_API_BASE_URL;
-        const { data } = await axios.post(`${API_URL}/assistant/process`, { 
-            type: 'redirect', 
-            agentId: 'counselor_1' // Updated to match your backend agentId logic
-        });
-        window.open(data.url, "_blank");
+        try {
+            const { data } = await axios.post(`${API_URL}/assistant/chat`, { 
+                type: 'redirect', 
+                agentId: 'counselor_1' 
+            });
+            if (data.url) {
+                window.open(data.url, "_blank");
+            }
+        } catch (err) {
+            window.open("https://wa.me/917282983335", "_blank");
+        }
     };
 
     return (
@@ -100,7 +122,7 @@ export default function ChatBot() {
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={() => setIsOpen(true)} 
-                        className="bg-[#1A5F7A] text-white p-5 rounded-full shadow-2xl relative group overflow-hidden"
+                        className="bg-[#1A5F7A] text-white p-5 rounded-full shadow-2xl relative group overflow-hidden cursor-pointer"
                     >
                         <FiMessageSquare size={28} />
                     </motion.button>
@@ -122,7 +144,7 @@ export default function ChatBot() {
                                     <h3 className="text-sm font-bold italic">AI Admissions Desk</h3>
                                 </div>
                             </div>
-                            <button onClick={() => setIsOpen(false)} className="hover:bg-white/10 p-2 rounded-full transition-colors">
+                            <button onClick={() => setIsOpen(false)} className="hover:bg-white/10 p-2 rounded-full transition-colors cursor-pointer">
                                 <FiX size={20} />
                             </button>
                         </div>
@@ -136,20 +158,26 @@ export default function ChatBot() {
                                     key={i} 
                                     className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}
                                 >
-                                    <div className={`max-w-[85%] p-4 text-[12px] font-medium leading-relaxed shadow-sm ${
-                                        m.sender === "user" 
-                                        ? "bg-[#F37021] text-white rounded-[1.5rem_1.5rem_0_1.5rem]" 
-                                        : "bg-white text-slate-700 rounded-[1.5rem_1.5rem_1.5rem_0]"
-                                    }`}>
-                                        {m.text}
-                                        {m.isHandover && (
-                                            <button 
-                                                onClick={secureRedirect} 
-                                                className="mt-4 bg-[#25D366] text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest w-full flex items-center justify-center gap-2 hover:shadow-lg transition-all"
-                                            >
-                                                <FaWhatsapp size={16} /> Contact Human
-                                            </button>
-                                        )}
+                                    <div className="flex flex-col max-w-[85%]">
+                                        <div className={`p-4 text-[12px] font-medium leading-relaxed shadow-sm ${
+                                            m.sender === "user" 
+                                                ? "bg-[#F37021] text-white rounded-[1.5rem_1.5rem_0_1.5rem]" 
+                                                : "bg-white text-slate-700 rounded-[1.5rem_1.5rem_1.5rem_0]"
+                                        }`}>
+                                            {m.text}
+                                            {m.isHandover && (
+                                                <button 
+                                                    onClick={secureRedirect} 
+                                                    className="mt-4 bg-[#25D366] text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest w-full flex items-center justify-center gap-2 hover:shadow-lg transition-all cursor-pointer"
+                                                >
+                                                    <FaWhatsapp size={16} /> Contact Human
+                                                </button>
+                                            )}
+                                        </div>
+                                        {/* Timestamp Display */}
+                                        <span className={`text-[9px] text-slate-400 mt-1.5 px-1 ${m.sender === "user" ? "text-right" : "text-left"}`}>
+                                            {m.timestamp}
+                                        </span>
                                     </div>
                                 </motion.div>
                             ))}
@@ -164,13 +192,13 @@ export default function ChatBot() {
                             <input 
                                 value={input} 
                                 onChange={(e) => setInput(e.target.value)} 
-                                placeholder="Tell me your name or ask about fees..." 
-                                className="flex-grow p-3 bg-slate-50 rounded-2xl outline-none text-sm font-medium focus:bg-white transition-all"
+                                placeholder="Ask about our courses or leave your name..." 
+                                className="flex-grow p-3 bg-slate-50 rounded-2xl outline-none text-sm font-medium focus:bg-white transition-all text-slate-900"
                             />
                             <button 
                                 type="submit" 
                                 disabled={!input.trim() || isTyping}
-                                className="bg-[#1A5F7A] text-white p-3 rounded-2xl hover:bg-[#F37021] transition-all"
+                                className="bg-[#1A5F7A] text-white p-3 rounded-2xl hover:bg-[#F37021] transition-all disabled:opacity-40 cursor-pointer"
                             >
                                 <FiSend />
                             </button>
@@ -185,10 +213,10 @@ export default function ChatBot() {
 function TypingIndicator() {
     return (
         <div className="flex justify-start">
-            <div className="bg-white p-4 rounded-[1.5rem_1.5rem_1.5rem_0] shadow-sm flex gap-1">
-                <span className="w-1 h-1 bg-slate-300 rounded-full animate-bounce" />
-                <span className="w-1 h-1 bg-slate-300 rounded-full animate-bounce [animation-delay:0.2s]" />
-                <span className="w-1 h-1 bg-slate-300 rounded-full animate-bounce [animation-delay:0.4s]" />
+            <div className="bg-white p-4 rounded-[1.5rem_1.5rem_1.5rem_0] shadow-sm flex gap-1 items-center">
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.4s]" />
             </div>
         </div>
     );
