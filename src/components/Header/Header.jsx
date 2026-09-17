@@ -147,25 +147,10 @@ export default function Header() {
                         </Link>
                     </div>
 
-                    {/* MOBILE NAVBAR QUICK ACTIONS */}
-                    <div className="flex lg:hidden items-center gap-2 sm:gap-3">
-                        <Link 
-                            to="/admin/login" 
-                            className="p-2 text-slate-400 hover:text-white transition-colors"
-                            aria-label="Admin Portal"
-                        >
-                            <FiLock size={18} />
-                        </Link>
-                        <Link 
-                            to="/student-login" 
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-wider hover:border-[#F37021] hover:text-white transition-all bg-slate-900/60 backdrop-blur-md"
-                            aria-label="Student ERP Portal"
-                        >
-                            <FiUser size={12} className="text-[#F37021]" /> ERP
-                        </Link>
-                        
+                    {/* MOBILE NAVBAR QUICK ACTIONS (Links removed, only Hamburger remains) */}
+                    <div className="flex lg:hidden items-center">
                         <button 
-                            className="p-2 rounded-xl transition-all text-slate-300 bg-slate-900/60 border border-slate-700/80 backdrop-blur-md hover:bg-slate-800 hover:text-white shadow-lg ml-1"
+                            className="p-2 rounded-xl transition-all text-slate-300 bg-slate-900/60 border border-slate-700/80 backdrop-blur-md hover:bg-slate-800 hover:text-white shadow-lg"
                             onClick={() => setIsMobileMenuOpen(true)}
                             aria-label="Open Menu"
                             aria-expanded={isMobileMenuOpen}
