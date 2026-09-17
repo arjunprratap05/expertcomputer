@@ -4,16 +4,20 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" /> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    
     <title>Expert Computer Academy</title>
 
+    <!-- OPTIMIZATION 1: Preconnect to external domains to speed up DNS resolution -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://www.google-analytics.com" />
+
+    <!-- OPTIMIZATION 2: Razorpay script REMOVED from here to prevent render-blocking -->
+
+    <!-- Google Analytics (Kept async, which is non-blocking) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-V0V6J10RQE"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-V0V6J10RQE');
     </script>
   </head>

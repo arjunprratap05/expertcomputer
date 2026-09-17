@@ -1,20 +1,21 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo, lazy, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './components/Header/Header';
-import Footer from './components/Footer/Footer';
-import ChatBot from './components/chatbot'; 
+// 1. Structural change: Lazy import non-critical components
+const Footer = lazy(() => import('./components/Footer/Footer'));
+const ChatBot = lazy(() => import('./components/chatbot'));
+
 import expertcomputerlogo from './assets/expertcomputerlogo.jpeg';
 
-// Text Animation Variants for Initial Splash
+// Text Animation Variants... [No change needed here]
 const textContainerVariants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
-        transition: { staggerChildren: 0.05, delayChildren: 0.2 }
+        transition: { staggerChildren: 0.05, delayChildren: 0.1 } // Sped up slightly
     }
 };
-
 const letterVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: { 
@@ -28,7 +29,6 @@ export default function Layout() {
     const location = useLocation();
     const isERPPage = location.pathname.startsWith('/erp');
 
-    // 1. Persistent Check: Has the user visited before or logged in/out?
     const hasSeenLoader = useMemo(() => {
         return (
             sessionStorage.getItem("hasSeenLoader") === "true" ||
@@ -36,30 +36,31 @@ export default function Layout() {
         );
     }, []);
 
-    // Only allow loader strictly on the very first visit to the bare root "/"
     const [isLoading, setIsLoading] = useState(() => {
         return location.pathname === '/' && !hasSeenLoader;
     });
 
     useEffect(() => {
-        // Once the user hits any path other than root (login, erp, courses, etc.),
-        // permanently suppress the splash animation across tabs and sessions.
-        if (location.pathname !== '/') {
+        if (location.pathname !== '/' && !hasSeenLoader) {
             sessionStorage.setItem("hasSeenLoader", "true");
             localStorage.setItem("hasSeenLoader", "true");
         }
-    }, [location.pathname]);
+    }, [location.pathname, hasSeenLoader]);
 
+    // OPTIMIZATION 2: Heavy Reduction in arbitrary delay.
     useEffect(() => {
         if (isLoading) {
             document.body.style.overflow = 'hidden';
             
+            // Old 2s delay was the single biggest bottleneck.
+            // Reduced to 400ms to allow branding FCP without hindering perceived performance.
+            // Ideally, this finishes when the first route component mounts, but 400ms is a safe universal improvement.
             const timer = setTimeout(() => {
                 setIsLoading(false);
                 document.body.style.overflow = 'unset';
                 sessionStorage.setItem("hasSeenLoader", "true");
                 localStorage.setItem("hasSeenLoader", "true");
-            }, 2000); 
+            }, 400); // reduced from 2000
 
             return () => {
                 clearTimeout(timer);
@@ -69,7 +70,8 @@ export default function Layout() {
     }, [isLoading]);
 
     return (
-        <div className="relative min-h-screen bg-[#070D1D] selection:bg-[#F37021]/20">
+        // selection:bg-neutral-800 to fix unreadable contrast with Orange
+        <div className="relative min-h-screen bg-[#070D1D] selection:bg-neutral-800 selection:text-[#F37021]">
             
             {/* --- INITIAL ONE-TIME SPLASH LOADER --- */}
             <AnimatePresence>
@@ -78,9 +80,10 @@ export default function Layout() {
                         key="global-loader"
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }} // Faster exit
                         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white"
                     >
+                        {/* Logo Animation ... [Keep standard] */}
                         <div className="relative mb-8">
                             <motion.div 
                                 animate={{ rotate: 360 }} 
@@ -91,15 +94,16 @@ export default function Layout() {
                                 <motion.img 
                                     initial={{ scale: 0.85, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ duration: 0.3 }}
+                                    transition={{ duration: 0.2 }}
                                     src={expertcomputerlogo} 
-                                    alt="Expert Academy" 
+                                    alt="Expert Computer Academy Patna" 
                                     className="w-full h-auto object-contain"
-                                    fetchpriority="high"
+                                    fetchpriority="high" // Critical for logo FCP
                                 />
                             </div>
                         </div>
 
+                        {/* Text Animations ... [Keep standard] */}
                         <motion.div 
                             variants={textContainerVariants}
                             initial="hidden"
@@ -129,39 +133,34 @@ export default function Layout() {
             </AnimatePresence>
 
             {/* --- MAIN APP CONTAINER --- */}
-            <div className={`flex flex-col min-h-screen ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
+            {/* OPTIMIZATION 3: Removed 'opacity-0'. Allows browser to start rendering paths IMMEDIATELY under splash.
+                z-index ensures main content fetches data but doesn't show visually until ready. */}
+            <div className={`flex flex-col min-h-screen ${isLoading ? 'relative z-[-1]' : 'relative z-0'}`}>
                 {!isERPPage && <Header />}
                 
                 <main className="flex-grow flex flex-col relative w-full overflow-hidden">
-                    {/* ERP views mount instantly without transition delays */}
-                    {isERPPage ? (
-                        <Outlet />
-                    ) : (
-                        <motion.div
-                            key={location.pathname}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.15 }}
-                            className="flex-grow flex flex-col w-full"
-                        >
-                            <Outlet /> 
-                        </motion.div>
-                    )}
+                    {/* OPTIMIZATION 4: Outlet already eager inside, no need to add motion delays globally */}
+                    <Outlet />
                 </main>
 
-                {!isERPPage && <Footer />}
-                {!isLoading && !isERPPage && <DelayedChatBot />}
+                {/* OPTIMIZATION 5: Suspense handles lazy loaded Footer/Chatbot bundle */}
+                <Suspense fallback={null}>
+                    {!isERPPage && <Footer />}
+                    {!isLoading && !isERPPage && <DelayedChatBot lazyComponent={ChatBot} />}
+                </Suspense>
             </div>
         </div>
     );
 }
 
 // Deferred Chatbot Initialization to Free Main-Thread on Cold Load
-const DelayedChatBot = memo(() => {
+const DelayedChatBot = memo(({ lazyComponent: Component }) => {
     const [render, setRender] = useState(false);
     useEffect(() => {
+        // Chatbot usually secondary interaction. Defer longer if necessary to free main thread.
+        // OLD was 2s. Keep 2s delay here, but now it's relative to the app showing, not the arbitrary loader timer.
         const t = setTimeout(() => setRender(true), 2000);
         return () => clearTimeout(t);
     }, []);
-    return render ? <ChatBot /> : null;
+    return render ? <Component /> : null;
 });
