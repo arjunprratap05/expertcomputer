@@ -155,21 +155,37 @@ const PremiumTiltCard = ({ children, className }) => {
     );
 };
 
-// --- OPTIMIZED IMAGE LOADER ---
+// --- OPTIMIZED IMAGE LOADER (WITH ERROR HANDLING) ---
 const OptimizedImage = ({ src, alt, className }) => {
     const [isLoaded, setIsLoaded] = useState(false);
+    const [hasError, setHasError] = useState(false);
+
     return (
-        <div className={`relative overflow-hidden ${className}`}>
-            {!isLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#0A192F] animate-pulse rounded-t-2xl">
+        <div className={`relative overflow-hidden bg-slate-900 ${className}`}>
+            {!isLoaded && !hasError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#0A192F] animate-pulse">
                     <FiLoader className="text-[#F37021] animate-spin text-xl" />
                 </div>
             )}
+            
+            {/* If the image fails to load, stop spinning and show a broken image placeholder */}
+            {hasError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#0A192F] border border-red-500/30 text-red-400 text-xs text-center p-2">
+                    Missing Image
+                </div>
+            )}
+
             <img 
                 src={src} 
                 alt={alt} 
                 onLoad={() => setIsLoaded(true)} 
-                className={`transition-all duration-700 ${className} ${isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"}`} 
+                onError={() => {
+                    console.error(`Failed to load image: ${src}`);
+                    setHasError(true);
+                }}
+                className={`transition-all duration-700 ${className} ${
+                    isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                } ${hasError ? "hidden" : ""}`} 
                 loading="lazy" 
             />
         </div>
