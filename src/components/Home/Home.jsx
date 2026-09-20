@@ -12,10 +12,10 @@ import SyllabusModal from "../Modals/SyllabusModal";
 import SEO from "../../components/SEO";
 
 // --- ASSET IMPORTS ---
-import javaPoster from "../../assets/posters/java.png";
-import htmlPoster from "../../assets/posters/html.png";
-import adcaPoster from "../../assets/posters/adca.jpeg";
-import pythonPoster from "../../assets/posters/python.jpeg";
+import javaPoster from "../../assets/posters/java.webp";
+import htmlPoster from "../../assets/posters/html.webp";
+import adcaPoster from "../../assets/posters/adca.webp";
+import pythonPoster from "../../assets/posters/python.webp";
 import schoolImg from '../../assets/ecosystem/schoolcourses.jpeg';
 import collegeImg from '../../assets/ecosystem/collegecourses.jpeg';
 import graduatesImg from '../../assets/ecosystem/graduatescourses.jpg';
@@ -26,18 +26,18 @@ import expertcomuteroffice from '../../assets/expertcomuteroffice.webp';
 import suruchiImg from "../../assets/student-suruchi.jpeg";
 import harshImg from "../../assets/student-harsh.jpeg";
 import ankitImg from "../../assets/student-ankit.jpeg";
-import tallyPoster from "../../assets/posters/Tally.jpeg";
-import genAIPoster from "../../assets/posters/GenerativeAI.jpeg"; 
+import tallyPoster from "../../assets/posters/Tally.webp";
+import genAIPoster from "../../assets/posters/GenerativeAI.webp"; 
 import expertcomputerlogo from '../../assets/expertcomputerlogo.png';
 import AdvancedProgramFullStackPoster from '../../assets/posters/AdvancedProgramFullStack.webp';
-import DSAPoster from '../../assets/posters/DSA.jpeg';
-import ProgrammingusingCProgramPoster from '../../assets/posters/ProgrammingusingC++Program.jpeg';
-import DiplomainComputerApplicationPoster from '../../assets/posters/DiplomainComputerApplication.jpeg';
-import FoundationinITPoster from '../../assets/posters/FoundationinIT.jpeg';
-import msofficePoster from '../../assets/posters/MS-OFFICE.jpeg';
-import AdvanceExcelPoster from '../../assets/posters/AdvanceExcel.jpeg';
+import DSAPoster from '../../assets/posters/DSA.webp';
+import ProgrammingusingCProgramPoster from '../../assets/posters/ProgrammingusingC++Program.webp';
+import DiplomainComputerApplicationPoster from '../../assets/posters/DiplomainComputerApplication.webp';
+import FoundationinITPoster from '../../assets/posters/FoundationinIT.webp';
+import msofficePoster from '../../assets/posters/MS-OFFICE.webp';
+import AdvanceExcelPoster from '../../assets/posters/AdvanceExcel.webp';
 import tallyBootcampPoster from "../../assets/posters/TallyBootcampWebinar.jpeg";
-import CProgrammingPoster from "../../assets/posters/ProgramminginC.jpeg";
+import CProgrammingPoster from "../../assets/posters/ProgramminginC.webp";
 
 // --- LIVE ACADEMY STATUS INDICATOR (OPEN/CLOSED) ---
 const AcademyStatusIndicator = () => {

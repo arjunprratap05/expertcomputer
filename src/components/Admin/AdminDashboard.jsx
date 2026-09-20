@@ -17,6 +17,9 @@ import BatchScheduler from '../Admin/BatchScheduler';
 import QuizManager from '../Admin/QuizManager';
 import WhatsAppLeads from '../Admin/WhatsAppLeads';
 import AdminCertificates from '../Admin/AdminCertificates';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
 
@@ -135,23 +138,116 @@ export default function AdminDashboard() {
         }
     };
 
+    const getNormalizedEnrollments = useCallback((student) => {
+        let list = student.enrollments ? [...student.enrollments] : [];
+        if (list.length === 0 && student.course) {
+            list.push({
+                course: student.course,
+                courseFee: student.totalFee || 0,
+                amountPaid: student.amountPaid || 0,
+                paymentStatus: student.paymentStatus || (student.isApproved ? "VERIFIED" : "PENDING"),
+                transactionId: student.transactionId || "UTR-LEGACY",
+                enrolledAt: student.createdAt
+            });
+        }
+
+        return list.map(en => {
+            let verifiedItemPaid = 0;
+            if (en.amountPaid !== undefined && en.amountPaid !== null && Number(en.amountPaid) !== 0) {
+                verifiedItemPaid = Number(en.amountPaid);
+            } else if (en.transactionId === student.transactionId || list.length === 1) {
+                verifiedItemPaid = Number(student.amountPaid) || 0;
+            }
+
+            return {
+                ...en,
+                courseFee: Number(en.courseFee) || Number(student.totalFee) || 0,
+                amountPaid: verifiedItemPaid,
+                transactionId: en.transactionId || student.transactionId || "UTR-PENDING",
+                enrolledAt: en.enrolledAt || student.createdAt
+            };
+        });
+    }, []);
+
+    const calculateAggregateLedger = useCallback((student) => {
+        const enrolls = getNormalizedEnrollments(student);
+        const total = enrolls.reduce((acc, curr) => acc + (Number(curr.courseFee) || 0), 0);
+        const paid = enrolls.reduce((acc, curr) => acc + (Number(curr.amountPaid) || 0), 0);
+        const due = total - paid;
+        return { total, paid, due: due > 0 ? due : 0 };
+    }, [getNormalizedEnrollments]);
+
+    // --- PROPER LEAD INTELLIGENCE ANALYSIS ---
+    const analyzeLead = useCallback((student) => {
+        // If the backend has strictly calculated it via ML, use that.
+        if (student.sentiment && student.conversionProbability) {
+            return {
+                sentiment: student.sentiment.toLowerCase(),
+                probability: Number(student.conversionProbability)
+            };
+        }
+
+        const ledger = calculateAggregateLedger(student);
+        const enrolls = getNormalizedEnrollments(student);
+        
+        // Calculate Days Since Registration
+        const createdDate = student.createdAt ? new Date(student.createdAt) : new Date();
+        const daysActive = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
+
+        let prob = 50;
+        let sentiment = 'neutral';
+
+        // Proper Heuristic Evaluation
+        if (student.isApproved) {
+            // Fully approved and active student
+            prob = 100;
+            sentiment = 'positive';
+        } else if (ledger.paid > 0 && ledger.due === 0) {
+            // Fully paid, pending manual admin portal approval
+            prob = 95;
+            sentiment = 'positive';
+        } else if (ledger.paid > 0 && ledger.due > 0) {
+            // Partial payment made (High Intent / Positive Lead)
+            prob = 75;
+            sentiment = 'positive';
+        } else if (ledger.paid === 0 && enrolls.length > 0 && daysActive <= 3) {
+            // Fresh lead, currently evaluating courses
+            prob = 60;
+            sentiment = 'neutral';
+        } else if (ledger.paid === 0 && daysActive > 14) {
+            // Stale lead / Ghosted / Urgent Follow-up needed (Negative Lead)
+            prob = 15;
+            sentiment = 'negative';
+        } else {
+            // Standard pending lead (4-14 days active without payment)
+            prob = 40;
+            sentiment = 'neutral';
+        }
+
+        return { sentiment, probability: prob };
+    }, [calculateAggregateLedger, getNormalizedEnrollments]);
+
     const mlOverviewStats = useMemo(() => {
         if (students.length === 0) return { avgProb: 0, positive: 0, neutral: 0, negative: 0 };
         let totalProb = 0;
         let positive = 0, neutral = 0, negative = 0;
+        
         students.forEach(s => {
-            totalProb += (s.conversionProbability || 50);
-            if (s.sentiment === 'positive') positive++;
-            else if (s.sentiment === 'negative') negative++;
+            const analysis = analyzeLead(s);
+            totalProb += analysis.probability;
+            
+            if (analysis.sentiment === 'positive') positive++;
+            else if (analysis.sentiment === 'negative') negative++;
             else neutral++;
         });
+        
         return {
             avgProb: Math.round(totalProb / students.length),
             positive,
             neutral,
             negative
         };
-    }, [students]);
+    }, [students, analyzeLead]);
 
     const webPerformanceMetrics = useMemo(() => [
         { label: "First Contentful Paint (FCP)", value: "0.74s", status: "Optimal", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" },
@@ -197,37 +293,6 @@ export default function AdminDashboard() {
         if (cleanBatchName.length > 2 && (cleanCourse.includes(cleanBatchName) || cleanBatchName.includes(cleanCourse))) return true;
 
         return false;
-    }, []);
-
-    const getNormalizedEnrollments = useCallback((student) => {
-        let list = student.enrollments ? [...student.enrollments] : [];
-        if (list.length === 0 && student.course) {
-            list.push({
-                course: student.course,
-                courseFee: student.totalFee || 0,
-                amountPaid: student.amountPaid || 0,
-                paymentStatus: student.paymentStatus || (student.isApproved ? "VERIFIED" : "PENDING"),
-                transactionId: student.transactionId || "UTR-LEGACY",
-                enrolledAt: student.createdAt
-            });
-        }
-
-        return list.map(en => {
-            let verifiedItemPaid = 0;
-            if (en.amountPaid !== undefined && en.amountPaid !== null && Number(en.amountPaid) !== 0) {
-                verifiedItemPaid = Number(en.amountPaid);
-            } else if (en.transactionId === student.transactionId || list.length === 1) {
-                verifiedItemPaid = Number(student.amountPaid) || 0;
-            }
-
-            return {
-                ...en,
-                courseFee: Number(en.courseFee) || Number(student.totalFee) || 0,
-                amountPaid: verifiedItemPaid,
-                transactionId: en.transactionId || student.transactionId || "UTR-PENDING",
-                enrolledAt: en.enrolledAt || student.createdAt
-            };
-        });
     }, []);
 
     const analyzeFinances = useCallback((studentList) => {
@@ -299,14 +364,6 @@ export default function AdminDashboard() {
             .sort((a, b) => b.enrollments - a.enrollments)
             .slice(0, 4);
     }, [students, getNormalizedEnrollments]);
-
-    const calculateAggregateLedger = useCallback((student) => {
-        const enrolls = getNormalizedEnrollments(student);
-        const total = enrolls.reduce((acc, curr) => acc + (Number(curr.courseFee) || 0), 0);
-        const paid = enrolls.reduce((acc, curr) => acc + (Number(curr.amountPaid) || 0), 0);
-        const due = total - paid;
-        return { total, paid, due: due > 0 ? due : 0 };
-    }, [getNormalizedEnrollments]);
 
     const fetchEverything = useCallback(async () => {
         if (!token) return;
@@ -382,7 +439,7 @@ export default function AdminDashboard() {
 
     const handleCreateCoupon = async (e) => {
         e.preventDefault();
-    
+
         const newCode = (couponForm.code || "").toUpperCase().trim();
         if (!newCode) return triggerToast("ENTER A COUPON CODE");
         if (!couponForm.discountValue || Number(couponForm.discountValue) <= 0) {
@@ -391,20 +448,20 @@ export default function AdminDashboard() {
         if (!couponForm.maxUsage || Number(couponForm.maxUsage) <= 0) {
             return triggerToast("ENTER MAX USAGE LIMIT");
         }
-    
+
         const codeExists = Array.isArray(coupons) && coupons.some(
             c => (c?.code || "").toUpperCase().trim() === newCode
         );
-    
+
         if (codeExists) {
             triggerToast("COUPON CODE ALREADY EXISTS");
             return;
         }
-    
+
         try {
             const rawApi = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
             const API_BASE = rawApi.endsWith('/api') ? rawApi : `${rawApi}/api`;
-    
+
             const payload = {
                 ...couponForm,
                 code: newCode,
@@ -412,23 +469,17 @@ export default function AdminDashboard() {
                 discountValue: Number(couponForm.discountValue),
                 courseCode: couponForm.courseCode || "ALL"
             };
-    
+
             const res = await axios.post(`${API_BASE}/admin/coupons`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-    
+
             if (res.data?.success || res.status === 200 || res.status === 201) {
                 triggerToast("COUPON ACTIVATED SUCCESSFULLY");
                 setCouponForm({
-                    code: "",
-                    description: "",
-                    maxUsage: "",
-                    isActive: true,
-                    validFrom: "",
-                    validTo: "",
-                    courseCode: "ALL",
-                    discountType: "PERCENTAGE",
-                    discountValue: ""
+                    code: "", description: "", maxUsage: "", isActive: true,
+                    validFrom: "", validTo: "", courseCode: "ALL",
+                    discountType: "PERCENTAGE", discountValue: ""
                 });
                 fetchEverything();
             }
@@ -579,7 +630,7 @@ export default function AdminDashboard() {
 
                     {/* Time-Series Trend */}
                     <div className="lg:col-span-2 bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex justify-between items-center mb-2">
                             <div>
                                 <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
                                     <FiTrendingUp className="text-[#F37021]" /> Time-Series Revenue Trend
@@ -591,33 +642,84 @@ export default function AdminDashboard() {
                             </span>
                         </div>
 
-                        <div className="h-44 w-full flex items-end gap-3 pt-6 pb-2 px-2 border-b border-slate-800">
-                            {Object.keys(monthlyHistory).length > 0 ? (
-                                Object.entries(monthlyHistory).map(([month, rev], idx) => {
-                                    const maxVal = Math.max(...Object.values(monthlyHistory), 1000);
-                                    const heightPercent = Math.max((rev / maxVal) * 100, 12);
-                                    return (
-                                        <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group relative">
-                                            <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950 text-white text-[8px] font-black px-2.5 py-1 rounded-md uppercase whitespace-nowrap shadow-md pointer-events-none z-10 border border-slate-800">
-                                                {month}: ₹{rev.toLocaleString()}
-                                            </div>
-                                            <div
-                                                className="w-full bg-[#1A5F7A] group-hover:bg-[#F37021] rounded-t-lg transition-all duration-300 shadow-sm"
-                                                style={{ height: `${heightPercent}%` }}
+                        {/* RECHARTS IMPLEMENTATION */}
+                        <div className="h-56 w-full mt-4 border-b border-slate-800 pb-2">
+                            {Object.keys(monthlyHistory).length > 0 ? (() => {
+                                // Smart chronological sorting with year-wise boundary detection
+                                let previousYear = null;
+
+                                const chartData = Object.entries(monthlyHistory)
+                                    .sort(([a], [b]) => a.localeCompare(b))
+                                    .map(([monthStr, rev]) => {
+                                        const [year, monthNum] = monthStr.split('-');
+                                        const date = new Date(year, parseInt(monthNum) - 1);
+                                        const monthName = date.toLocaleString('en-US', { month: 'short' });
+
+                                        let label = monthName;
+
+                                        // Once the year changes, attach the year to the X-Axis label
+                                        if (year !== previousYear) {
+                                            label = `${monthName} ${year}`;
+                                            previousYear = year;
+                                        }
+
+                                        return {
+                                            monthLabel: label,
+                                            fullMonth: date.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+                                            revenue: rev
+                                        };
+                                    });
+
+                                return (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#F37021" stopOpacity={0.4} />
+                                                    <stop offset="95%" stopColor="#F37021" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                            <XAxis
+                                                dataKey="monthLabel"
+                                                stroke="#64748b"
+                                                fontSize={10}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={10}
                                             />
-                                            <span className="text-[8px] font-black text-slate-500 uppercase truncate w-full text-center">
-                                                {month.split('-')[1]}M
-                                            </span>
-                                        </div>
-                                    );
-                                })
-                            ) : (
+                                            <YAxis
+                                                stroke="#64748b"
+                                                fontSize={10}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px', color: '#fff' }}
+                                                itemStyle={{ color: '#F37021', fontWeight: '900' }}
+                                                formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                                                labelFormatter={(label, payload) => payload?.[0]?.payload?.fullMonth || label}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="revenue"
+                                                stroke="#F37021"
+                                                strokeWidth={3}
+                                                fillOpacity={1}
+                                                fill="url(#colorRev)"
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                );
+                            })() : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-500 text-[10px] font-black uppercase">
                                     Waiting for telemetry entries...
                                 </div>
                             )}
                         </div>
-                        <div className="flex justify-between items-center mt-3 text-[10px] font-bold text-slate-400 uppercase">
+
+                        <div className="flex justify-between items-center mt-3 text-[10px] font-bold text-slate-400 uppercase pt-2">
                             <span>Timeline Origin</span>
                             <span className="text-[#F37021] font-black">Current Period ({selectedMonth})</span>
                         </div>
@@ -627,15 +729,15 @@ export default function AdminDashboard() {
                     <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
                         <div>
                             <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
-                                <FiCpu className="text-[#F37021]" /> Deep ML Analytics
+                                <FiCpu className="text-[#F37021]" /> Deep Lead Intelligence
                             </h4>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Neural classification telemetry.</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Heuristic classification of lead intent.</p>
                         </div>
 
                         <div className="space-y-4 my-5">
                             <div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 mb-1">
-                                    <span>Positive Sentiment</span>
+                                    <span>Positive Intent (Hot)</span>
                                     <span className="text-emerald-400 font-bold">{mlOverviewStats.positive} Leads</span>
                                 </div>
                                 <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
@@ -645,7 +747,7 @@ export default function AdminDashboard() {
 
                             <div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 mb-1">
-                                    <span>Neutral Sentiment</span>
+                                    <span>Neutral / Evaluating</span>
                                     <span className="text-slate-400 font-bold">{mlOverviewStats.neutral} Leads</span>
                                 </div>
                                 <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
@@ -655,7 +757,7 @@ export default function AdminDashboard() {
 
                             <div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 mb-1">
-                                    <span>Negative / Urgent</span>
+                                    <span>Stale / Urgent Follow-up</span>
                                     <span className="text-red-400 font-bold">{mlOverviewStats.negative} Leads</span>
                                 </div>
                                 <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
@@ -834,6 +936,7 @@ export default function AdminDashboard() {
                             const ledger = calculateAggregateLedger(student);
                             const enrollments = getNormalizedEnrollments(student);
                             const isExpanded = expandedStudent === student._id;
+                            const leadAnalysis = analyzeLead(student); // Dynamic sentiment & prob
 
                             const studentMatchingBatches = availableBatches.filter(batch =>
                                 enrollments.some(en => isCourseBatchMatch(en.course, batch.courseId, batch.courseName))
@@ -860,13 +963,13 @@ export default function AdminDashboard() {
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${student.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                                                        student.sentiment === 'negative' ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${leadAnalysis.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+                                                        leadAnalysis.sentiment === 'negative' ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
                                                     }`}>
-                                                    Sentiment: {student.sentiment || 'Neutral'}
+                                                    Sentiment: {leadAnalysis.sentiment}
                                                 </span>
                                                 <span className="bg-orange-500/10 text-[#F37021] border border-orange-500/30 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider">
-                                                    Conv: {student.conversionProbability || 50}%
+                                                    Conv: {leadAnalysis.probability}%
                                                 </span>
                                             </div>
                                         </td>
@@ -982,32 +1085,31 @@ export default function AdminDashboard() {
             Array.isArray(coupons) &&
             coupons.some(c => (c?.code || "").toUpperCase().trim() === couponForm.code.trim().toUpperCase())
         );
-    
+
         return (
             <div className="space-y-8 max-w-5xl mx-auto">
                 <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden border-t-8 border-[#1A5F7A]">
                     <div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-900/50">
-                        <div className="p-2.5 bg-orange-500/10 text-[#F37021] rounded-xl border border-orange-500/20"><FiTag size={20}/></div>
+                        <div className="p-2.5 bg-orange-500/10 text-[#F37021] rounded-xl border border-orange-500/20"><FiTag size={20} /></div>
                         <div>
                             <h3 className="text-lg font-black text-white uppercase italic leading-none">Coupon Deployment Engine</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Generate and distribute tuition benefits</p>
                         </div>
                     </div>
-                    
+
                     <form onSubmit={handleCreateCoupon} className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Activation Code</label>
                                 <div className="relative">
                                     <FiTag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                    <input 
-                                        required 
-                                        className={`w-full pl-11 pr-4 py-3.5 bg-slate-900/80 border rounded-2xl font-black uppercase text-sm text-white outline-none focus:border-[#F37021] transition-all shadow-inner ${
-                                            isDuplicateCoupon ? 'border-red-500 ring-1 ring-red-500/50' : 'border-slate-800'
-                                        }`} 
-                                        placeholder="E.g. DIWALI2026" 
-                                        value={couponForm.code} 
-                                        onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})} 
+                                    <input
+                                        required
+                                        className={`w-full pl-11 pr-4 py-3.5 bg-slate-900/80 border rounded-2xl font-black uppercase text-sm text-white outline-none focus:border-[#F37021] transition-all shadow-inner ${isDuplicateCoupon ? 'border-red-500 ring-1 ring-red-500/50' : 'border-slate-800'
+                                            }`}
+                                        placeholder="E.g. DIWALI2026"
+                                        value={couponForm.code}
+                                        onChange={e => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
                                     />
                                 </div>
                                 {isDuplicateCoupon && (
@@ -1016,64 +1118,64 @@ export default function AdminDashboard() {
                                     </p>
                                 )}
                             </div>
-    
+
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Usage Limit</label>
                                 <div className="relative">
                                     <FiUsers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                    <input 
-                                        required 
-                                        type="number" 
-                                        min="1" 
-                                        className="w-full pl-11 pr-4 py-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-sm text-white outline-none focus:border-[#F37021] transition-all shadow-inner" 
-                                        placeholder="100" 
-                                        value={couponForm.maxUsage} 
-                                        onChange={e => setCouponForm({...couponForm, maxUsage: e.target.value})} 
+                                    <input
+                                        required
+                                        type="number"
+                                        min="1"
+                                        className="w-full pl-11 pr-4 py-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-sm text-white outline-none focus:border-[#F37021] transition-all shadow-inner"
+                                        placeholder="100"
+                                        value={couponForm.maxUsage}
+                                        onChange={e => setCouponForm({ ...couponForm, maxUsage: e.target.value })}
                                     />
                                 </div>
                             </div>
                         </div>
-    
+
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Campaign Description</label>
-                            <textarea 
-                                className="w-full p-4 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-xs text-white outline-none focus:border-[#F37021] min-h-[80px] resize-none transition-all shadow-inner placeholder:text-slate-600" 
-                                placeholder="Optional summary of this promotion..." 
-                                value={couponForm.description} 
-                                onChange={e => setCouponForm({...couponForm, description: e.target.value})} 
+                            <textarea
+                                className="w-full p-4 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-xs text-white outline-none focus:border-[#F37021] min-h-[80px] resize-none transition-all shadow-inner placeholder:text-slate-600"
+                                placeholder="Optional summary of this promotion..."
+                                value={couponForm.description}
+                                onChange={e => setCouponForm({ ...couponForm, description: e.target.value })}
                             />
                         </div>
-    
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Start Date</label>
-                                <input 
-                                    required 
-                                    type="date" 
-                                    className="w-full p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-xs outline-none focus:border-[#F37021] text-white shadow-inner" 
-                                    value={couponForm.validFrom} 
-                                    onChange={e => setCouponForm({...couponForm, validFrom: e.target.value})} 
+                                <input
+                                    required
+                                    type="date"
+                                    className="w-full p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-xs outline-none focus:border-[#F37021] text-white shadow-inner"
+                                    value={couponForm.validFrom}
+                                    onChange={e => setCouponForm({ ...couponForm, validFrom: e.target.value })}
                                 />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Expiry Date</label>
-                                <input 
-                                    required 
-                                    type="date" 
-                                    className="w-full p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-xs outline-none focus:border-[#F37021] text-white shadow-inner" 
-                                    value={couponForm.validTo} 
-                                    onChange={e => setCouponForm({...couponForm, validTo: e.target.value})} 
+                                <input
+                                    required
+                                    type="date"
+                                    className="w-full p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl font-bold text-xs outline-none focus:border-[#F37021] text-white shadow-inner"
+                                    value={couponForm.validTo}
+                                    onChange={e => setCouponForm({ ...couponForm, validTo: e.target.value })}
                                 />
                             </div>
                         </div>
-    
+
                         <div className="p-6 bg-slate-900/50 rounded-2xl border border-slate-800 grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase text-[#F37021] ml-1">Scope</label>
-                                <select 
-                                    className="w-full p-3.5 bg-[#0A192F] border border-slate-800 rounded-xl font-bold text-xs outline-none cursor-pointer text-slate-200 focus:border-[#F37021]" 
-                                    value={couponForm.courseCode} 
-                                    onChange={e => setCouponForm({...couponForm, courseCode: e.target.value})}
+                                <select
+                                    className="w-full p-3.5 bg-[#0A192F] border border-slate-800 rounded-xl font-bold text-xs outline-none cursor-pointer text-slate-200 focus:border-[#F37021]"
+                                    value={couponForm.courseCode}
+                                    onChange={e => setCouponForm({ ...couponForm, courseCode: e.target.value })}
                                 >
                                     <option value="ALL">All Programs (Global)</option>
                                     {allCourses.map(c => <option key={c.id || c.title} value={c.title}>{c.title}</option>)}
@@ -1082,21 +1184,19 @@ export default function AdminDashboard() {
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase text-[#F37021] ml-1">Mode</label>
                                 <div className="flex bg-[#0A192F] p-1 rounded-xl border border-slate-800">
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setCouponForm({...couponForm, discountType: 'PERCENTAGE'})} 
-                                        className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase transition-all ${
-                                            couponForm.discountType === 'PERCENTAGE' ? 'bg-[#1A5F7A] text-white shadow-xs' : 'text-slate-500'
-                                        }`}
+                                    <button
+                                        type="button"
+                                        onClick={() => setCouponForm({ ...couponForm, discountType: 'PERCENTAGE' })}
+                                        className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase transition-all ${couponForm.discountType === 'PERCENTAGE' ? 'bg-[#1A5F7A] text-white shadow-xs' : 'text-slate-500'
+                                            }`}
                                     >
                                         % Percent
                                     </button>
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setCouponForm({...couponForm, discountType: 'FLAT'})} 
-                                        className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase transition-all ${
-                                            couponForm.discountType === 'FLAT' ? 'bg-[#1A5F7A] text-white shadow-xs' : 'text-slate-500'
-                                        }`}
+                                    <button
+                                        type="button"
+                                        onClick={() => setCouponForm({ ...couponForm, discountType: 'FLAT' })}
+                                        className={`flex-1 py-2.5 rounded-lg font-black text-[10px] uppercase transition-all ${couponForm.discountType === 'FLAT' ? 'bg-[#1A5F7A] text-white shadow-xs' : 'text-slate-500'
+                                            }`}
                                     >
                                         ₹ Flat
                                     </button>
@@ -1104,19 +1204,19 @@ export default function AdminDashboard() {
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase text-white ml-1">Value ({couponForm.discountType === 'PERCENTAGE' ? '%' : '₹'})</label>
-                                <input 
-                                    required 
-                                    type="number" 
-                                    min="1" 
-                                    className="w-full p-3 bg-[#0A192F] border border-slate-800 rounded-xl font-black text-xl text-center outline-none focus:border-[#F37021] text-white shadow-inner" 
-                                    placeholder="0" 
-                                    value={couponForm.discountValue} 
-                                    onChange={e => setCouponForm({...couponForm, discountValue: e.target.value})} 
+                                <input
+                                    required
+                                    type="number"
+                                    min="1"
+                                    className="w-full p-3 bg-[#0A192F] border border-slate-800 rounded-xl font-black text-xl text-center outline-none focus:border-[#F37021] text-white shadow-inner"
+                                    placeholder="0"
+                                    value={couponForm.discountValue}
+                                    onChange={e => setCouponForm({ ...couponForm, discountValue: e.target.value })}
                                 />
                             </div>
                         </div>
-    
-                        <button 
+
+                        <button
                             type="submit"
                             className="w-full py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all flex justify-center items-center gap-2 bg-[#F37021] hover:bg-orange-600 active:scale-95 shadow-orange-950/40 cursor-pointer"
                         >
