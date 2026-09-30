@@ -7,7 +7,8 @@ import {
     FiCheckCircle, FiCreditCard, FiDollarSign, FiVideo, FiBookOpen,
     FiGrid, FiClock, FiShield, FiTag, FiChevronDown, FiZap, FiPhoneCall,
     FiAlertCircle, FiCpu, FiUserCheck, FiMessageCircle, FiFacebook, FiGlobe,
-    FiEdit3, FiPlusCircle, FiCheck, FiUnlock, FiSend, FiTrendingUp, FiAward
+    FiEdit3, FiPlusCircle, FiCheck, FiUnlock, FiSend, FiTrendingUp, FiAward,
+    FiFilter
 } from 'react-icons/fi';
 import AdminAIBot from './AdminAIBot';
 import { techCoursesData, universityPrograms } from '../../data/courses';
@@ -18,7 +19,7 @@ import QuizManager from '../Admin/QuizManager';
 import WhatsAppLeads from '../Admin/WhatsAppLeads';
 import AdminCertificates from '../Admin/AdminCertificates';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+    ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
@@ -76,18 +77,30 @@ export default function AdminDashboard() {
     const [isSearching, setIsSearching] = useState(false);
     const [traceModal, setTraceModal] = useState({ show: false, phone: null, data: null, loading: false });
 
+    // Financial & Overview States
     const [finances, setFinances] = useState({ total: 0, pendingAdjustments: 0 });
     const [monthlyHistory, setMonthlyHistory] = useState({});
     const [selectedMonth, setSelectedMonth] = useState("");
 
+    // Registration Tab Filters
     const [expandedStudent, setExpandedStudent] = useState(null);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [logoutModal, setLogoutModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterApproved, setFilterApproved] = useState("all");
+    const [studentCourseFilter, setStudentCourseFilter] = useState("all");
+    const [studentSortBy, setStudentSortBy] = useState("newest");
+
+    // Web Leads Tab Filters
+    const [enquirySearchQuery, setEnquirySearchQuery] = useState("");
+    const [enquiryStatusFilter, setEnquiryStatusFilter] = useState("all");
+    const [enquirySourceFilter, setEnquirySourceFilter] = useState("all");
+
+    // UI States
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [logoutModal, setLogoutModal] = useState(false);
     const [toast, setToast] = useState({ show: false, message: "" });
     const [isSendingReport, setIsSendingReport] = useState(false);
 
+    // Modals
     const [paymentModal, setPaymentModal] = useState({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" });
     const [batchModal, setBatchModal] = useState({ show: false, student: null, filteredBatches: [] });
 
@@ -177,9 +190,7 @@ export default function AdminDashboard() {
         return { total, paid, due: due > 0 ? due : 0 };
     }, [getNormalizedEnrollments]);
 
-    // --- PROPER LEAD INTELLIGENCE ANALYSIS ---
     const analyzeLead = useCallback((student) => {
-        // If the backend has strictly calculated it via ML, use that.
         if (student.sentiment && student.conversionProbability) {
             return {
                 sentiment: student.sentiment.toLowerCase(),
@@ -190,36 +201,28 @@ export default function AdminDashboard() {
         const ledger = calculateAggregateLedger(student);
         const enrolls = getNormalizedEnrollments(student);
         
-        // Calculate Days Since Registration
         const createdDate = student.createdAt ? new Date(student.createdAt) : new Date();
         const daysActive = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
 
         let prob = 50;
         let sentiment = 'neutral';
 
-        // Proper Heuristic Evaluation
         if (student.isApproved) {
-            // Fully approved and active student
             prob = 100;
             sentiment = 'positive';
         } else if (ledger.paid > 0 && ledger.due === 0) {
-            // Fully paid, pending manual admin portal approval
             prob = 95;
             sentiment = 'positive';
         } else if (ledger.paid > 0 && ledger.due > 0) {
-            // Partial payment made (High Intent / Positive Lead)
             prob = 75;
             sentiment = 'positive';
         } else if (ledger.paid === 0 && enrolls.length > 0 && daysActive <= 3) {
-            // Fresh lead, currently evaluating courses
             prob = 60;
             sentiment = 'neutral';
         } else if (ledger.paid === 0 && daysActive > 14) {
-            // Stale lead / Ghosted / Urgent Follow-up needed (Negative Lead)
             prob = 15;
             sentiment = 'negative';
         } else {
-            // Standard pending lead (4-14 days active without payment)
             prob = 40;
             sentiment = 'neutral';
         }
@@ -317,7 +320,7 @@ export default function AdminDashboard() {
 
         while (startYear < now.getFullYear() || (startYear === now.getFullYear() && startMonth <= (now.getMonth() + 1))) {
             const monthKey = `${startYear}-${String(startMonth).padStart(2, '0')}`;
-            history[monthKey] = 0;
+            history[monthKey] = { revenue: 0, enrollments: 0 };
             startMonth++;
             if (startMonth > 12) { startMonth = 1; startYear++; }
         }
@@ -330,7 +333,8 @@ export default function AdminDashboard() {
                 if (!isNaN(dateObj.getTime())) {
                     const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
                     if (history[monthKey] !== undefined) {
-                        history[monthKey] += (Number(en.amountPaid) || 0);
+                        history[monthKey].revenue += (Number(en.amountPaid) || 0);
+                        history[monthKey].enrollments += 1;
                     }
                 }
             });
@@ -547,7 +551,7 @@ export default function AdminDashboard() {
         try {
             await axios.post(`${API_URL}/admin/reports/dispatch-founder-report`, {
                 targetMonth: selectedMonth,
-                totalRevenue: monthlyHistory[selectedMonth] || 0,
+                totalRevenue: monthlyHistory[selectedMonth]?.revenue || 0,
                 topCourses: topCoursesData,
                 totalStudents: students.length,
                 pendingQueue: finances.pendingAdjustments
@@ -573,10 +577,11 @@ export default function AdminDashboard() {
     };
 
     const renderOverview = () => {
-        let currentRevenue = selectedMonth ? (monthlyHistory[selectedMonth] || 0) : 0;
+        let currentRevenue = selectedMonth && monthlyHistory[selectedMonth] ? monthlyHistory[selectedMonth].revenue : 0;
         let [y, m] = selectedMonth ? selectedMonth.split('-').map(Number) : [2026, 1];
         m -= 1; if (m === 0) { m = 12; y -= 1; }
-        let prevRevenue = monthlyHistory[`${y}-${String(m).padStart(2, '0')}`] || 0;
+        let prevMonthKey = `${y}-${String(m).padStart(2, '0')}`;
+        let prevRevenue = monthlyHistory[prevMonthKey] ? monthlyHistory[prevMonthKey].revenue : 0;
 
         return (
             <div className="space-y-8 text-left">
@@ -642,22 +647,19 @@ export default function AdminDashboard() {
                             </span>
                         </div>
 
-                        {/* RECHARTS IMPLEMENTATION */}
+                        {/* RECHARTS IMPLEMENTATION - DUAL AXIS */}
                         <div className="h-56 w-full mt-4 border-b border-slate-800 pb-2">
                             {Object.keys(monthlyHistory).length > 0 ? (() => {
-                                // Smart chronological sorting with year-wise boundary detection
                                 let previousYear = null;
 
                                 const chartData = Object.entries(monthlyHistory)
                                     .sort(([a], [b]) => a.localeCompare(b))
-                                    .map(([monthStr, rev]) => {
+                                    .map(([monthStr, data]) => {
                                         const [year, monthNum] = monthStr.split('-');
                                         const date = new Date(year, parseInt(monthNum) - 1);
                                         const monthName = date.toLocaleString('en-US', { month: 'short' });
 
                                         let label = monthName;
-
-                                        // Once the year changes, attach the year to the X-Axis label
                                         if (year !== previousYear) {
                                             label = `${monthName} ${year}`;
                                             previousYear = year;
@@ -666,13 +668,14 @@ export default function AdminDashboard() {
                                         return {
                                             monthLabel: label,
                                             fullMonth: date.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
-                                            revenue: rev
+                                            revenue: data.revenue,
+                                            enrollments: data.enrollments
                                         };
                                     });
 
                                 return (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="#F37021" stopOpacity={0.4} />
@@ -680,36 +683,62 @@ export default function AdminDashboard() {
                                                 </linearGradient>
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                                            <XAxis
-                                                dataKey="monthLabel"
-                                                stroke="#64748b"
-                                                fontSize={10}
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickMargin={10}
+                                            <XAxis 
+                                                dataKey="monthLabel" 
+                                                stroke="#64748b" 
+                                                fontSize={10} 
+                                                tickLine={false} 
+                                                axisLine={false} 
+                                                tickMargin={10} 
                                             />
-                                            <YAxis
-                                                stroke="#64748b"
-                                                fontSize={10}
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
+                                            <YAxis 
+                                                yAxisId="left"
+                                                stroke="#64748b" 
+                                                fontSize={10} 
+                                                tickLine={false} 
+                                                axisLine={false} 
+                                                tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`} 
+                                            />
+                                            <YAxis 
+                                                yAxisId="right"
+                                                orientation="right"
+                                                stroke="#38bdf8" 
+                                                fontSize={10} 
+                                                tickLine={false} 
+                                                axisLine={false} 
+                                                tickFormatter={(val) => `${val}`} 
                                             />
                                             <Tooltip
                                                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px', color: '#fff' }}
-                                                itemStyle={{ color: '#F37021', fontWeight: '900' }}
-                                                formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
                                                 labelFormatter={(label, payload) => payload?.[0]?.payload?.fullMonth || label}
+                                                formatter={(value, name) => {
+                                                    if (name === 'Gross Revenue') return [`₹${value.toLocaleString()}`, name];
+                                                    if (name === 'Student Enrollments') return [value, name];
+                                                    return [value, name];
+                                                }}
                                             />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="revenue"
-                                                stroke="#F37021"
-                                                strokeWidth={3}
-                                                fillOpacity={1}
-                                                fill="url(#colorRev)"
+                                            <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', color: '#94a3b8' }} />
+                                            <Area 
+                                                yAxisId="left"
+                                                type="monotone" 
+                                                dataKey="revenue" 
+                                                name="Gross Revenue"
+                                                stroke="#F37021" 
+                                                strokeWidth={3} 
+                                                fillOpacity={1} 
+                                                fill="url(#colorRev)" 
                                             />
-                                        </AreaChart>
+                                            <Line 
+                                                yAxisId="right"
+                                                type="monotone" 
+                                                dataKey="enrollments" 
+                                                name="Student Enrollments"
+                                                stroke="#38bdf8" 
+                                                strokeWidth={3} 
+                                                dot={{ r: 4, fill: '#0f172a', strokeWidth: 2 }}
+                                                activeDot={{ r: 6 }}
+                                            />
+                                        </ComposedChart>
                                     </ResponsiveContainer>
                                 );
                             })() : (
@@ -893,26 +922,54 @@ export default function AdminDashboard() {
 
     const renderRegistry = () => (
         <div className="space-y-6">
-            <div className="flex flex-wrap justify-between items-center gap-4">
-                <h3 className="text-2xl font-black text-white uppercase italic">Student Registry</h3>
-                <div className="flex items-center gap-3 w-full max-w-xl">
-                    <div className="relative flex-1 group">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-2xl font-black text-white uppercase italic">Student Registry</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage and track enrollments.</p>
+                </div>
+                
+                {/* Advanced Filters */}
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                    <div className="relative flex-1 min-w-[200px] group">
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                         <input
                             type="text"
                             placeholder="Search Identity or UTR..."
                             className="w-full pl-11 pr-4 py-3 bg-[#0A192F] border border-slate-800 text-white rounded-2xl outline-none font-bold text-xs focus:border-[#F37021] shadow-inner transition-all placeholder:text-slate-500"
+                            value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                         />
                     </div>
+                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                        <FiFilter className="text-slate-500 ml-1" size={14}/>
+                        <select
+                            className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
+                            value={filterApproved}
+                            onChange={e => setFilterApproved(e.target.value)}
+                        >
+                            <option value="all">All Status</option>
+                            <option value="approved">Approved ERP</option>
+                            <option value="pending">Pending Access</option>
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                        <FiBookOpen className="text-slate-500 ml-1" size={14}/>
+                        <select
+                            className="bg-transparent py-2 max-w-[120px] font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
+                            value={studentCourseFilter}
+                            onChange={e => setStudentCourseFilter(e.target.value)}
+                        >
+                            <option value="all">All Courses</option>
+                            {allCourses.map(c => <option key={c.id || c.title} value={c.title}>{c.title}</option>)}
+                        </select>
+                    </div>
                     <select
-                        className="bg-[#0A192F] border border-slate-800 rounded-2xl px-4 py-3 font-black text-xs uppercase outline-none text-slate-200 cursor-pointer shadow-md focus:border-[#F37021]"
-                        value={filterApproved}
-                        onChange={e => setFilterApproved(e.target.value)}
+                        className="bg-[#0A192F] border border-slate-800 rounded-2xl px-4 py-3 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer shadow-md focus:border-[#F37021]"
+                        value={studentSortBy}
+                        onChange={e => setStudentSortBy(e.target.value)}
                     >
-                        <option value="all">All Registry</option>
-                        <option value="approved">Approved ERP Only</option>
-                        <option value="pending">Pending Access</option>
+                        <option value="newest">Sort: Newest</option>
+                        <option value="oldest">Sort: Oldest</option>
                     </select>
                 </div>
             </div>
@@ -930,8 +987,13 @@ export default function AdminDashboard() {
                     <tbody className="divide-y divide-slate-850 text-xs">
                         {students.filter(s => {
                             const matchSearch = s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.phone?.includes(searchQuery);
-                            const matchFilter = filterApproved === "all" ? true : filterApproved === "approved" ? s.isApproved : !s.isApproved;
-                            return matchSearch && matchFilter;
+                            const matchStatus = filterApproved === "all" ? true : filterApproved === "approved" ? s.isApproved : !s.isApproved;
+                            const matchCourse = studentCourseFilter === "all" ? true : s.enrollments?.some(e => e.course === studentCourseFilter) || s.course === studentCourseFilter;
+                            return matchSearch && matchStatus && matchCourse;
+                        }).sort((a, b) => {
+                            const dateA = new Date(a.createdAt || 0);
+                            const dateB = new Date(b.createdAt || 0);
+                            return studentSortBy === "newest" ? dateB - dateA : dateA - dateB;
                         }).map(student => {
                             const ledger = calculateAggregateLedger(student);
                             const enrollments = getNormalizedEnrollments(student);
@@ -951,6 +1013,9 @@ export default function AdminDashboard() {
                                                 <button onClick={() => handleOpenTracer(student.phone)} className="px-2.5 py-0.5 bg-orange-500/10 text-[#F37021] rounded-lg font-black text-[8px] uppercase border border-orange-500/30 flex items-center gap-1 hover:bg-[#F37021] hover:text-white transition-all">
                                                     <FiCpu size={10} /> Trace
                                                 </button>
+                                            </div>
+                                            <div className="text-[9px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
+                                                Registered: {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : 'N/A'}
                                             </div>
                                             <div className="text-slate-400 font-bold text-[10px] uppercase mt-1 italic flex items-center gap-1.5 flex-wrap">
                                                 <span>{enrollments.length} Enrollment(s)</span>
@@ -1073,6 +1138,147 @@ export default function AdminDashboard() {
                                 </React.Fragment>
                             );
                         })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+
+    const renderEnquiries = () => (
+        <div className="space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-2xl font-black text-white uppercase italic">Web Leads</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage incoming inquiries and chatbot interactions.</p>
+                </div>
+                
+                {/* Advanced Filters */}
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                    <div className="relative flex-1 min-w-[200px] group">
+                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                            type="text"
+                            placeholder="Search Name or Phone..."
+                            className="w-full pl-11 pr-4 py-3 bg-[#0A192F] border border-slate-800 text-white rounded-2xl outline-none font-bold text-xs focus:border-[#F37021] shadow-inner transition-all placeholder:text-slate-500"
+                            value={enquirySearchQuery}
+                            onChange={e => setEnquirySearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                        <FiFilter className="text-slate-500 ml-1" size={14}/>
+                        <select
+                            className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
+                            value={enquiryStatusFilter}
+                            onChange={e => setEnquiryStatusFilter(e.target.value)}
+                        >
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="contacted">Handled</option>
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                        <FiGlobe className="text-slate-500 ml-1" size={14}/>
+                        <select
+                            className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
+                            value={enquirySourceFilter}
+                            onChange={e => setEnquirySourceFilter(e.target.value)}
+                        >
+                            <option value="all">All Sources</option>
+                            <option value="bot">AI Chatbot</option>
+                            <option value="facebook">Facebook Ads</option>
+                            <option value="web">Website Form</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
+                <table className="w-full min-w-[950px] text-xs">
+                    <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
+                        <tr>
+                            <th className="p-5 pl-8">Lead Identity</th>
+                            <th>User Inquiry & Message</th>
+                            <th>Source</th>
+                            <th>Timeline</th>
+                            <th className="pr-8 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850 font-bold">
+                        {enquiries.filter(item => {
+                            const matchSearch = item.name?.toLowerCase().includes(enquirySearchQuery.toLowerCase()) || item.phone?.includes(enquirySearchQuery) || item.message?.toLowerCase().includes(enquirySearchQuery.toLowerCase());
+                            const matchStatus = enquiryStatusFilter === "all" ? true : enquiryStatusFilter === "contacted" ? item.isContacted : !item.isContacted;
+                            const matchSource = enquirySourceFilter === "all" ? true : item.source?.toLowerCase().includes(enquirySourceFilter);
+                            return matchSearch && matchStatus && matchSource;
+                        }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).length === 0 ? (
+                            <tr>
+                                <td colSpan="5" className="p-8 text-center text-slate-500 font-black uppercase tracking-wider">
+                                    No website inquiries matching criteria.
+                                </td>
+                            </tr>
+                        ) : (
+                            enquiries.filter(item => {
+                                const matchSearch = item.name?.toLowerCase().includes(enquirySearchQuery.toLowerCase()) || item.phone?.includes(enquirySearchQuery) || item.message?.toLowerCase().includes(enquirySearchQuery.toLowerCase());
+                                const matchStatus = enquiryStatusFilter === "all" ? true : enquiryStatusFilter === "contacted" ? item.isContacted : !item.isContacted;
+                                const matchSource = enquirySourceFilter === "all" ? true : (item.source || "").toLowerCase().includes(enquirySourceFilter);
+                                return matchSearch && matchStatus && matchSource;
+                            }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).map(item => {
+                                const actualMessage = item.message && item.message.trim() !== ""
+                                    ? item.message
+                                    : item.course || "General Inquiry";
+
+                                return (
+                                    <tr key={item._id} className="hover:bg-slate-900/50 transition-colors">
+                                        <td className="p-5 pl-8">
+                                            <div className="font-black text-white uppercase text-xs">{item.name}</div>
+                                            <div className="text-slate-400 text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                                <span>📞 {item.phone}</span>
+                                                {item.email && (
+                                                    <>
+                                                        <span className="text-slate-600">•</span>
+                                                        <span className="lowercase font-normal text-slate-400">{item.email}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="max-w-xs pr-4">
+                                            <div className="bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl text-slate-200 font-semibold text-xs leading-relaxed truncate whitespace-break-spaces">
+                                                "{actualMessage}"
+                                            </div>
+                                            {item.course && item.course !== "General Inquiry" && item.course !== actualMessage && (
+                                                <span className="text-[9px] font-black uppercase text-[#F37021] tracking-wider mt-1 block">
+                                                    Track: {item.course}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td>{renderSourceBadge(item.source)}</td>
+                                        <td>
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase">
+                                                <span className="block text-slate-500 text-[8px]">Received On:</span>
+                                                <span className="text-white">{item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}</span>
+                                            </div>
+                                            {item.isContacted && (
+                                                <div className="text-[10px] font-bold text-emerald-400 uppercase mt-1">
+                                                    <span className="block text-emerald-500/50 text-[8px]">Handled On:</span>
+                                                    <span className="text-emerald-400">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'N/A'}</span>
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="pr-8 text-right">
+                                            <button
+                                                onClick={() => handleEnquiryStatusUpdate(item._id, item.isContacted, item.name)}
+                                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ml-auto ${item.isContacted
+                                                        ? 'bg-emerald-600 text-white'
+                                                        : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                                                    }`}
+                                                title={item.isContacted ? "Contacted" : "Mark as Contacted"}
+                                            >
+                                                {item.isContacted ? <FiCheckCircle size={16} /> : <FiPhoneCall size={14} />}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -1365,75 +1571,7 @@ export default function AdminDashboard() {
                     {activeTab === 'registrations' && renderRegistry()}
                     {activeTab === 'coupons' && renderCoupons()}
                     {activeTab === 'logs' && renderLogs()}
-                    {activeTab === 'enquiries' && (
-                        <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
-                            <table className="w-full min-w-[850px] text-xs">
-                                <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
-                                    <tr>
-                                        <th className="p-5 pl-8">Lead Identity</th>
-                                        <th>User Inquiry & Message</th>
-                                        <th>Source</th>
-                                        <th className="pr-8 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-850 font-bold">
-                                    {enquiries.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="4" className="p-8 text-center text-slate-500 font-black uppercase tracking-wider">
-                                                No website inquiries recorded.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        enquiries.map(item => {
-                                            const actualMessage = item.message && item.message.trim() !== ""
-                                                ? item.message
-                                                : item.course || "General Inquiry";
-
-                                            return (
-                                                <tr key={item._id} className="hover:bg-slate-900/50 transition-colors">
-                                                    <td className="p-5 pl-8">
-                                                        <div className="font-black text-white uppercase text-xs">{item.name}</div>
-                                                        <div className="text-slate-400 text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                                            <span>📞 {item.phone}</span>
-                                                            {item.email && (
-                                                                <>
-                                                                    <span className="text-slate-600">•</span>
-                                                                    <span className="lowercase font-normal text-slate-400">{item.email}</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="max-w-md pr-4">
-                                                        <div className="bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl text-slate-200 font-semibold text-xs leading-relaxed">
-                                                            "{actualMessage}"
-                                                        </div>
-                                                        {item.course && item.course !== "General Inquiry" && item.course !== actualMessage && (
-                                                            <span className="text-[9px] font-black uppercase text-[#F37021] tracking-wider mt-1 block">
-                                                                Track: {item.course}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td>{renderSourceBadge(item.source)}</td>
-                                                    <td className="pr-8 text-right">
-                                                        <button
-                                                            onClick={() => handleEnquiryStatusUpdate(item._id, item.isContacted, item.name)}
-                                                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ml-auto ${item.isContacted
-                                                                    ? 'bg-emerald-600 text-white'
-                                                                    : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
-                                                                }`}
-                                                            title={item.isContacted ? "Contacted" : "Mark as Contacted"}
-                                                        >
-                                                            {item.isContacted ? <FiCheckCircle size={16} /> : <FiPhoneCall size={14} />}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    {activeTab === 'enquiries' && renderEnquiries()}
                     {activeTab === 'whatsapp' && <WhatsAppLeads />}
                     {activeTab === 'batches' && <BatchScheduler />}
                     {activeTab === 'lectures' && <AddLecture />}
@@ -1593,7 +1731,7 @@ export default function AdminDashboard() {
             <AdminAIBot
                 systemData={{
                     totalRevenue: finances.total,
-                    monthlyRevenue: selectedMonth ? (monthlyHistory[selectedMonth] || 0) : 0,
+                    monthlyRevenue: selectedMonth ? (monthlyHistory[selectedMonth]?.revenue || 0) : 0,
                     totalStudents: students.length,
                     activeBatches: availableBatches.length,
                     pendingAlerts: finances.pendingAdjustments,
