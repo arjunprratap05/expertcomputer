@@ -8,7 +8,7 @@ import {
     FiGrid, FiClock, FiShield, FiTag, FiChevronDown, FiZap, FiPhoneCall,
     FiAlertCircle, FiCpu, FiUserCheck, FiMessageCircle, FiFacebook, FiGlobe,
     FiEdit3, FiPlusCircle, FiCheck, FiUnlock, FiSend, FiTrendingUp, FiAward,
-    FiFilter
+    FiFilter, FiDownload, FiPrinter, FiColumns, FiList, FiCheckSquare
 } from 'react-icons/fi';
 import AdminAIBot from './AdminAIBot';
 import { techCoursesData, universityPrograms } from '../../data/courses';
@@ -23,6 +23,39 @@ import {
 } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
+
+// --- INDIAN CURRENCY NUMBER TO WORDS CONVERTER ---
+const formatNumberToWords = (amount) => {
+    if (!amount || amount === 0) return "Zero Rupees";
+    const single = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+    const double = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const tens = ["", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+    
+    const formatTens = (num) => {
+        if (num < 10) return single[num];
+        if (num < 20) return double[num - 10];
+        return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + single[num % 10] : "");
+    };
+    
+    const convert = (num) => {
+        if (num === 0) return "";
+        if (num < 100) return formatTens(num);
+        return single[Math.floor(num / 100)] + " Hundred" + (num % 100 !== 0 ? " " + formatTens(num % 100) : "");
+    };
+    
+    let word = "";
+    let crore = Math.floor(amount / 10000000);
+    let lakh = Math.floor((amount % 10000000) / 100000);
+    let thousand = Math.floor((amount % 100000) / 1000);
+    let remainder = amount % 1000;
+
+    if (crore > 0) word += convert(crore) + " Crore ";
+    if (lakh > 0) word += convert(lakh) + " Lakh ";
+    if (thousand > 0) word += convert(thousand) + " Thousand ";
+    if (remainder > 0) word += convert(remainder);
+
+    return word.trim() + " Rupees Only";
+};
 
 const SidebarBtn = React.memo(({ active, onClick, icon, label }) => (
     <button
@@ -50,8 +83,8 @@ export default function AdminDashboard() {
     const userName = localStorage.getItem("adminName") || "Administrator";
 
     const permissions = {
-        founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes', 'certificates'],
-        admin: ['overview', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes', 'certificates'],
+        founder: ['overview', 'logs', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes', 'certificates', 'instructors'],
+        admin: ['overview', 'registrations', 'batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'coupons', 'quizzes', 'certificates', 'instructors'],
         frontoffice: ['batches', 'lectures', 'materials', 'enquiries', 'whatsapp', 'quizzes', 'coupons', 'certificates'],
         accounts: ['registrations', 'batches', 'lectures', 'materials', 'coupons', 'quizzes', 'certificates']
     };
@@ -71,36 +104,39 @@ export default function AdminDashboard() {
     const [availableBatches, setAvailableBatches] = useState([]);
     const [apiLatency, setApiLatency] = useState("Calculating...");
 
-    // Global Search & Neural Tracer States
+    // CRM Cross-Reference Memory (For Auto-Converting Leads)
+    const studentPhones = useMemo(() => new Set(students.map(s => s.phone).filter(Boolean)), [students]);
+
+    // NEW CRM STATES: Bulk Selection & Kanban Views
+    const [selectedStudents, setSelectedStudents] = useState([]);
+    const [selectedEnquiries, setSelectedEnquiries] = useState([]);
+    const [leadViewMode, setLeadViewMode] = useState('kanban'); // 'table' or 'kanban'
+
     const [globalQuery, setGlobalQuery] = useState("");
     const [searchResults, setSearchResults] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [traceModal, setTraceModal] = useState({ show: false, phone: null, data: null, loading: false });
 
-    // Financial & Overview States
     const [finances, setFinances] = useState({ total: 0, pendingAdjustments: 0 });
     const [monthlyHistory, setMonthlyHistory] = useState({});
     const [selectedMonth, setSelectedMonth] = useState("");
 
-    // Registration Tab Filters
     const [expandedStudent, setExpandedStudent] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [logoutModal, setLogoutModal] = useState(false);
+    
+    // Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [filterApproved, setFilterApproved] = useState("all");
     const [studentCourseFilter, setStudentCourseFilter] = useState("all");
     const [studentSortBy, setStudentSortBy] = useState("newest");
-
-    // Web Leads Tab Filters
     const [enquirySearchQuery, setEnquirySearchQuery] = useState("");
     const [enquiryStatusFilter, setEnquiryStatusFilter] = useState("all");
     const [enquirySourceFilter, setEnquirySourceFilter] = useState("all");
 
-    // UI States
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [logoutModal, setLogoutModal] = useState(false);
     const [toast, setToast] = useState({ show: false, message: "" });
     const [isSendingReport, setIsSendingReport] = useState(false);
 
-    // Modals
     const [paymentModal, setPaymentModal] = useState({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" });
     const [batchModal, setBatchModal] = useState({ show: false, student: null, filteredBatches: [] });
 
@@ -132,7 +168,6 @@ export default function AdminDashboard() {
                 setIsSearching(false);
             }
         }, 300);
-
         return () => clearTimeout(delayDebounce);
     }, [globalQuery, token]);
 
@@ -151,19 +186,51 @@ export default function AdminDashboard() {
         }
     };
 
+    const exportToCSV = (data, filename, columns) => {
+        const header = columns.map(c => c.label).join(',');
+        const rows = data.map(item => columns.map(c => `"${c.accessor(item)?.toString().replace(/"/g, '""') || ''}"`).join(','));
+        const csv = [header, ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        triggerToast(`EXPORTED ${data.length} ROWS TO CSV`);
+    };
+
+    const handlePrintReceipt = (student, enrollment) => {
+        const printWindow = window.open('', '', 'width=800,height=600');
+        printWindow.document.write(`
+            <html><head><title>Payment Receipt</title>
+            <style>body{font-family: Arial, sans-serif; padding: 40px;} .header{text-align: center; border-bottom: 2px solid #F37021; padding-bottom: 20px;}
+            .content{margin-top: 30px; line-height: 1.8;} .bold{font-weight: bold;} .amt{font-size: 24px; color: #1A5F7A;} </style>
+            </head><body>
+            <div class="header"><h1>EXPERT COMPUTER ACADEMY</h1><p>Payment Acknowledgment Receipt</p></div>
+            <div class="content">
+                <p><span class="bold">Date:</span> ${new Date().toLocaleString()}</p>
+                <p><span class="bold">Transaction Ref (UTR):</span> ${enrollment.transactionId}</p>
+                <p><span class="bold">Student Identity:</span> ${student.name} (${student.phone})</p>
+                <p><span class="bold">Program Subscribed:</span> ${enrollment.course}</p>
+                <p><span class="bold">Amount Paid:</span> <span class="amt">INR ${Number(enrollment.amountPaid).toLocaleString()}</span></p>
+                <p><span class="bold">Status:</span> ${enrollment.paymentStatus}</p>
+            </div>
+            <div style="margin-top:50px; font-size: 10px; color: #666; text-align:center;">This is a computer-generated receipt and does not require a physical signature.</div>
+            </body></html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+    };
+
     const getNormalizedEnrollments = useCallback((student) => {
         let list = student.enrollments ? [...student.enrollments] : [];
         if (list.length === 0 && student.course) {
             list.push({
-                course: student.course,
-                courseFee: student.totalFee || 0,
-                amountPaid: student.amountPaid || 0,
+                course: student.course, courseFee: student.totalFee || 0, amountPaid: student.amountPaid || 0,
                 paymentStatus: student.paymentStatus || (student.isApproved ? "VERIFIED" : "PENDING"),
-                transactionId: student.transactionId || "UTR-LEGACY",
-                enrolledAt: student.createdAt
+                transactionId: student.transactionId || "UTR-LEGACY", enrolledAt: student.createdAt
             });
         }
-
         return list.map(en => {
             let verifiedItemPaid = 0;
             if (en.amountPaid !== undefined && en.amountPaid !== null && Number(en.amountPaid) !== 0) {
@@ -171,13 +238,9 @@ export default function AdminDashboard() {
             } else if (en.transactionId === student.transactionId || list.length === 1) {
                 verifiedItemPaid = Number(student.amountPaid) || 0;
             }
-
             return {
-                ...en,
-                courseFee: Number(en.courseFee) || Number(student.totalFee) || 0,
-                amountPaid: verifiedItemPaid,
-                transactionId: en.transactionId || student.transactionId || "UTR-PENDING",
-                enrolledAt: en.enrolledAt || student.createdAt
+                ...en, courseFee: Number(en.courseFee) || Number(student.totalFee) || 0, amountPaid: verifiedItemPaid,
+                transactionId: en.transactionId || student.transactionId || "UTR-PENDING", enrolledAt: en.enrolledAt || student.createdAt
             };
         });
     }, []);
@@ -191,65 +254,34 @@ export default function AdminDashboard() {
     }, [getNormalizedEnrollments]);
 
     const analyzeLead = useCallback((student) => {
-        if (student.sentiment && student.conversionProbability) {
-            return {
-                sentiment: student.sentiment.toLowerCase(),
-                probability: Number(student.conversionProbability)
-            };
-        }
-
+        if (student.sentiment && student.conversionProbability) return { sentiment: student.sentiment.toLowerCase(), probability: Number(student.conversionProbability) };
         const ledger = calculateAggregateLedger(student);
         const enrolls = getNormalizedEnrollments(student);
-        
         const createdDate = student.createdAt ? new Date(student.createdAt) : new Date();
         const daysActive = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
 
-        let prob = 50;
-        let sentiment = 'neutral';
-
-        if (student.isApproved) {
-            prob = 100;
-            sentiment = 'positive';
-        } else if (ledger.paid > 0 && ledger.due === 0) {
-            prob = 95;
-            sentiment = 'positive';
-        } else if (ledger.paid > 0 && ledger.due > 0) {
-            prob = 75;
-            sentiment = 'positive';
-        } else if (ledger.paid === 0 && enrolls.length > 0 && daysActive <= 3) {
-            prob = 60;
-            sentiment = 'neutral';
-        } else if (ledger.paid === 0 && daysActive > 14) {
-            prob = 15;
-            sentiment = 'negative';
-        } else {
-            prob = 40;
-            sentiment = 'neutral';
-        }
+        let prob = 50; let sentiment = 'neutral';
+        if (student.isApproved) { prob = 100; sentiment = 'positive'; }
+        else if (ledger.paid > 0 && ledger.due === 0) { prob = 95; sentiment = 'positive'; }
+        else if (ledger.paid > 0 && ledger.due > 0) { prob = 75; sentiment = 'positive'; }
+        else if (ledger.paid === 0 && enrolls.length > 0 && daysActive <= 3) { prob = 60; sentiment = 'neutral'; }
+        else if (ledger.paid === 0 && daysActive > 14) { prob = 15; sentiment = 'negative'; }
+        else { prob = 40; sentiment = 'neutral'; }
 
         return { sentiment, probability: prob };
     }, [calculateAggregateLedger, getNormalizedEnrollments]);
 
     const mlOverviewStats = useMemo(() => {
         if (students.length === 0) return { avgProb: 0, positive: 0, neutral: 0, negative: 0 };
-        let totalProb = 0;
-        let positive = 0, neutral = 0, negative = 0;
-        
+        let totalProb = 0; let positive = 0, neutral = 0, negative = 0;
         students.forEach(s => {
             const analysis = analyzeLead(s);
             totalProb += analysis.probability;
-            
             if (analysis.sentiment === 'positive') positive++;
             else if (analysis.sentiment === 'negative') negative++;
             else neutral++;
         });
-        
-        return {
-            avgProb: Math.round(totalProb / students.length),
-            positive,
-            neutral,
-            negative
-        };
+        return { avgProb: Math.round(totalProb / students.length), positive, neutral, negative };
     }, [students, analyzeLead]);
 
     const webPerformanceMetrics = useMemo(() => [
@@ -274,6 +306,8 @@ export default function AdminDashboard() {
     const handleTabChange = useCallback((tab) => {
         setActiveTab(tab);
         setIsSidebarOpen(false);
+        setSelectedStudents([]); 
+        setSelectedEnquiries([]);
     }, []);
 
     const isCourseBatchMatch = useCallback((courseName, batchCourseId, batchCourseName) => {
@@ -309,9 +343,7 @@ export default function AdminDashboard() {
             const enrolls = getNormalizedEnrollments(s);
             enrolls.forEach(en => {
                 const dateObj = new Date(en.enrolledAt || s.createdAt);
-                if (!isNaN(dateObj.getTime()) && dateObj < earliestDate) {
-                    earliestDate = dateObj;
-                }
+                if (!isNaN(dateObj.getTime()) && dateObj < earliestDate) earliestDate = dateObj;
             });
         });
 
@@ -341,11 +373,7 @@ export default function AdminDashboard() {
         });
 
         setMonthlyHistory(history);
-        setFinances({
-            total: grossTotal,
-            pendingAdjustments: studentList.filter(s => s.discountRequest?.status === 'PENDING').length
-        });
-
+        setFinances({ total: grossTotal, pendingAdjustments: studentList.filter(s => s.discountRequest?.status === 'PENDING').length });
         if (!selectedMonth) setSelectedMonth(currentMonthKey);
     }, [getNormalizedEnrollments, selectedMonth]);
 
@@ -355,18 +383,12 @@ export default function AdminDashboard() {
             const enrolls = getNormalizedEnrollments(student);
             enrolls.forEach(en => {
                 if (!en.course) return;
-                if (!stats[en.course]) {
-                    stats[en.course] = { enrollments: 0, revenue: 0 };
-                }
+                if (!stats[en.course]) stats[en.course] = { enrollments: 0, revenue: 0 };
                 stats[en.course].enrollments += 1;
                 stats[en.course].revenue += (Number(en.amountPaid) || 0);
             });
         });
-
-        return Object.entries(stats)
-            .map(([courseName, data]) => ({ courseName, ...data }))
-            .sort((a, b) => b.enrollments - a.enrollments)
-            .slice(0, 4);
+        return Object.entries(stats).map(([courseName, data]) => ({ courseName, ...data })).sort((a, b) => b.enrollments - a.enrollments).slice(0, 4);
     }, [students, getNormalizedEnrollments]);
 
     const fetchEverything = useCallback(async () => {
@@ -374,12 +396,8 @@ export default function AdminDashboard() {
         const headers = { Authorization: `Bearer ${token}` };
         const latencyStart = performance.now();
         const safeFetch = async (url) => {
-            try {
-                const res = await axios.get(url, { headers });
-                return res.data.data || res.data.materials || res.data.coupons || res.data.logs || res.data;
-            } catch (err) {
-                return [];
-            }
+            try { const res = await axios.get(url, { headers }); return res.data.data || res.data.materials || res.data.coupons || res.data.logs || res.data; } 
+            catch (err) { return []; }
         };
 
         try {
@@ -396,14 +414,40 @@ export default function AdminDashboard() {
                 setAuditLogs(lData.logs || lData);
             }
             setApiLatency(`${Math.round(performance.now() - latencyStart)}ms`);
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     }, [token, analyzeFinances]);
 
-    useEffect(() => {
-        fetchEverything();
-    }, [fetchEverything]);
+    useEffect(() => { fetchEverything(); }, [fetchEverything]);
+
+    const toggleStudentSelection = (id) => {
+        setSelectedStudents(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+    };
+    
+    const handleBulkApprove = async () => {
+        try {
+            for (let id of selectedStudents) {
+                await axios.patch(`${API_URL}/admin/registrations/${id}/grant-access`, {}, { headers: { Authorization: `Bearer ${token}` } });
+            }
+            triggerToast(`BULK APPROVED ${selectedStudents.length} ACCOUNTS`);
+            setSelectedStudents([]);
+            fetchEverything();
+        } catch (err) { triggerToast("BULK APPROVAL FAILED"); }
+    };
+
+    const toggleEnquirySelection = (id) => {
+        setSelectedEnquiries(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+    };
+
+    const handleBulkMarkContacted = async () => {
+        try {
+            for (let id of selectedEnquiries) {
+                await axios.patch(`${API_URL}/inquiry/${id}`, { isContacted: true, targetName: "Bulk Operation" }, { headers: { Authorization: `Bearer ${token}` } });
+            }
+            triggerToast(`MARKED ${selectedEnquiries.length} LEADS AS HANDLED`);
+            setSelectedEnquiries([]);
+            fetchEverything();
+        } catch (err) { triggerToast("BULK ACTION FAILED"); }
+    };
 
     const handleAuthorizeBatch = async (studentId, batchId, studentName) => {
         if (!batchId) return;
@@ -412,9 +456,7 @@ export default function AdminDashboard() {
             triggerToast("STREAM AUTHORIZED");
             setBatchModal({ show: false, student: null, filteredBatches: [] });
             fetchEverything();
-        } catch (err) {
-            triggerToast("AUTHORIZATION FAILED");
-        }
+        } catch (err) { triggerToast("AUTHORIZATION FAILED"); }
     };
 
     const handleApprovePayment = async (studentId, studentName, transactionId) => {
@@ -424,89 +466,48 @@ export default function AdminDashboard() {
             await axios.patch(`${API_URL}/admin/registrations/${studentId}/grant-access`, {}, { headers });
             triggerToast("PAYMENT VERIFIED");
             await fetchEverything();
-        } catch (err) {
-            triggerToast("VERIFICATION FAILED");
-        }
+        } catch (err) { triggerToast("VERIFICATION FAILED"); }
     };
 
     const handleForceUnlock = async (studentId) => {
         try {
-            await axios.patch(`${API_URL}/admin/registrations/${studentId}/grant-access`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await axios.patch(`${API_URL}/admin/registrations/${studentId}/grant-access`, {}, { headers: { Authorization: `Bearer ${token}` } });
             triggerToast("PORTAL GRANTED FOR TOKEN PAYMENT");
             fetchEverything();
-        } catch (err) {
-            triggerToast("PORTAL UNLOCK FAILED");
-        }
+        } catch (err) { triggerToast("PORTAL UNLOCK FAILED"); }
     };
 
     const handleCreateCoupon = async (e) => {
         e.preventDefault();
-
         const newCode = (couponForm.code || "").toUpperCase().trim();
         if (!newCode) return triggerToast("ENTER A COUPON CODE");
-        if (!couponForm.discountValue || Number(couponForm.discountValue) <= 0) {
-            return triggerToast("ENTER A VALID DISCOUNT VALUE");
-        }
-        if (!couponForm.maxUsage || Number(couponForm.maxUsage) <= 0) {
-            return triggerToast("ENTER MAX USAGE LIMIT");
-        }
+        if (!couponForm.discountValue || Number(couponForm.discountValue) <= 0) return triggerToast("ENTER A VALID DISCOUNT VALUE");
+        if (!couponForm.maxUsage || Number(couponForm.maxUsage) <= 0) return triggerToast("ENTER MAX USAGE LIMIT");
 
-        const codeExists = Array.isArray(coupons) && coupons.some(
-            c => (c?.code || "").toUpperCase().trim() === newCode
-        );
-
-        if (codeExists) {
-            triggerToast("COUPON CODE ALREADY EXISTS");
-            return;
-        }
+        const codeExists = Array.isArray(coupons) && coupons.some(c => (c?.code || "").toUpperCase().trim() === newCode);
+        if (codeExists) { triggerToast("COUPON CODE ALREADY EXISTS"); return; }
 
         try {
-            const rawApi = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-            const API_BASE = rawApi.endsWith('/api') ? rawApi : `${rawApi}/api`;
-
-            const payload = {
-                ...couponForm,
-                code: newCode,
-                maxUsage: Number(couponForm.maxUsage),
-                discountValue: Number(couponForm.discountValue),
-                courseCode: couponForm.courseCode || "ALL"
-            };
-
-            const res = await axios.post(`${API_BASE}/admin/coupons`, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
+            const API_BASE = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
+            const payload = { ...couponForm, code: newCode, maxUsage: Number(couponForm.maxUsage), discountValue: Number(couponForm.discountValue), courseCode: couponForm.courseCode || "ALL" };
+            const res = await axios.post(`${API_BASE}/admin/coupons`, payload, { headers: { Authorization: `Bearer ${token}` } });
             if (res.data?.success || res.status === 200 || res.status === 201) {
                 triggerToast("COUPON ACTIVATED SUCCESSFULLY");
-                setCouponForm({
-                    code: "", description: "", maxUsage: "", isActive: true,
-                    validFrom: "", validTo: "", courseCode: "ALL",
-                    discountType: "PERCENTAGE", discountValue: ""
-                });
+                setCouponForm({ code: "", description: "", maxUsage: "", isActive: true, validFrom: "", validTo: "", courseCode: "ALL", discountType: "PERCENTAGE", discountValue: "" });
                 fetchEverything();
             }
-        } catch (err) {
-            console.error("Coupon deploy error:", err);
-            triggerToast(err.response?.data?.message?.toUpperCase() || "DEPLOYMENT FAILED");
-        }
+        } catch (err) { triggerToast(err.response?.data?.message?.toUpperCase() || "DEPLOYMENT FAILED"); }
     };
 
     const generateLocalCashTxn = () => {
-        const now = new Date();
-        const year = now.getFullYear();
+        const now = new Date(); const year = now.getFullYear();
         const month = now.getMonth() >= 3 ? `${year}-${(year + 1).toString().slice(-2)}` : `${year - 1}-${year.toString().slice(-2)}`;
         const randomNum = Math.floor(Math.random() * 900) + 100;
         return `ECA/CASH/${month}/${randomNum}`;
     };
 
     const handlePaymentModeSelect = (newMode) => {
-        setPaymentModal(prev => ({
-            ...prev,
-            mode: newMode,
-            transactionId: newMode === 'Cash' ? generateLocalCashTxn() : ""
-        }));
+        setPaymentModal(prev => ({ ...prev, mode: newMode, transactionId: newMode === 'Cash' ? generateLocalCashTxn() : "" }));
     };
 
     const handleLedgerSync = async (e) => {
@@ -520,20 +521,14 @@ export default function AdminDashboard() {
                 { courseTitle, amountPaid: amt, paymentLog: { amount: amt, mode, transactionId, date: new Date() } },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-
             const ledger = calculateAggregateLedger(student);
             if (amt >= ledger.due && !student.isApproved) {
-                await axios.patch(`${API_URL}/admin/registrations/${student._id}/grant-access`, {}, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await axios.patch(`${API_URL}/admin/registrations/${student._id}/grant-access`, {}, { headers: { Authorization: `Bearer ${token}` } });
             }
-
             triggerToast("LEDGER SYNCED");
             setPaymentModal({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" });
             fetchEverything();
-        } catch (err) {
-            triggerToast("SYNC FAILED");
-        }
+        } catch (err) { triggerToast("SYNC FAILED"); }
     };
 
     const handleEnquiryStatusUpdate = async (id, currentStatus, studentName) => {
@@ -541,40 +536,44 @@ export default function AdminDashboard() {
             await axios.patch(`${API_URL}/inquiry/${id}`, { isContacted: !currentStatus, targetName: studentName }, { headers: { Authorization: `Bearer ${token}` } });
             triggerToast(!currentStatus ? "CONTACTED" : "PENDING");
             fetchEverything();
-        } catch (err) {
-            triggerToast("FAILED");
-        }
+        } catch (err) { triggerToast("FAILED"); }
     };
 
     const handleSendReport = async () => {
         setIsSendingReport(true);
         try {
             await axios.post(`${API_URL}/admin/reports/dispatch-founder-report`, {
-                targetMonth: selectedMonth,
-                totalRevenue: monthlyHistory[selectedMonth]?.revenue || 0,
-                topCourses: topCoursesData,
-                totalStudents: students.length,
-                pendingQueue: finances.pendingAdjustments
+                targetMonth: selectedMonth, totalRevenue: monthlyHistory[selectedMonth]?.revenue || 0,
+                topCourses: topCoursesData, totalStudents: students.length, pendingQueue: finances.pendingAdjustments
             }, { headers: { Authorization: `Bearer ${token}` } });
-
             triggerToast("REPORT DISPATCHED TO FOUNDER");
-        } catch (err) {
-            triggerToast("FAILED TO DISPATCH REPORT");
-        } finally {
-            setIsSendingReport(false);
-        }
+        } catch (err) { triggerToast("FAILED TO DISPATCH REPORT"); } 
+        finally { setIsSendingReport(false); }
     };
 
     const renderSourceBadge = (src) => {
         const norm = src?.toLowerCase() || "";
-        if (norm.includes("bot") || norm.includes("ai")) {
-            return <span className="px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full font-black text-[9px] border border-sky-500/30 uppercase italic inline-flex items-center gap-1.5"><FiMessageCircle size={11} /> AI Chatbot</span>;
-        }
-        if (norm.includes("facebook") || norm.includes("meta")) {
-            return <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full font-black text-[9px] border border-indigo-500/30 uppercase italic inline-flex items-center gap-1.5"><FiFacebook size={11} /> Facebook Ads</span>;
-        }
+        if (norm.includes("bot") || norm.includes("ai")) return <span className="px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full font-black text-[9px] border border-sky-500/30 uppercase italic inline-flex items-center gap-1.5"><FiMessageCircle size={11} /> AI Chatbot</span>;
+        if (norm.includes("facebook") || norm.includes("meta")) return <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full font-black text-[9px] border border-indigo-500/30 uppercase italic inline-flex items-center gap-1.5"><FiFacebook size={11} /> Facebook Ads</span>;
         return <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full font-black text-[9px] border border-emerald-500/30 uppercase italic inline-flex items-center gap-1.5"><FiGlobe size={11} /> Website Portal</span>;
     };
+
+    // --- COMPONENT LEVEL MONTHLY TALLY ---
+    const getMonthlyAcquisitionStats = useCallback((dataArray, isStudentData = false) => {
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        return dataArray.filter(item => {
+            const itemDate = new Date(item.createdAt || item.date || Date.now());
+            const itemMonthKey = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+            if (isStudentData) {
+                return itemMonthKey === currentMonthKey;
+            } else {
+                return itemMonthKey === currentMonthKey && !studentPhones.has(item.phone);
+            }
+        }).length;
+    }, [studentPhones]);
+
 
     const renderOverview = () => {
         let currentRevenue = selectedMonth && monthlyHistory[selectedMonth] ? monthlyHistory[selectedMonth].revenue : 0;
@@ -587,10 +586,11 @@ export default function AdminDashboard() {
             <div className="space-y-8 text-left">
                 {/* 1. TOP METRICS ROW */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    <div className="bg-gradient-to-br from-[#1A5F7A] to-[#0A192F] text-white p-7 rounded-3xl shadow-xl relative overflow-hidden border border-slate-700/60 border-b-4 border-b-[#F37021]">
+                    <div className="bg-gradient-to-br from-[#1A5F7A] to-[#0A192F] text-white p-7 rounded-3xl shadow-xl relative overflow-hidden border border-slate-700/60 border-b-4 border-b-[#F37021] flex flex-col justify-center">
                         <FiDollarSign className="absolute -right-3 -bottom-3 text-8xl opacity-10" />
                         <p className="text-[10px] uppercase font-black text-slate-300 tracking-wider mb-1">Gross Collection (All Time)</p>
                         <div className="text-3xl lg:text-4xl font-black italic tracking-tight">₹{finances.total.toLocaleString()}</div>
+                        <div className="text-[9px] text-[#F37021] font-bold uppercase tracking-wider mt-1">{formatNumberToWords(finances.total)}</div>
                     </div>
 
                     <div className="bg-[#0A192F]/80 backdrop-blur-md p-7 rounded-3xl border border-slate-800 flex flex-col justify-between shadow-xl">
@@ -632,7 +632,6 @@ export default function AdminDashboard() {
 
                 {/* --- TIME-SERIES & DEEP ML ANALYTICS --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
                     {/* Time-Series Trend */}
                     <div className="lg:col-span-2 bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
                         <div className="flex justify-between items-center mb-2">
@@ -642,36 +641,21 @@ export default function AdminDashboard() {
                                 </h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Monthly collection history across chronological time-buckets.</p>
                             </div>
-                            <span className="bg-orange-500/10 text-[#F37021] border border-orange-500/30 px-3 py-1 rounded-full text-[9px] font-black uppercase">
-                                Live Stream
-                            </span>
+                            <span className="bg-orange-500/10 text-[#F37021] border border-orange-500/30 px-3 py-1 rounded-full text-[9px] font-black uppercase">Live Stream</span>
                         </div>
 
                         {/* RECHARTS IMPLEMENTATION - DUAL AXIS */}
                         <div className="h-56 w-full mt-4 border-b border-slate-800 pb-2">
                             {Object.keys(monthlyHistory).length > 0 ? (() => {
                                 let previousYear = null;
-
-                                const chartData = Object.entries(monthlyHistory)
-                                    .sort(([a], [b]) => a.localeCompare(b))
-                                    .map(([monthStr, data]) => {
-                                        const [year, monthNum] = monthStr.split('-');
-                                        const date = new Date(year, parseInt(monthNum) - 1);
-                                        const monthName = date.toLocaleString('en-US', { month: 'short' });
-
-                                        let label = monthName;
-                                        if (year !== previousYear) {
-                                            label = `${monthName} ${year}`;
-                                            previousYear = year;
-                                        }
-
-                                        return {
-                                            monthLabel: label,
-                                            fullMonth: date.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
-                                            revenue: data.revenue,
-                                            enrollments: data.enrollments
-                                        };
-                                    });
+                                const chartData = Object.entries(monthlyHistory).sort(([a], [b]) => a.localeCompare(b)).map(([monthStr, data]) => {
+                                    const [year, monthNum] = monthStr.split('-');
+                                    const date = new Date(year, parseInt(monthNum) - 1);
+                                    const monthName = date.toLocaleString('en-US', { month: 'short' });
+                                    let label = monthName;
+                                    if (year !== previousYear) { label = `${monthName} ${year}`; previousYear = year; }
+                                    return { monthLabel: label, fullMonth: date.toLocaleString('en-US', { month: 'long', year: 'numeric' }), revenue: data.revenue, enrollments: data.enrollments };
+                                });
 
                                 return (
                                     <ResponsiveContainer width="100%" height="100%">
@@ -683,71 +667,20 @@ export default function AdminDashboard() {
                                                 </linearGradient>
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                                            <XAxis 
-                                                dataKey="monthLabel" 
-                                                stroke="#64748b" 
-                                                fontSize={10} 
-                                                tickLine={false} 
-                                                axisLine={false} 
-                                                tickMargin={10} 
-                                            />
-                                            <YAxis 
-                                                yAxisId="left"
-                                                stroke="#64748b" 
-                                                fontSize={10} 
-                                                tickLine={false} 
-                                                axisLine={false} 
-                                                tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`} 
-                                            />
-                                            <YAxis 
-                                                yAxisId="right"
-                                                orientation="right"
-                                                stroke="#38bdf8" 
-                                                fontSize={10} 
-                                                tickLine={false} 
-                                                axisLine={false} 
-                                                tickFormatter={(val) => `${val}`} 
-                                            />
-                                            <Tooltip
-                                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px', color: '#fff' }}
-                                                labelFormatter={(label, payload) => payload?.[0]?.payload?.fullMonth || label}
-                                                formatter={(value, name) => {
-                                                    if (name === 'Gross Revenue') return [`₹${value.toLocaleString()}`, name];
-                                                    if (name === 'Student Enrollments') return [value, name];
-                                                    return [value, name];
-                                                }}
-                                            />
+                                            <XAxis dataKey="monthLabel" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickMargin={10} />
+                                            <YAxis yAxisId="left" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`} />
+                                            <YAxis yAxisId="right" orientation="right" stroke="#38bdf8" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val} Enrolls`} />
+                                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px', color: '#fff' }} labelFormatter={(label, payload) => payload?.[0]?.payload?.fullMonth || label} formatter={(value, name) => { if (name === 'Gross Revenue') return [`₹${value.toLocaleString()}`, name]; if (name === 'Student Enrollments') return [value, name]; return [value, name]; }} />
                                             <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', color: '#94a3b8' }} />
-                                            <Area 
-                                                yAxisId="left"
-                                                type="monotone" 
-                                                dataKey="revenue" 
-                                                name="Gross Revenue"
-                                                stroke="#F37021" 
-                                                strokeWidth={3} 
-                                                fillOpacity={1} 
-                                                fill="url(#colorRev)" 
-                                            />
-                                            <Line 
-                                                yAxisId="right"
-                                                type="monotone" 
-                                                dataKey="enrollments" 
-                                                name="Student Enrollments"
-                                                stroke="#38bdf8" 
-                                                strokeWidth={3} 
-                                                dot={{ r: 4, fill: '#0f172a', strokeWidth: 2 }}
-                                                activeDot={{ r: 6 }}
-                                            />
+                                            <Area yAxisId="left" type="monotone" dataKey="revenue" name="Gross Revenue" stroke="#F37021" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                                            <Line yAxisId="right" type="monotone" dataKey="enrollments" name="Student Enrollments" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4, fill: '#0f172a', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                                         </ComposedChart>
                                     </ResponsiveContainer>
                                 );
                             })() : (
-                                <div className="w-full h-full flex items-center justify-center text-slate-500 text-[10px] font-black uppercase">
-                                    Waiting for telemetry entries...
-                                </div>
+                                <div className="w-full h-full flex items-center justify-center text-slate-500 text-[10px] font-black uppercase">Waiting for telemetry entries...</div>
                             )}
                         </div>
-
                         <div className="flex justify-between items-center mt-3 text-[10px] font-bold text-slate-400 uppercase pt-2">
                             <span>Timeline Origin</span>
                             <span className="text-[#F37021] font-black">Current Period ({selectedMonth})</span>
@@ -766,28 +699,23 @@ export default function AdminDashboard() {
                         <div className="space-y-4 my-5">
                             <div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 mb-1">
-                                    <span>Positive Intent (Hot)</span>
-                                    <span className="text-emerald-400 font-bold">{mlOverviewStats.positive} Leads</span>
+                                    <span>Positive Intent (Hot)</span><span className="text-emerald-400 font-bold">{mlOverviewStats.positive} Leads</span>
                                 </div>
                                 <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
                                     <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${students.length ? (mlOverviewStats.positive / students.length) * 100 : 0}%` }} />
                                 </div>
                             </div>
-
                             <div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 mb-1">
-                                    <span>Neutral / Evaluating</span>
-                                    <span className="text-slate-400 font-bold">{mlOverviewStats.neutral} Leads</span>
+                                    <span>Neutral / Evaluating</span><span className="text-slate-400 font-bold">{mlOverviewStats.neutral} Leads</span>
                                 </div>
                                 <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
                                     <div className="bg-slate-500 h-full rounded-full transition-all duration-500" style={{ width: `${students.length ? (mlOverviewStats.neutral / students.length) * 100 : 0}%` }} />
                                 </div>
                             </div>
-
                             <div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 mb-1">
-                                    <span>Stale / Urgent Follow-up</span>
-                                    <span className="text-red-400 font-bold">{mlOverviewStats.negative} Leads</span>
+                                    <span>Stale / Urgent Follow-up</span><span className="text-red-400 font-bold">{mlOverviewStats.negative} Leads</span>
                                 </div>
                                 <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
                                     <div className="bg-red-500 h-full rounded-full transition-all duration-500" style={{ width: `${students.length ? (mlOverviewStats.negative / students.length) * 100 : 0}%` }} />
@@ -796,10 +724,7 @@ export default function AdminDashboard() {
                         </div>
 
                         <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center justify-between shadow-inner">
-                            <div>
-                                <span className="text-[8px] font-black text-[#F37021] uppercase block tracking-wider">Avg Conversion Score</span>
-                                <span className="text-2xl font-black text-white italic">{mlOverviewStats.avgProb}%</span>
-                            </div>
+                            <div><span className="text-[8px] font-black text-[#F37021] uppercase block tracking-wider">Avg Conversion Score</span><span className="text-2xl font-black text-white italic">{mlOverviewStats.avgProb}%</span></div>
                             <FiActivity className="text-[#F37021] text-2xl animate-pulse" />
                         </div>
                     </div>
@@ -839,12 +764,8 @@ export default function AdminDashboard() {
                         </div>
                         {(userRole === 'founder' || userRole === 'admin') && (
                             <button
-                                onClick={handleSendReport}
-                                disabled={isSendingReport}
-                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all border ${isSendingReport
-                                        ? "bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed"
-                                        : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500 hover:text-white"
-                                    }`}
+                                onClick={handleSendReport} disabled={isSendingReport}
+                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all border ${isSendingReport ? "bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500 hover:text-white"}`}
                             >
                                 <FiSend /> {isSendingReport ? "Transmitting..." : "Dispatch Founder Report"}
                             </button>
@@ -859,20 +780,12 @@ export default function AdminDashboard() {
                                 </div>
                                 <h5 className="font-black text-white text-xs uppercase italic mt-1 leading-tight min-h-[32px]">{course.courseName}</h5>
                                 <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Enrolls</p>
-                                        <p className="font-black text-[#F37021] text-base">{course.enrollments}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Revenue</p>
-                                        <p className="font-black text-white text-base">₹{course.revenue.toLocaleString()}</p>
-                                    </div>
+                                    <div><p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Enrolls</p><p className="font-black text-[#F37021] text-base">{course.enrollments}</p></div>
+                                    <div className="text-right"><p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Revenue</p><p className="font-black text-white text-base">₹{course.revenue.toLocaleString()}</p></div>
                                 </div>
                             </div>
                         )) : (
-                            <div className="col-span-full p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-2xl">
-                                <span className="text-[10px] font-black uppercase tracking-widest block">Awaiting Sales Data</span>
-                            </div>
+                            <div className="col-span-full p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-2xl"><span className="text-[10px] font-black uppercase tracking-widest block">Awaiting Sales Data</span></div>
                         )}
                     </div>
                 </div>
@@ -920,370 +833,488 @@ export default function AdminDashboard() {
         );
     };
 
-    const renderRegistry = () => (
-        <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                    <h3 className="text-2xl font-black text-white uppercase italic">Student Registry</h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage and track enrollments.</p>
-                </div>
-                
-                {/* Advanced Filters */}
-                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                    <div className="relative flex-1 min-w-[200px] group">
-                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                            type="text"
-                            placeholder="Search Identity or UTR..."
-                            className="w-full pl-11 pr-4 py-3 bg-[#0A192F] border border-slate-800 text-white rounded-2xl outline-none font-bold text-xs focus:border-[#F37021] shadow-inner transition-all placeholder:text-slate-500"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
-                        <FiFilter className="text-slate-500 ml-1" size={14}/>
-                        <select
-                            className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
-                            value={filterApproved}
-                            onChange={e => setFilterApproved(e.target.value)}
-                        >
-                            <option value="all">All Status</option>
-                            <option value="approved">Approved ERP</option>
-                            <option value="pending">Pending Access</option>
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
-                        <FiBookOpen className="text-slate-500 ml-1" size={14}/>
-                        <select
-                            className="bg-transparent py-2 max-w-[120px] font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
-                            value={studentCourseFilter}
-                            onChange={e => setStudentCourseFilter(e.target.value)}
-                        >
-                            <option value="all">All Courses</option>
-                            {allCourses.map(c => <option key={c.id || c.title} value={c.title}>{c.title}</option>)}
-                        </select>
-                    </div>
-                    <select
-                        className="bg-[#0A192F] border border-slate-800 rounded-2xl px-4 py-3 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer shadow-md focus:border-[#F37021]"
-                        value={studentSortBy}
-                        onChange={e => setStudentSortBy(e.target.value)}
-                    >
-                        <option value="newest">Sort: Newest</option>
-                        <option value="oldest">Sort: Oldest</option>
-                    </select>
-                </div>
-            </div>
+    const renderRegistry = () => {
+        const filteredStudents = students.filter(s => {
+            const matchSearch = s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.phone?.includes(searchQuery);
+            const matchStatus = filterApproved === "all" ? true : filterApproved === "approved" ? s.isApproved : !s.isApproved;
+            const matchCourse = studentCourseFilter === "all" ? true : s.enrollments?.some(e => e.course === studentCourseFilter) || s.course === studentCourseFilter;
+            return matchSearch && matchStatus && matchCourse;
+        }).sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return studentSortBy === "newest" ? dateB - dateA : dateA - dateB;
+        });
 
-            <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto">
-                <table className="w-full min-w-[950px] text-left">
-                    <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px] tracking-wider">
-                        <tr>
-                            <th className="p-6">Profile Identity</th>
-                            <th>Financial Standing</th>
-                            <th>Portal Status</th>
-                            <th className="pr-6 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-850 text-xs">
-                        {students.filter(s => {
-                            const matchSearch = s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.phone?.includes(searchQuery);
-                            const matchStatus = filterApproved === "all" ? true : filterApproved === "approved" ? s.isApproved : !s.isApproved;
-                            const matchCourse = studentCourseFilter === "all" ? true : s.enrollments?.some(e => e.course === studentCourseFilter) || s.course === studentCourseFilter;
-                            return matchSearch && matchStatus && matchCourse;
-                        }).sort((a, b) => {
-                            const dateA = new Date(a.createdAt || 0);
-                            const dateB = new Date(b.createdAt || 0);
-                            return studentSortBy === "newest" ? dateB - dateA : dateA - dateB;
-                        }).map(student => {
-                            const ledger = calculateAggregateLedger(student);
-                            const enrollments = getNormalizedEnrollments(student);
-                            const isExpanded = expandedStudent === student._id;
-                            const leadAnalysis = analyzeLead(student); // Dynamic sentiment & prob
+        const toggleAllStudents = () => {
+            if (selectedStudents.length === filteredStudents.length) setSelectedStudents([]);
+            else setSelectedStudents(filteredStudents.map(s => s._id));
+        };
 
-                            const studentMatchingBatches = availableBatches.filter(batch =>
-                                enrollments.some(en => isCourseBatchMatch(en.course, batch.courseId, batch.courseName))
-                            );
+        const handleCSVExport = () => {
+            const columns = [
+                { label: 'Name', accessor: s => s.name || 'N/A' },
+                { label: 'Phone', accessor: s => s.phone || 'N/A' },
+                { label: 'Aadhaar Status', accessor: s => s.aadhaarNo || s.aadhar ? '[Aadhaar Redacted]' : 'Pending' },
+                { label: 'Status', accessor: s => s.isApproved ? 'Approved' : 'Pending' },
+                { label: 'Registration Date', accessor: s => s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A' },
+                { label: 'Total Paid', accessor: s => calculateAggregateLedger(s).paid },
+                { label: 'Total Due', accessor: s => calculateAggregateLedger(s).due }
+            ];
+            exportToCSV(filteredStudents, 'Student_Registry', columns);
+        };
 
-                            return (
-                                <React.Fragment key={student._id}>
-                                    <tr className={`group transition-all ${isExpanded ? 'bg-slate-900/90' : 'hover:bg-slate-900/50'}`}>
-                                        <td className="p-6">
-                                            <div className="font-black text-white uppercase italic text-sm tracking-wide flex items-center justify-between">
-                                                <span>{student.name}</span>
-                                                <button onClick={() => handleOpenTracer(student.phone)} className="px-2.5 py-0.5 bg-orange-500/10 text-[#F37021] rounded-lg font-black text-[8px] uppercase border border-orange-500/30 flex items-center gap-1 hover:bg-[#F37021] hover:text-white transition-all">
-                                                    <FiCpu size={10} /> Trace
-                                                </button>
-                                            </div>
-                                            <div className="text-[9px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
-                                                Registered: {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : 'N/A'}
-                                            </div>
-                                            <div className="text-slate-400 font-bold text-[10px] uppercase mt-1 italic flex items-center gap-1.5 flex-wrap">
-                                                <span>{enrollments.length} Enrollment(s)</span>
-                                                <span className="text-slate-600">•</span>
-                                                <span>{student.phone}</span>
-                                                <span className="text-slate-600">•</span>
-                                                <span className="flex items-center gap-1 text-slate-300">
-                                                    <FiShield size={10} className={student.aadhaarNo || student.aadhar ? "text-emerald-400" : "text-slate-500"} />
-                                                    {student.aadhaarNo || student.aadhar ? "[Aadhaar Redacted]" : "Aadhaar Pending"}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${leadAnalysis.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                                                        leadAnalysis.sentiment === 'negative' ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
-                                                    }`}>
-                                                    Sentiment: {leadAnalysis.sentiment}
-                                                </span>
-                                                <span className="bg-orange-500/10 text-[#F37021] border border-orange-500/30 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider">
-                                                    Conv: {leadAnalysis.probability}%
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="font-black text-white text-sm">
-                                                ₹{ledger.paid.toLocaleString()} <span className="text-slate-500 text-xs font-normal">/ ₹{ledger.total.toLocaleString()}</span>
-                                            </div>
-                                            <div className={`text-[10px] uppercase font-black italic mt-1 ${ledger.due > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                {ledger.due > 0 ? `DUE: ₹${ledger.due.toLocaleString()}` : 'CLEARED'}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="flex flex-col gap-1.5">
-                                                {student.isApproved ? (
-                                                    <span className="bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-md border border-emerald-500/30 text-[9px] font-black w-fit uppercase flex items-center gap-1.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Portal Active
-                                                    </span>
-                                                ) : (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="bg-red-500/10 text-red-400 px-2.5 py-0.5 rounded-md border border-red-500/30 text-[9px] font-black uppercase flex items-center gap-1">
-                                                            Inactive
-                                                        </span>
-                                                        <button
-                                                            onClick={() => handleForceUnlock(student._id)}
-                                                            className="bg-slate-900 border border-slate-700 text-[#F37021] hover:bg-[#F37021] hover:text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
-                                                        >
-                                                            <FiUnlock size={10} /> Unlock
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="pr-6 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => setExpandedStudent(isExpanded ? null : student._id)}
-                                                    className={`p-2 rounded-xl border transition-all ${isExpanded ? 'bg-[#F37021] text-white border-orange-500 rotate-180' : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'}`}
-                                                >
-                                                    <FiChevronDown size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setBatchModal({ show: true, student, filteredBatches: studentMatchingBatches })}
-                                                    className="w-9 h-9 bg-slate-900 border border-slate-700 text-slate-300 rounded-xl flex items-center justify-center hover:bg-[#1A5F7A] hover:text-white transition-all shadow-md"
-                                                    title="Link Batch"
-                                                >
-                                                    <FiUserCheck size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setPaymentModal({ show: true, student, amount: "", mode: "Cash", transactionId: generateLocalCashTxn(), courseTitle: enrollments[0]?.course || "" })}
-                                                    className="w-9 h-9 bg-slate-900 border border-slate-700 text-slate-300 rounded-xl flex items-center justify-center hover:bg-[#1A5F7A] hover:text-white transition-all shadow-md"
-                                                    title="Ledger Sync"
-                                                >
-                                                    <FiCreditCard size={14} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                    <AnimatePresence>
-                                        {isExpanded && (
-                                            <tr>
-                                                <td colSpan="4" className="p-0 bg-slate-950/60">
-                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0 }} className="overflow-hidden border-y border-slate-800 p-6 space-y-3">
-                                                        {enrollments.map((en, i) => (
-                                                            <div key={i} className="bg-[#0A192F] p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-8 h-8 bg-orange-500/10 border border-orange-500/20 text-[#F37021] font-black rounded-lg flex items-center justify-center text-xs">
-                                                                        {i + 1}
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="font-black text-white uppercase italic text-sm">{en.course}</div>
-                                                                        <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 flex items-center gap-2">
-                                                                            <span>UTR: <span className="text-slate-300 font-black">{en.transactionId}</span></span>
-                                                                            <span>•</span>
-                                                                            <span>Status: <span className="text-sky-400 font-black">{en.paymentStatus}</span></span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center gap-4">
-                                                                    <div className="text-right">
-                                                                        <span className="text-[8px] uppercase text-slate-500 font-black block">Paid / Fee</span>
-                                                                        <span className="text-sm font-black text-white">₹{(en.amountPaid || 0).toLocaleString()} <span className="text-slate-500 text-xs font-normal">/ ₹{en.courseFee?.toLocaleString()}</span></span>
-                                                                    </div>
-                                                                    {['PENDING', 'PARTIALLY_PAID'].includes(en.paymentStatus?.toUpperCase()) ? (
-                                                                        <button onClick={() => handleApprovePayment(student._id, student.name, en.transactionId)} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-500 flex items-center gap-1 shadow-md">
-                                                                            <FiShield /> Verify
-                                                                        </button>
-                                                                    ) : (
-                                                                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-3 py-1 rounded-lg flex items-center gap-1">
-                                                                            <FiCheckCircle /> Verified
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </motion.div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </AnimatePresence>
-                                </React.Fragment>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-
-    const renderEnquiries = () => (
-        <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                    <h3 className="text-2xl font-black text-white uppercase italic">Web Leads</h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage incoming inquiries and chatbot interactions.</p>
-                </div>
-                
-                {/* Advanced Filters */}
-                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                    <div className="relative flex-1 min-w-[200px] group">
-                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                            type="text"
-                            placeholder="Search Name or Phone..."
-                            className="w-full pl-11 pr-4 py-3 bg-[#0A192F] border border-slate-800 text-white rounded-2xl outline-none font-bold text-xs focus:border-[#F37021] shadow-inner transition-all placeholder:text-slate-500"
-                            value={enquirySearchQuery}
-                            onChange={e => setEnquirySearchQuery(e.target.value)}
-                        />
+        return (
+            <div className="space-y-6 pb-20 relative">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <h3 className="text-2xl font-black text-white uppercase italic">Student Registry</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage and track enrollments.</p>
                     </div>
-                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
-                        <FiFilter className="text-slate-500 ml-1" size={14}/>
-                        <select
-                            className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
-                            value={enquiryStatusFilter}
-                            onChange={e => setEnquiryStatusFilter(e.target.value)}
-                        >
-                            <option value="all">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="contacted">Handled</option>
-                        </select>
+                    
+                    {/* NEW: MONTHLY ACQUISITION STAT-BLOCK */}
+                    <div className="bg-[#0A192F] border border-slate-800 rounded-2xl px-5 py-2 shadow-inner flex flex-col justify-center min-w-[200px]">
+                        <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-0.5 flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"/> Current Month Volume</span>
+                        <div className="text-xl font-black text-emerald-400 leading-none">
+                            +{getMonthlyAcquisitionStats(students, true)} <span className="text-xs text-slate-400 font-bold uppercase">New Registrations</span>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
-                        <FiGlobe className="text-slate-500 ml-1" size={14}/>
-                        <select
-                            className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer"
-                            value={enquirySourceFilter}
-                            onChange={e => setEnquirySourceFilter(e.target.value)}
-                        >
-                            <option value="all">All Sources</option>
-                            <option value="bot">AI Chatbot</option>
-                            <option value="facebook">Facebook Ads</option>
-                            <option value="web">Website Form</option>
-                        </select>
+                    
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        <div className="relative flex-1 min-w-[200px] group">
+                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="text" placeholder="Search Identity or UTR..."
+                                className="w-full pl-11 pr-4 py-3 bg-[#0A192F] border border-slate-800 text-white rounded-2xl outline-none font-bold text-xs focus:border-[#F37021] shadow-inner transition-all placeholder:text-slate-500"
+                                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                            <FiFilter className="text-slate-500 ml-1" size={14}/>
+                            <select className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={filterApproved} onChange={e => setFilterApproved(e.target.value)}>
+                                <option value="all">All Status</option><option value="approved">Approved ERP</option><option value="pending">Pending Access</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                            <FiBookOpen className="text-slate-500 ml-1" size={14}/>
+                            <select className="bg-transparent py-2 max-w-[120px] font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={studentCourseFilter} onChange={e => setStudentCourseFilter(e.target.value)}>
+                                <option value="all">All Courses</option>
+                                {allCourses.map(c => <option key={c.id || c.title} value={c.title}>{c.title}</option>)}
+                            </select>
+                        </div>
+                        <button onClick={handleCSVExport} className="p-3 bg-slate-900 border border-slate-800 text-[#F37021] rounded-2xl hover:bg-[#F37021] hover:text-white transition-all shadow-md" title="Export to Excel/CSV">
+                            <FiDownload size={16} />
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
-                <table className="w-full min-w-[950px] text-xs">
-                    <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
-                        <tr>
-                            <th className="p-5 pl-8">Lead Identity</th>
-                            <th>User Inquiry & Message</th>
-                            <th>Source</th>
-                            <th>Timeline</th>
-                            <th className="pr-8 text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-850 font-bold">
-                        {enquiries.filter(item => {
-                            const matchSearch = item.name?.toLowerCase().includes(enquirySearchQuery.toLowerCase()) || item.phone?.includes(enquirySearchQuery) || item.message?.toLowerCase().includes(enquirySearchQuery.toLowerCase());
-                            const matchStatus = enquiryStatusFilter === "all" ? true : enquiryStatusFilter === "contacted" ? item.isContacted : !item.isContacted;
-                            const matchSource = enquirySourceFilter === "all" ? true : item.source?.toLowerCase().includes(enquirySourceFilter);
-                            return matchSearch && matchStatus && matchSource;
-                        }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).length === 0 ? (
+                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto">
+                    <table className="w-full min-w-[950px] text-left">
+                        <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px] tracking-wider">
                             <tr>
-                                <td colSpan="5" className="p-8 text-center text-slate-500 font-black uppercase tracking-wider">
-                                    No website inquiries matching criteria.
-                                </td>
+                                <th className="p-6 w-12 text-center">
+                                    <input type="checkbox" checked={selectedStudents.length === filteredStudents.length && filteredStudents.length > 0} onChange={toggleAllStudents} className="accent-[#F37021] w-4 h-4 cursor-pointer rounded" />
+                                </th>
+                                <th className="p-6 pl-0">Profile Identity</th>
+                                <th>Financial Standing</th>
+                                <th>Portal Status</th>
+                                <th className="pr-6 text-right">Actions</th>
                             </tr>
-                        ) : (
-                            enquiries.filter(item => {
-                                const matchSearch = item.name?.toLowerCase().includes(enquirySearchQuery.toLowerCase()) || item.phone?.includes(enquirySearchQuery) || item.message?.toLowerCase().includes(enquirySearchQuery.toLowerCase());
-                                const matchStatus = enquiryStatusFilter === "all" ? true : enquiryStatusFilter === "contacted" ? item.isContacted : !item.isContacted;
-                                const matchSource = enquirySourceFilter === "all" ? true : (item.source || "").toLowerCase().includes(enquirySourceFilter);
-                                return matchSearch && matchStatus && matchSource;
-                            }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).map(item => {
-                                const actualMessage = item.message && item.message.trim() !== ""
-                                    ? item.message
-                                    : item.course || "General Inquiry";
+                        </thead>
+                        <tbody className="divide-y divide-slate-850 text-xs">
+                            {filteredStudents.map(student => {
+                                const ledger = calculateAggregateLedger(student);
+                                const enrollments = getNormalizedEnrollments(student);
+                                const isExpanded = expandedStudent === student._id;
+                                const leadAnalysis = analyzeLead(student);
+                                const isSelected = selectedStudents.includes(student._id);
+
+                                const studentMatchingBatches = availableBatches.filter(batch =>
+                                    enrollments.some(en => isCourseBatchMatch(en.course, batch.courseId, batch.courseName))
+                                );
 
                                 return (
-                                    <tr key={item._id} className="hover:bg-slate-900/50 transition-colors">
-                                        <td className="p-5 pl-8">
-                                            <div className="font-black text-white uppercase text-xs">{item.name}</div>
-                                            <div className="text-slate-400 text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                                <span>📞 {item.phone}</span>
-                                                {item.email && (
-                                                    <>
-                                                        <span className="text-slate-600">•</span>
-                                                        <span className="lowercase font-normal text-slate-400">{item.email}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="max-w-xs pr-4">
-                                            <div className="bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl text-slate-200 font-semibold text-xs leading-relaxed truncate whitespace-break-spaces">
-                                                "{actualMessage}"
-                                            </div>
-                                            {item.course && item.course !== "General Inquiry" && item.course !== actualMessage && (
-                                                <span className="text-[9px] font-black uppercase text-[#F37021] tracking-wider mt-1 block">
-                                                    Track: {item.course}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td>{renderSourceBadge(item.source)}</td>
-                                        <td>
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase">
-                                                <span className="block text-slate-500 text-[8px]">Received On:</span>
-                                                <span className="text-white">{item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}</span>
-                                            </div>
-                                            {item.isContacted && (
-                                                <div className="text-[10px] font-bold text-emerald-400 uppercase mt-1">
-                                                    <span className="block text-emerald-500/50 text-[8px]">Handled On:</span>
-                                                    <span className="text-emerald-400">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'N/A'}</span>
+                                    <React.Fragment key={student._id}>
+                                        <tr className={`group transition-all ${isExpanded || isSelected ? 'bg-slate-900/90' : 'hover:bg-slate-900/50'}`}>
+                                            <td className="p-6 text-center">
+                                                <input type="checkbox" checked={isSelected} onChange={() => toggleStudentSelection(student._id)} className="accent-[#F37021] w-4 h-4 cursor-pointer rounded" />
+                                            </td>
+                                            <td className="p-6 pl-0">
+                                                <div className="font-black text-white uppercase italic text-sm tracking-wide flex items-center justify-between">
+                                                    <span>{student.name}</span>
+                                                    <button onClick={() => handleOpenTracer(student.phone)} className="px-2.5 py-0.5 bg-orange-500/10 text-[#F37021] rounded-lg font-black text-[8px] uppercase border border-orange-500/30 flex items-center gap-1 hover:bg-[#F37021] hover:text-white transition-all">
+                                                        <FiCpu size={10} /> Trace
+                                                    </button>
                                                 </div>
+                                                <div className="text-[9px] text-slate-500 mt-1 uppercase font-bold tracking-wider">
+                                                    Registered: {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : 'N/A'}
+                                                </div>
+                                                <div className="text-slate-400 font-bold text-[10px] uppercase mt-1 italic flex items-center gap-1.5 flex-wrap">
+                                                    <span>{enrollments.length} Enrollment(s)</span><span className="text-slate-600">•</span>
+                                                    <span>{student.phone}</span><span className="text-slate-600">•</span>
+                                                    <span className="flex items-center gap-1 text-slate-300">
+                                                        <FiShield size={10} className={student.aadhaarNo || student.aadhar ? "text-emerald-400" : "text-slate-500"} />
+                                                        {student.aadhaarNo || student.aadhar ? "[Aadhaar Redacted]" : "Aadhaar Pending"}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                    <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${leadAnalysis.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : leadAnalysis.sentiment === 'negative' ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                                                        Sentiment: {leadAnalysis.sentiment}
+                                                    </span>
+                                                    <span className="bg-orange-500/10 text-[#F37021] border border-orange-500/30 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider">
+                                                        Conv: {leadAnalysis.probability}%
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="font-black text-white text-sm">₹{ledger.paid.toLocaleString()} <span className="text-slate-500 text-xs font-normal">/ ₹{ledger.total.toLocaleString()}</span></div>
+                                                <div className={`text-[10px] uppercase font-black italic mt-1 ${ledger.due > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                    {ledger.due > 0 ? `DUE: ₹${ledger.due.toLocaleString()}` : 'CLEARED'}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="flex flex-col gap-1.5">
+                                                    {student.isApproved ? (
+                                                        <span className="bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-md border border-emerald-500/30 text-[9px] font-black w-fit uppercase flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Portal Active</span>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="bg-red-500/10 text-red-400 px-2.5 py-0.5 rounded-md border border-red-500/30 text-[9px] font-black uppercase flex items-center gap-1">Inactive</span>
+                                                            <button onClick={() => handleForceUnlock(student._id)} className="bg-slate-900 border border-slate-700 text-[#F37021] hover:bg-[#F37021] hover:text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-1 transition-all">
+                                                                <FiUnlock size={10} /> Unlock
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="pr-6 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button onClick={() => setExpandedStudent(isExpanded ? null : student._id)} className={`p-2 rounded-xl border transition-all ${isExpanded ? 'bg-[#F37021] text-white border-orange-500 rotate-180' : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'}`}><FiChevronDown size={14} /></button>
+                                                    <button onClick={() => setBatchModal({ show: true, student, filteredBatches: studentMatchingBatches })} className="w-9 h-9 bg-slate-900 border border-slate-700 text-slate-300 rounded-xl flex items-center justify-center hover:bg-[#1A5F7A] hover:text-white transition-all shadow-md" title="Link Batch"><FiUserCheck size={14} /></button>
+                                                    <button onClick={() => setPaymentModal({ show: true, student, amount: "", mode: "Cash", transactionId: generateLocalCashTxn(), courseTitle: enrollments[0]?.course || "" })} className="w-9 h-9 bg-slate-900 border border-slate-700 text-slate-300 rounded-xl flex items-center justify-center hover:bg-[#1A5F7A] hover:text-white transition-all shadow-md" title="Ledger Sync"><FiCreditCard size={14} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <AnimatePresence>
+                                            {isExpanded && (
+                                                <tr>
+                                                    <td colSpan="5" className="p-0 bg-slate-950/60">
+                                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0 }} className="overflow-hidden border-y border-slate-800 p-6 space-y-3">
+                                                            {enrollments.map((en, i) => (
+                                                                <div key={i} className="bg-[#0A192F] p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-8 h-8 bg-orange-500/10 border border-orange-500/20 text-[#F37021] font-black rounded-lg flex items-center justify-center text-xs">{i + 1}</div>
+                                                                        <div>
+                                                                            <div className="font-black text-white uppercase italic text-sm">{en.course}</div>
+                                                                            <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 flex items-center gap-2">
+                                                                                <span>UTR: <span className="text-slate-300 font-black">{en.transactionId}</span></span><span>•</span>
+                                                                                <span>Status: <span className="text-sky-400 font-black">{en.paymentStatus}</span></span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="text-right">
+                                                                            <span className="text-[8px] uppercase text-slate-500 font-black block">Paid / Fee</span>
+                                                                            <span className="text-sm font-black text-white">₹{(en.amountPaid || 0).toLocaleString()} <span className="text-slate-500 text-xs font-normal">/ ₹{en.courseFee?.toLocaleString()}</span></span>
+                                                                        </div>
+                                                                        {['PENDING', 'PARTIALLY_PAID'].includes(en.paymentStatus?.toUpperCase()) ? (
+                                                                            <button onClick={() => handleApprovePayment(student._id, student.name, en.transactionId)} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-500 flex items-center gap-1 shadow-md"><FiShield /> Verify</button>
+                                                                        ) : (
+                                                                            <>
+                                                                                <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-3 py-1 rounded-lg flex items-center gap-1"><FiCheckCircle /> Verified</span>
+                                                                                <button onClick={() => handlePrintReceipt(student, en)} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-slate-700 flex items-center gap-1 transition-all"><FiPrinter size={12}/> Receipt</button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </motion.div>
+                                                    </td>
+                                                </tr>
                                             )}
-                                        </td>
-                                        <td className="pr-8 text-right">
-                                            <button
-                                                onClick={() => handleEnquiryStatusUpdate(item._id, item.isContacted, item.name)}
-                                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ml-auto ${item.isContacted
-                                                        ? 'bg-emerald-600 text-white'
-                                                        : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
-                                                    }`}
-                                                title={item.isContacted ? "Contacted" : "Mark as Contacted"}
-                                            >
-                                                {item.isContacted ? <FiCheckCircle size={16} /> : <FiPhoneCall size={14} />}
-                                            </button>
-                                        </td>
-                                    </tr>
+                                        </AnimatePresence>
+                                    </React.Fragment>
                                 );
-                            })
-                        )}
-                    </tbody>
-                </table>
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Bulk Action Floating Bar */}
+                <AnimatePresence>
+                    {selectedStudents.length > 0 && (
+                        <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#F37021] text-white px-6 py-4 rounded-full shadow-2xl font-black border-2 border-white/20 uppercase text-xs flex items-center gap-4 z-[999]">
+                            <span className="bg-white/20 px-2 py-1 rounded text-[10px]">{selectedStudents.length} Selected</span>
+                            <button onClick={handleBulkApprove} className="hover:text-amber-200 transition-colors flex items-center gap-1.5"><FiShield size={16} /> Bulk Approve Accounts</button>
+                            <span className="w-px h-4 bg-white/30"></span>
+                            <button onClick={() => setSelectedStudents([])} className="hover:text-slate-200 transition-colors flex items-center gap-1.5"><FiX size={16} /> Cancel</button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-        </div>
-    );
+        );
+    };
+
+    const renderEnquiries = () => {
+        const filteredEnquiries = enquiries.filter(item => {
+            const isConverted = studentPhones.has(item.phone);
+            const matchSearch = item.name?.toLowerCase().includes(enquirySearchQuery.toLowerCase()) || item.phone?.includes(enquirySearchQuery) || item.message?.toLowerCase().includes(enquirySearchQuery.toLowerCase());
+            const matchStatus = enquiryStatusFilter === "all" ? true :
+                enquiryStatusFilter === "converted" ? isConverted :
+                enquiryStatusFilter === "contacted" ? (item.isContacted && !isConverted) :
+                (!item.isContacted && !isConverted);
+            const matchSource = enquirySourceFilter === "all" ? true : item.source?.toLowerCase().includes(enquirySourceFilter);
+            return matchSearch && matchStatus && matchSource;
+        }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+        const toggleAllEnquiries = () => {
+            if (selectedEnquiries.length === filteredEnquiries.length) setSelectedEnquiries([]);
+            else setSelectedEnquiries(filteredEnquiries.map(e => e._id));
+        };
+
+        const handleCSVExport = () => {
+            const columns = [
+                { label: 'Name', accessor: s => s.name || 'N/A' },
+                { label: 'Phone', accessor: s => s.phone || 'N/A' },
+                { label: 'Message/Interest', accessor: s => s.message || s.course || 'General' },
+                { label: 'Source', accessor: s => s.source || 'Website' },
+                { label: 'Status', accessor: s => studentPhones.has(s.phone) ? 'Converted' : s.isContacted ? 'Contacted' : 'Pending' },
+                { label: 'Date', accessor: s => s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A' }
+            ];
+            exportToCSV(filteredEnquiries, 'Web_Leads', columns);
+        };
+
+        return (
+            <div className="space-y-6 pb-20 relative">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <h3 className="text-2xl font-black text-white uppercase italic">Web Leads</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage incoming inquiries and chatbot interactions.</p>
+                    </div>
+
+                    {/* NEW: MONTHLY ACQUISITION STAT-BLOCK */}
+                    <div className="bg-[#0A192F] border border-slate-800 rounded-2xl px-5 py-2 shadow-inner flex flex-col justify-center min-w-[200px]">
+                        <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-0.5 flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"/> Current Month Volume</span>
+                        <div className="text-xl font-black text-red-400 leading-none">
+                            +{getMonthlyAcquisitionStats(enquiries, false)} <span className="text-xs text-slate-400 font-bold uppercase">Fresh Leads</span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        {/* View Toggle */}
+                        <div className="bg-[#0A192F] p-1 rounded-2xl flex border border-slate-800 shadow-md">
+                            <button onClick={() => setLeadViewMode('kanban')} className={`p-2 rounded-xl transition-all ${leadViewMode === 'kanban' ? 'bg-[#1A5F7A] text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}><FiColumns size={16}/></button>
+                            <button onClick={() => setLeadViewMode('table')} className={`p-2 rounded-xl transition-all ${leadViewMode === 'table' ? 'bg-[#1A5F7A] text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}><FiList size={16}/></button>
+                        </div>
+
+                        <div className="relative flex-1 min-w-[200px] group">
+                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input type="text" placeholder="Search Name or Phone..." className="w-full pl-11 pr-4 py-3 bg-[#0A192F] border border-slate-800 text-white rounded-2xl outline-none font-bold text-xs focus:border-[#F37021] shadow-inner transition-all placeholder:text-slate-500" value={enquirySearchQuery} onChange={e => setEnquirySearchQuery(e.target.value)} />
+                        </div>
+                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                            <FiFilter className="text-slate-500 ml-1" size={14}/>
+                            <select className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={enquiryStatusFilter} onChange={e => setEnquiryStatusFilter(e.target.value)}>
+                                <option value="all">All Status</option><option value="pending">Pending</option><option value="contacted">Handled</option><option value="converted">Converted</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                            <FiGlobe className="text-slate-500 ml-1" size={14}/>
+                            <select className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={enquirySourceFilter} onChange={e => setEnquirySourceFilter(e.target.value)}>
+                                <option value="all">All Sources</option><option value="bot">AI Chatbot</option><option value="facebook">Facebook Ads</option><option value="web">Website Form</option>
+                            </select>
+                        </div>
+                        <button onClick={handleCSVExport} className="p-3 bg-slate-900 border border-slate-800 text-[#F37021] rounded-2xl hover:bg-[#F37021] hover:text-white transition-all shadow-md" title="Export to Excel/CSV">
+                            <FiDownload size={16} />
+                        </button>
+                    </div>
+                </div>
+
+                {leadViewMode === 'table' ? (
+                    <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
+                        <table className="w-full min-w-[950px] text-xs">
+                            <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
+                                <tr>
+                                    <th className="p-6 w-12 text-center"><input type="checkbox" checked={selectedEnquiries.length === filteredEnquiries.length && filteredEnquiries.length > 0} onChange={toggleAllEnquiries} className="accent-[#F37021] w-4 h-4 cursor-pointer rounded" /></th>
+                                    <th className="p-5 pl-0">Lead Identity</th>
+                                    <th>User Inquiry & Message</th>
+                                    <th>Source</th>
+                                    <th>Timeline</th>
+                                    <th className="pr-8 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-850 font-bold">
+                                {filteredEnquiries.length === 0 ? (
+                                    <tr><td colSpan="6" className="p-8 text-center text-slate-500 font-black uppercase tracking-wider">No website inquiries matching criteria.</td></tr>
+                                ) : (
+                                    filteredEnquiries.map(item => {
+                                        const actualMessage = item.message && item.message.trim() !== "" ? item.message : item.course || "General Inquiry";
+                                        const isSelected = selectedEnquiries.includes(item._id);
+                                        const isConverted = studentPhones.has(item.phone);
+
+                                        return (
+                                            <tr key={item._id} className={`transition-colors ${isSelected ? 'bg-slate-900/90' : 'hover:bg-slate-900/50'}`}>
+                                                <td className="p-6 text-center"><input type="checkbox" checked={isSelected} onChange={() => toggleEnquirySelection(item._id)} className="accent-[#F37021] w-4 h-4 cursor-pointer rounded" /></td>
+                                                <td className="p-5 pl-0">
+                                                    <div className="font-black text-white uppercase text-xs">{item.name}</div>
+                                                    <div className="text-slate-400 text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                                        <a href={`https://wa.me/91${item.phone}?text=Hi ${encodeURIComponent(item.name)}, reaching out from Expert Computer Academy regarding your inquiry.`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-[#F37021] transition-colors"><FiPhoneCall size={10}/> {item.phone}</a>
+                                                        {item.email && (<><span className="text-slate-600">•</span><span className="lowercase font-normal text-slate-400">{item.email}</span></>)}
+                                                    </div>
+                                                </td>
+                                                <td className="max-w-xs pr-4">
+                                                    <div className="bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl text-slate-200 font-semibold text-xs leading-relaxed truncate whitespace-break-spaces">"{actualMessage}"</div>
+                                                    {item.course && item.course !== "General Inquiry" && item.course !== actualMessage && (<span className="text-[9px] font-black uppercase text-[#F37021] tracking-wider mt-1 block">Track: {item.course}</span>)}
+                                                </td>
+                                                <td>{renderSourceBadge(item.source)}</td>
+                                                <td>
+                                                    <div className="text-[10px] font-bold text-slate-400 uppercase"><span className="block text-slate-500 text-[8px]">Received On:</span><span className="text-white">{item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}</span></div>
+                                                    {isConverted ? (
+                                                        <div className="text-[10px] font-bold text-sky-400 uppercase mt-1"><span className="block text-sky-500/50 text-[8px]">Converted On:</span><span className="text-sky-400">Registered Student</span></div>
+                                                    ) : item.isContacted && (
+                                                        <div className="text-[10px] font-bold text-emerald-400 uppercase mt-1"><span className="block text-emerald-500/50 text-[8px]">Handled On:</span><span className="text-emerald-400">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'N/A'}</span></div>
+                                                    )}
+                                                </td>
+                                                <td className="pr-8 text-right">
+                                                    {isConverted ? (
+                                                        <span className="w-9 h-9 rounded-xl flex items-center justify-center ml-auto bg-sky-600/20 text-sky-400 border border-sky-500/30" title="Converted to Registration"><FiCheckCircle size={16} /></span>
+                                                    ) : (
+                                                        <button onClick={() => handleEnquiryStatusUpdate(item._id, item.isContacted, item.name)} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ml-auto ${item.isContacted ? 'bg-emerald-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'}`} title={item.isContacted ? "Contacted" : "Mark as Contacted"}>
+                                                            {item.isContacted ? <FiCheckCircle size={16} /> : <FiCheckSquare size={14} />}
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    // --- KANBAN VIEW ---
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                        {/* Pending Column */}
+                        <div className="bg-slate-900/40 rounded-3xl p-5 border border-slate-800 min-h-[500px]">
+                            <h4 className="font-black text-white uppercase text-xs mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+                                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"/> Fresh Leads</span>
+                                <span className="bg-slate-800 px-2 py-0.5 rounded text-[10px] text-slate-400">{filteredEnquiries.filter(e => !e.isContacted && !studentPhones.has(e.phone)).length}</span>
+                            </h4>
+                            <div className="space-y-4">
+                                {filteredEnquiries.filter(e => !e.isContacted && !studentPhones.has(e.phone)).map(item => (
+                                    <div key={item._id} className="bg-[#0A192F] p-5 rounded-2xl border border-slate-700 hover:border-[#F37021] transition-all shadow-lg relative group">
+                                        <div className="absolute top-4 right-4">{renderSourceBadge(item.source)}</div>
+                                        <div className="font-black text-white text-sm uppercase">{item.name}</div>
+                                        <a href={`https://wa.me/91${item.phone}?text=Hi ${encodeURIComponent(item.name)}, reaching out from Expert Computer Academy regarding your inquiry.`} target="_blank" rel="noreferrer" className="text-[10px] text-[#F37021] hover:underline font-bold mt-1 inline-flex items-center gap-1"><FiPhoneCall/> {item.phone}</a>
+                                        <div className="text-xs text-slate-300 mt-3 font-medium bg-slate-900 p-3 rounded-xl border border-slate-800 italic line-clamp-3">"{item.message || item.course || 'General'}"</div>
+                                        <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center">
+                                            <span className="text-[9px] font-bold text-slate-500 uppercase">{new Date(item.createdAt).toLocaleDateString()}</span>
+                                            <button onClick={() => handleEnquiryStatusUpdate(item._id, false, item.name)} className="text-[9px] font-black uppercase bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-300 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"><FiCheckSquare/> Mark Contacted</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Handled Column */}
+                        <div className="bg-slate-900/40 rounded-3xl p-5 border border-slate-800 min-h-[500px] opacity-70 hover:opacity-100 transition-opacity">
+                            <h4 className="font-black text-white uppercase text-xs mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+                                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"/> Handled & Resolved</span>
+                                <span className="bg-slate-800 px-2 py-0.5 rounded text-[10px] text-slate-400">{filteredEnquiries.filter(e => e.isContacted && !studentPhones.has(e.phone)).length}</span>
+                            </h4>
+                            <div className="space-y-4">
+                                {filteredEnquiries.filter(e => e.isContacted && !studentPhones.has(e.phone)).map(item => (
+                                    <div key={item._id} className="bg-slate-900/50 p-5 rounded-2xl border border-slate-800/50 shadow-inner">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="font-black text-slate-300 text-sm uppercase">{item.name}</div>
+                                            <button onClick={() => handleEnquiryStatusUpdate(item._id, true, item.name)} className="text-emerald-500 hover:text-red-400 transition-colors" title="Revert to Pending"><FiCheckCircle size={16}/></button>
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 font-bold">{item.phone}</div>
+                                        <div className="text-[9px] font-bold text-slate-500 uppercase mt-3 pt-3 border-t border-slate-800/50">Handled: {new Date(item.updatedAt).toLocaleDateString()}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Converted Column */}
+                        <div className="bg-slate-900/40 rounded-3xl p-5 border border-slate-800 min-h-[500px]">
+                            <h4 className="font-black text-white uppercase text-xs mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+                                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-sky-500"/> Converted</span>
+                                <span className="bg-slate-800 px-2 py-0.5 rounded text-[10px] text-slate-400">{filteredEnquiries.filter(e => studentPhones.has(e.phone)).length}</span>
+                            </h4>
+                            <div className="space-y-4">
+                                {filteredEnquiries.filter(e => studentPhones.has(e.phone)).map(item => (
+                                    <div key={item._id} className="bg-slate-900/50 p-5 rounded-2xl border border-sky-900/50 shadow-inner">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="font-black text-sky-400 text-sm uppercase">{item.name}</div>
+                                            <FiCheckCircle className="text-sky-400" size={16}/>
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 font-bold">{item.phone}</div>
+                                        <div className="text-[9px] font-bold text-sky-500/70 uppercase mt-3 pt-3 border-t border-slate-800/50 flex items-center gap-1"><FiUsers/> Registered Student</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bulk Action Floating Bar for Enquiries */}
+                <AnimatePresence>
+                    {selectedEnquiries.length > 0 && (
+                        <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1A5F7A] text-white px-6 py-4 rounded-full shadow-2xl font-black border-2 border-white/20 uppercase text-xs flex items-center gap-4 z-[999]">
+                            <span className="bg-white/20 px-2 py-1 rounded text-[10px]">{selectedEnquiries.length} Selected</span>
+                            <button onClick={handleBulkMarkContacted} className="hover:text-emerald-300 transition-colors flex items-center gap-1.5"><FiCheckSquare size={16} /> Bulk Mark Handled</button>
+                            <span className="w-px h-4 bg-white/30"></span>
+                            <button onClick={() => setSelectedEnquiries([])} className="hover:text-slate-200 transition-colors flex items-center gap-1.5"><FiX size={16} /> Cancel</button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        );
+    };
+
+    const renderInstructors = () => {
+        const mockInstructors = [
+            { id: 1, name: "Arjun Singh", subject: "Full Stack / Java", activeBatches: 3, totalHours: 120, status: "Active" },
+            { id: 2, name: "Priya Sharma", subject: "Tally Prime / Fin", activeBatches: 2, totalHours: 85, status: "Active" },
+            { id: 3, name: "Rahul Verma", subject: "Gen AI / Python", activeBatches: 1, totalHours: 40, status: "On Leave" }
+        ];
+
+        return (
+            <div className="space-y-6 max-w-5xl mx-auto">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-2xl font-black text-white uppercase italic">Faculty Management</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Track instructor hours and active batch assignments.</p>
+                    </div>
+                    <button className="bg-[#F37021] text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-950/40 hover:bg-orange-600 transition-all">
+                        <FiPlusCircle size={14}/> Onboard Instructor
+                    </button>
+                </div>
+
+                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden text-left">
+                    <table className="w-full text-xs">
+                        <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
+                            <tr><th className="p-5 pl-8">Instructor Profile</th><th>Primary Subject</th><th>Active Load</th><th className="pr-8 text-right">Status</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-850 font-bold">
+                            {mockInstructors.map(inst => (
+                                <tr key={inst.id} className="hover:bg-slate-900/50 transition-colors">
+                                    <td className="p-5 pl-8"><div className="font-black text-white uppercase text-xs">{inst.name}</div><div className="text-slate-400 text-[9px] mt-0.5">ID: FAC-${inst.id}992</div></td>
+                                    <td className="uppercase text-slate-300 italic">{inst.subject}</td>
+                                    <td>
+                                        <div className="text-[#F37021] font-black">{inst.activeBatches} Batches</div>
+                                        <div className="text-[9px] text-slate-500 uppercase">{inst.totalHours} Hrs Logged</div>
+                                    </td>
+                                    <td className="pr-8 text-right">
+                                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${inst.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>{inst.status}</span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    }
 
     const renderCoupons = () => {
         const isDuplicateCoupon = Boolean(
@@ -1430,6 +1461,56 @@ export default function AdminDashboard() {
                         </button>
                     </form>
                 </div>
+
+                {/* --- COUPONS LEDGER TABLE --- */}
+                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left mt-8">
+                    <table className="w-full min-w-[850px] text-xs">
+                        <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
+                            <tr>
+                                <th className="p-5 pl-8">Coupon Code</th>
+                                <th>Description & Scope</th>
+                                <th>Discount Value</th>
+                                <th>Usage Limit</th>
+                                <th>Validity</th>
+                                <th className="pr-8 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-850 font-bold">
+                            {coupons.length === 0 ? (
+                                <tr><td colSpan="6" className="p-8 text-center text-slate-500">No active coupons found.</td></tr>
+                            ) : coupons.map(c => (
+                                <tr key={c._id || c.code} className="hover:bg-slate-900/50 transition-colors">
+                                    <td className="p-5 pl-8">
+                                        <span className="bg-[#1A5F7A] text-white px-3 py-1 rounded-md tracking-widest text-[10px] uppercase shadow-sm border border-cyan-700/50">
+                                            {c.code}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="text-slate-200">{c.description || 'General Campaign Discount'}</div>
+                                        <div className="text-[#F37021] text-[9px] mt-0.5 uppercase tracking-wider">SCOPE: {c.courseCode || 'ALL COURSES'}</div>
+                                    </td>
+                                    <td className="text-emerald-400">
+                                        {c.discountType === 'FLAT' ? `₹${c.discountValue}` : `${c.discountValue}%`} OFF
+                                    </td>
+                                    <td className="text-slate-400">
+                                        <span className="text-white">{c.usedCount || 0}</span> / {c.maxUsage}
+                                    </td>
+                                    <td>
+                                        <div className="text-[9px] text-slate-500 uppercase">From: <span className="text-slate-300">{new Date(c.validFrom).toLocaleDateString()}</span></div>
+                                        <div className="text-[9px] text-slate-500 uppercase">To: <span className="text-slate-300">{new Date(c.validTo).toLocaleDateString()}</span></div>
+                                    </td>
+                                    <td className="pr-8 text-right">
+                                        {c.isActive ? (
+                                            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Active</span>
+                                        ) : (
+                                            <span className="bg-red-500/10 text-red-400 border border-red-500/30 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Inactive</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         );
     };
@@ -1498,9 +1579,10 @@ export default function AdminDashboard() {
                     {hasAccess('quizzes') && <SidebarBtn active={activeTab === 'quizzes'} onClick={() => handleTabChange('quizzes')} icon={<FiEdit3 />} label="Examinations" />}
                     {hasAccess('certificates') && <SidebarBtn active={activeTab === 'certificates'} onClick={() => handleTabChange('certificates')} icon={<FiAward />} label="Certificates" />}
 
-                    {userRole === 'founder' && (
+                    {hasAccess('instructors') && (
                         <>
                             <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mt-5 mb-1 ml-3">Admin Tools</p>
+                            <SidebarBtn active={activeTab === 'instructors'} onClick={() => handleTabChange('instructors')} icon={<FiUsers />} label="Instructors" />
                             {hasAccess('coupons') && <SidebarBtn active={activeTab === 'coupons'} onClick={() => handleTabChange('coupons')} icon={<FiTag />} label="Coupons" />}
                             {hasAccess('logs') && <SidebarBtn active={activeTab === 'logs'} onClick={() => handleTabChange('logs')} icon={<FiActivity />} label="Audit Logs" />}
                         </>
@@ -1569,6 +1651,7 @@ export default function AdminDashboard() {
                 <main className="p-6 lg:p-10 overflow-y-auto flex-1 no-scrollbar bg-[#070D1D]">
                     {activeTab === 'overview' && renderOverview()}
                     {activeTab === 'registrations' && renderRegistry()}
+                    {activeTab === 'instructors' && renderInstructors()}
                     {activeTab === 'coupons' && renderCoupons()}
                     {activeTab === 'logs' && renderLogs()}
                     {activeTab === 'enquiries' && renderEnquiries()}
