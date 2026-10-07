@@ -107,7 +107,7 @@ export default function AdminDashboard() {
     // CRM Cross-Reference Memory (For Auto-Converting Leads)
     const studentPhones = useMemo(() => new Set(students.map(s => s.phone).filter(Boolean)), [students]);
 
-    // NEW CRM STATES: Bulk Selection & Kanban Views
+    // CRM STATES: Bulk Selection & Kanban Views
     const [selectedStudents, setSelectedStudents] = useState([]);
     const [selectedEnquiries, setSelectedEnquiries] = useState([]);
     const [leadViewMode, setLeadViewMode] = useState('kanban'); // 'table' or 'kanban'
@@ -159,9 +159,7 @@ export default function AdminDashboard() {
                 const res = await axios.get(`${API_URL}/admin/global-search?q=${globalQuery}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                if (res.data.success) {
-                    setSearchResults(res.data.results);
-                }
+                if (res.data.success) setSearchResults(res.data.results);
             } catch (err) {
                 console.error("Global search failed", err);
             } finally {
@@ -177,9 +175,7 @@ export default function AdminDashboard() {
             const res = await axios.get(`${API_URL}/admin/trace/${phone}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (res.data.success) {
-                setTraceModal(prev => ({ ...prev, data: res.data.dossier, loading: false }));
-            }
+            if (res.data.success) setTraceModal(prev => ({ ...prev, data: res.data.dossier, loading: false }));
         } catch (err) {
             triggerToast("TRACE FAILED: RECORD NOT FOUND");
             setTraceModal({ show: false, phone: null, data: null, loading: false });
@@ -253,12 +249,14 @@ export default function AdminDashboard() {
         return { total, paid, due: due > 0 ? due : 0 };
     }, [getNormalizedEnrollments]);
 
-    const analyzeLead = useCallback((student) => {
+    // MOBILE OPTIMIZATION: Passed precalculated ledger to prevent blocking main thread
+    const analyzeLead = useCallback((student, preCalculatedLedger) => {
         if (student.sentiment && student.conversionProbability) return { sentiment: student.sentiment.toLowerCase(), probability: Number(student.conversionProbability) };
-        const ledger = calculateAggregateLedger(student);
+        
+        const ledger = preCalculatedLedger || calculateAggregateLedger(student);
         const enrolls = getNormalizedEnrollments(student);
         const createdDate = student.createdAt ? new Date(student.createdAt) : new Date();
-        const daysActive = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
+        const daysActive = Math.floor((Date.now() - createdDate.getTime()) / 86400000);
 
         let prob = 50; let sentiment = 'neutral';
         if (student.isApproved) { prob = 100; sentiment = 'positive'; }
@@ -297,6 +295,7 @@ export default function AdminDashboard() {
     }, []);
 
     const handleLogout = useCallback(() => {
+        setLogoutModal(false);
         localStorage.clear();
         sessionStorage.setItem("hasSeenLoader", "true");
         localStorage.setItem("hasSeenLoader", "true");
@@ -558,7 +557,6 @@ export default function AdminDashboard() {
         return <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full font-black text-[9px] border border-emerald-500/30 uppercase italic inline-flex items-center gap-1.5"><FiGlobe size={11} /> Website Portal</span>;
     };
 
-    // --- COMPONENT LEVEL MONTHLY TALLY ---
     const getMonthlyAcquisitionStats = useCallback((dataArray, isStudentData = false) => {
         const now = new Date();
         const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -574,7 +572,6 @@ export default function AdminDashboard() {
         }).length;
     }, [studentPhones]);
 
-
     const renderOverview = () => {
         let currentRevenue = selectedMonth && monthlyHistory[selectedMonth] ? monthlyHistory[selectedMonth].revenue : 0;
         let [y, m] = selectedMonth ? selectedMonth.split('-').map(Number) : [2026, 1];
@@ -584,7 +581,6 @@ export default function AdminDashboard() {
 
         return (
             <div className="space-y-8 text-left">
-                {/* 1. TOP METRICS ROW */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <div className="bg-gradient-to-br from-[#1A5F7A] to-[#0A192F] text-white p-7 rounded-3xl shadow-xl relative overflow-hidden border border-slate-700/60 border-b-4 border-b-[#F37021] flex flex-col justify-center">
                         <FiDollarSign className="absolute -right-3 -bottom-3 text-8xl opacity-10" />
@@ -593,7 +589,7 @@ export default function AdminDashboard() {
                         <div className="text-[9px] text-[#F37021] font-bold uppercase tracking-wider mt-1">{formatNumberToWords(finances.total)}</div>
                     </div>
 
-                    <div className="bg-[#0A192F]/80 backdrop-blur-md p-7 rounded-3xl border border-slate-800 flex flex-col justify-between shadow-xl">
+                    <div className="bg-[#0A192F]/80 md:backdrop-blur-md p-7 rounded-3xl border border-slate-800 flex flex-col justify-between shadow-xl">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                                 <div className="p-2.5 bg-orange-500/10 text-[#F37021] rounded-xl border border-orange-500/20"><FiActivity size={18} /></div>
@@ -613,7 +609,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    <div className="bg-[#0A192F]/80 backdrop-blur-md p-7 rounded-3xl border border-slate-800 flex items-center gap-5 shadow-xl">
+                    <div className="bg-[#0A192F]/80 md:backdrop-blur-md p-7 rounded-3xl border border-slate-800 flex items-center gap-5 shadow-xl">
                         <div className="p-3.5 bg-sky-500/10 text-[#1A5F7A] rounded-2xl border border-sky-500/20"><FiUsers size={26} className="text-sky-400" /></div>
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">Student Registry</p>
@@ -621,7 +617,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    <div className="bg-[#0A192F]/80 backdrop-blur-md p-7 rounded-3xl border border-dashed border-red-500/40 flex items-center gap-5 shadow-xl bg-red-950/10">
+                    <div className="bg-[#0A192F]/80 md:backdrop-blur-md p-7 rounded-3xl border border-dashed border-red-500/40 flex items-center gap-5 shadow-xl bg-red-950/10">
                         <div className="p-3.5 bg-red-500/10 text-red-400 rounded-2xl border border-red-500/20 animate-pulse"><FiAlertCircle size={26} /></div>
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">Action Queue</p>
@@ -630,10 +626,8 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* --- TIME-SERIES & DEEP ML ANALYTICS --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Time-Series Trend */}
-                    <div className="lg:col-span-2 bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
+                    <div className="lg:col-span-2 bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
                         <div className="flex justify-between items-center mb-2">
                             <div>
                                 <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
@@ -644,8 +638,7 @@ export default function AdminDashboard() {
                             <span className="bg-orange-500/10 text-[#F37021] border border-orange-500/30 px-3 py-1 rounded-full text-[9px] font-black uppercase">Live Stream</span>
                         </div>
 
-                        {/* RECHARTS IMPLEMENTATION - DUAL AXIS */}
-                        <div className="h-56 w-full mt-4 border-b border-slate-800 pb-2">
+                        <div className="h-56 min-h-[224px] w-full mt-4 border-b border-slate-800 pb-2">
                             {Object.keys(monthlyHistory).length > 0 ? (() => {
                                 let previousYear = null;
                                 const chartData = Object.entries(monthlyHistory).sort(([a], [b]) => a.localeCompare(b)).map(([monthStr, data]) => {
@@ -658,7 +651,7 @@ export default function AdminDashboard() {
                                 });
 
                                 return (
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" debounce={50}>
                                         <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -687,8 +680,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* Deep ML Analytics */}
-                    <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
+                    <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
                         <div>
                             <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
                                 <FiCpu className="text-[#F37021]" /> Deep Lead Intelligence
@@ -730,8 +722,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 2. LIVE OPTIMIZATION ARCHITECTURE TRACE */}
-                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl">
+                <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl">
                     <div className="mb-5">
                         <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
                             <FiCpu className="text-[#F37021]" /> Live Optimization Architecture Trace
@@ -753,8 +744,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 3. MARKET INTELLIGENCE & REPORT DISPATCH */}
-                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl">
+                <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-slate-800">
                         <div>
                             <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
@@ -790,8 +780,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 4. ACTIVE BROADCAST STREAMS */}
-                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl">
+                <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-slate-800">
                         <div>
                             <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
@@ -907,7 +896,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto">
+                <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto">
                     <table className="w-full min-w-[950px] text-left">
                         <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px] tracking-wider">
                             <tr>
@@ -925,7 +914,7 @@ export default function AdminDashboard() {
                                 const ledger = calculateAggregateLedger(student);
                                 const enrollments = getNormalizedEnrollments(student);
                                 const isExpanded = expandedStudent === student._id;
-                                const leadAnalysis = analyzeLead(student);
+                                const leadAnalysis = analyzeLead(student, ledger); // Pass ledger to prevent mobile lag
                                 const isSelected = selectedStudents.includes(student._id);
 
                                 const studentMatchingBatches = availableBatches.filter(batch =>
@@ -1129,7 +1118,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {leadViewMode === 'table' ? (
-                    <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
+                    <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
                         <table className="w-full min-w-[950px] text-xs">
                             <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
                                 <tr>
@@ -1290,7 +1279,7 @@ export default function AdminDashboard() {
                     </button>
                 </div>
 
-                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden text-left">
+                <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden text-left">
                     <table className="w-full text-xs">
                         <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
                             <tr><th className="p-5 pl-8">Instructor Profile</th><th>Primary Subject</th><th>Active Load</th><th className="pr-8 text-right">Status</th></tr>
@@ -1325,7 +1314,7 @@ export default function AdminDashboard() {
 
         return (
             <div className="space-y-8 max-w-5xl mx-auto">
-                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden border-t-8 border-[#1A5F7A]">
+                <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden border-t-8 border-[#1A5F7A]">
                     <div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-900/50">
                         <div className="p-2.5 bg-orange-500/10 text-[#F37021] rounded-xl border border-orange-500/20"><FiTag size={20} /></div>
                         <div>
@@ -1463,7 +1452,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* --- COUPONS LEDGER TABLE --- */}
-                <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left mt-8">
+                <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left mt-8">
                     <table className="w-full min-w-[850px] text-xs">
                         <thead className="bg-slate-950 font-black uppercase text-slate-400 border-b border-slate-800 text-[10px]">
                             <tr>
@@ -1516,7 +1505,7 @@ export default function AdminDashboard() {
     };
 
     const renderLogs = () => (
-        <div className="bg-[#0A192F]/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
+        <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl shadow-xl border border-slate-800 overflow-hidden overflow-x-auto text-left">
             <table className="w-full min-w-[750px] text-xs">
                 <thead className="bg-slate-950 text-[10px] font-black uppercase border-b border-slate-800 text-slate-400">
                     <tr>
@@ -1541,17 +1530,24 @@ export default function AdminDashboard() {
     );
 
     return (
-        <div className="flex h-screen bg-[#070D1D] font-sans overflow-hidden text-left relative text-slate-200 w-full selection:bg-[#F37021]/30">
+        <div className="flex h-[100dvh] bg-[#070D1D] font-sans overflow-hidden text-left relative text-slate-200 w-full selection:bg-[#F37021]/30">
 
-            {/* AMBIENT BACKGROUND GLOWS */}
-            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-sky-600/5 rounded-full blur-[140px] pointer-events-none -z-10" />
-            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-orange-600/5 rounded-full blur-[140px] pointer-events-none -z-10" />
+            {/* AMBIENT BACKGROUND GLOWS (Hidden on mobile for performance) */}
+            <div className="hidden md:block absolute top-0 left-1/4 w-[500px] h-[500px] bg-sky-600/5 rounded-full blur-[100px] pointer-events-none -z-10" />
+            <div className="hidden md:block absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-orange-600/5 rounded-full blur-[100px] pointer-events-none -z-10" />
 
             <AnimatePresence>
                 {toast.show && (
                     <motion.div initial={{ y: -50, x: "-50%", opacity: 0 }} animate={{ y: 24, x: "-50%", opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed left-1/2 z-[999] bg-[#0A192F] text-white px-6 py-3.5 rounded-2xl shadow-2xl font-black border-b-4 border-[#F37021] border border-slate-700 uppercase text-xs flex items-center gap-2.5">
                         <FiZap className="text-[#F37021]" /> {toast.message}
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* SIDEBAR MOBILE OVERLAY */}
+            <AnimatePresence>
+                {isSidebarOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-slate-950/70 z-[190] lg:hidden" />
                 )}
             </AnimatePresence>
 
@@ -1592,19 +1588,19 @@ export default function AdminDashboard() {
 
             {/* MAIN CONTENT AREA */}
             <div className="flex-1 flex flex-col min-w-0 relative">
-                <header className="bg-[#0A192F]/90 backdrop-blur-md h-20 px-8 flex items-center justify-between border-b border-slate-800 shadow-sm sticky top-0 z-[150]">
+                <header className="bg-[#0A192F]/90 md:backdrop-blur-md h-20 px-4 md:px-8 flex items-center justify-between border-b border-slate-800 shadow-sm sticky top-0 z-[150]">
                     <div className="flex items-center gap-4">
                         <button className="lg:hidden text-white p-2 hover:bg-slate-800 rounded-xl" onClick={() => setIsSidebarOpen(true)}><FiMenu size={22} /></button>
                         <h2 className="font-black text-white text-base uppercase italic hidden sm:block tracking-wide">{activeTab.replace('-', ' ')}</h2>
                     </div>
 
                     {/* Global Search Bar */}
-                    <div className="relative max-w-md w-full mx-4">
+                    <div className="relative max-w-md w-full mx-2 md:mx-4">
                         <div className="relative flex items-center">
                             <FiSearch className="absolute left-4 text-slate-500" />
                             <input
                                 type="text"
-                                placeholder="Global Search (Students, Relatives, Web, Chats)..."
+                                placeholder="Global Search..."
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 text-white rounded-xl font-bold text-xs outline-none focus:border-[#F37021] transition-all shadow-inner placeholder:text-slate-500"
                                 value={globalQuery}
                                 onChange={e => setGlobalQuery(e.target.value)}
@@ -1618,7 +1614,7 @@ export default function AdminDashboard() {
                                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute left-0 right-0 top-12 bg-[#0A192F] rounded-2xl shadow-2xl border border-slate-700 p-5 max-h-[400px] overflow-y-auto no-scrollbar z-[300]">
                                     <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Intelligence Match</span>
-                                        <button onClick={() => { setSearchResults(null); setGlobalQuery(""); }} className="text-slate-400 hover:text-red-400"><FiX size={15} /></button>
+                                        <button onClick={() => { setSearchResults(null); setGlobalQuery(""); }} className="text-slate-400 hover:text-red-400 p-1"><FiX size={15} /></button>
                                     </div>
 
                                     {searchResults.students?.length > 0 && (
@@ -1639,16 +1635,16 @@ export default function AdminDashboard() {
                         </AnimatePresence>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4 md:gap-6">
                         <div className="hidden sm:block text-right pr-4 border-r border-slate-800">
                             <span className="text-white text-xs font-black uppercase block leading-tight">{userName}</span>
                             <span className="text-[9px] font-bold text-[#F37021] uppercase tracking-wider">{userRole}</span>
                         </div>
-                        <button onClick={() => setLogoutModal(true)} className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20"><FiLogOut size={18} /></button>
+                        <button type="button" onClick={() => setLogoutModal(true)} className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 active:scale-95 transition-transform border border-red-500/20 touch-manipulation"><FiLogOut size={18} /></button>
                     </div>
                 </header>
 
-                <main className="p-6 lg:p-10 overflow-y-auto flex-1 no-scrollbar bg-[#070D1D]">
+                <main className="p-4 sm:p-6 lg:p-10 overflow-y-auto flex-1 no-scrollbar bg-[#070D1D] overscroll-contain [-webkit-overflow-scrolling:touch]">
                     {activeTab === 'overview' && renderOverview()}
                     {activeTab === 'registrations' && renderRegistry()}
                     {activeTab === 'instructors' && renderInstructors()}
@@ -1667,11 +1663,11 @@ export default function AdminDashboard() {
             {/* NEURAL TRACER MODAL */}
             <AnimatePresence>
                 {traceModal.show && (
-                    <div className="fixed inset-0 z-[1100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[1100] bg-slate-950/80 md:backdrop-blur-sm flex items-center justify-center p-4">
                         <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0A192F] text-white rounded-3xl p-8 max-w-xl w-full border-t-8 border-[#1A5F7A] border border-slate-700 relative shadow-2xl max-h-[85vh] flex flex-col">
-                            <button onClick={() => setTraceModal({ show: false, phone: null, data: null, loading: false })} className="absolute top-6 right-6 text-slate-400 hover:text-red-400"><FiX size={20} /></button>
+                            <button onClick={() => setTraceModal({ show: false, phone: null, data: null, loading: false })} className="absolute top-6 right-6 text-slate-400 hover:text-red-400 p-2 touch-manipulation"><FiX size={20} /></button>
 
-                            <div className="flex items-center gap-3 mb-5">
+                            <div className="flex items-center gap-3 mb-5 mt-2">
                                 <div className="p-2.5 bg-orange-500/10 text-[#F37021] rounded-xl border border-orange-500/20"><FiCpu size={22} /></div>
                                 <div>
                                     <h3 className="text-base font-black text-white uppercase italic leading-tight">Neural Intelligence Tracer</h3>
@@ -1679,7 +1675,7 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto pr-1 space-y-5 no-scrollbar">
+                            <div className="flex-1 overflow-y-auto pr-1 space-y-5 no-scrollbar [-webkit-overflow-scrolling:touch]">
                                 {traceModal.loading ? (
                                     <div className="py-16 text-center font-black uppercase text-slate-500 text-xs animate-pulse">Tracing digital footprint...</div>
                                 ) : traceModal.data ? (
@@ -1725,13 +1721,13 @@ export default function AdminDashboard() {
             {/* BATCH LINK MODAL */}
             <AnimatePresence>
                 {batchModal.show && batchModal.student && (
-                    <div className="fixed inset-0 z-[1000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[1000] bg-slate-950/80 md:backdrop-blur-sm flex items-center justify-center p-4">
                         <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0A192F] text-white rounded-3xl p-8 max-w-md w-full border-t-8 border-[#F37021] border border-slate-700 relative shadow-2xl">
-                            <button onClick={() => setBatchModal({ show: false, student: null, filteredBatches: [] })} className="absolute top-6 right-6 text-slate-400 hover:text-red-400"><FiX size={20} /></button>
-                            <h3 className="text-lg font-black text-white uppercase italic mb-1">Stream Assignment</h3>
+                            <button onClick={() => setBatchModal({ show: false, student: null, filteredBatches: [] })} className="absolute top-6 right-6 text-slate-400 hover:text-red-400 p-2 touch-manipulation"><FiX size={20} /></button>
+                            <h3 className="text-lg font-black text-white uppercase italic mb-1 mt-2">Stream Assignment</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-5">{batchModal.student.name}</p>
 
-                            <div className="space-y-2.5 max-h-[280px] overflow-y-auto no-scrollbar">
+                            <div className="space-y-2.5 max-h-[280px] overflow-y-auto no-scrollbar [-webkit-overflow-scrolling:touch]">
                                 {batchModal.filteredBatches.length > 0 ? (
                                     batchModal.filteredBatches.map(b => (
                                         <div key={b._id} className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-3">
@@ -1739,7 +1735,7 @@ export default function AdminDashboard() {
                                                 <span className="bg-[#1A5F7A] text-white text-[8px] px-1.5 py-0.5 font-black uppercase rounded">{b.batchCode}</span>
                                                 <p className="text-xs font-black text-white uppercase mt-0.5">{b.courseName || b.courseId}</p>
                                             </div>
-                                            <button onClick={() => handleAuthorizeBatch(batchModal.student._id, b._id, batchModal.student.name)} className="bg-[#F37021] text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-all">Link</button>
+                                            <button onClick={() => handleAuthorizeBatch(batchModal.student._id, b._id, batchModal.student.name)} className="bg-[#F37021] text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-all touch-manipulation">Link</button>
                                         </div>
                                     ))
                                 ) : (
@@ -1757,10 +1753,10 @@ export default function AdminDashboard() {
                     const ledger = calculateAggregateLedger(paymentModal.student);
                     const enrolls = getNormalizedEnrollments(paymentModal.student);
                     return (
-                        <div className="fixed inset-0 z-[1000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0A192F] text-white rounded-3xl p-8 max-w-md w-full border-t-8 border-[#1A5F7A] border border-slate-700">
-                                <button onClick={() => setPaymentModal({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" })} className="absolute top-6 right-6 text-slate-400 hover:text-red-400"><FiX size={20} /></button>
-                                <h3 className="text-lg font-black text-white uppercase italic mb-1">Ledger Sync</h3>
+                        <div className="fixed inset-0 z-[1000] bg-slate-950/80 md:backdrop-blur-sm flex items-center justify-center p-4">
+                            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0A192F] text-white rounded-3xl p-8 max-w-md w-full border-t-8 border-[#1A5F7A] border border-slate-700 relative">
+                                <button onClick={() => setPaymentModal({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" })} className="absolute top-6 right-6 text-slate-400 hover:text-red-400 p-2 touch-manipulation"><FiX size={20} /></button>
+                                <h3 className="text-lg font-black text-white uppercase italic mb-1 mt-2">Ledger Sync</h3>
                                 <div className="rounded-2xl p-4 mb-5 border border-slate-800 flex justify-between items-center bg-slate-900">
                                     <div><p className="text-[8px] font-black text-slate-500 uppercase">Gross Total</p><div className="text-base font-black text-slate-200">₹{ledger.total.toLocaleString()}</div></div>
                                     <div className="text-right"><p className="text-[8px] font-black text-red-400 uppercase">Due</p><div className="text-lg font-black text-red-400">₹{ledger.due.toLocaleString()}</div></div>
@@ -1784,9 +1780,9 @@ export default function AdminDashboard() {
                                     </div>
                                     <button
                                         type="submit"
-                                        className="w-full py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all flex justify-center items-center gap-2 bg-[#F37021] hover:bg-orange-600 active:scale-95 shadow-orange-950/40 cursor-pointer"
+                                        className="w-full py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all flex justify-center items-center gap-2 bg-[#F37021] hover:bg-orange-600 active:scale-95 shadow-orange-950/40 cursor-pointer touch-manipulation"
                                     >
-                                        <FiCheckCircle size={16} /> Deploy Coupon
+                                        <FiCheckCircle size={16} /> Deploy Ledger
                                     </button>
                                 </form>
                             </motion.div>
@@ -1798,13 +1794,13 @@ export default function AdminDashboard() {
             {/* LOGOUT CONFIRMATION MODAL */}
             <AnimatePresence>
                 {logoutModal && (
-                    <div className="fixed inset-0 z-[1000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 text-center">
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0A192F] text-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border-t-8 border-red-500 border border-slate-800">
+                    <div className="fixed inset-0 z-[1000] bg-slate-950/80 md:backdrop-blur-sm flex items-center justify-center p-4 text-center">
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0A192F] text-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border-t-8 border-red-500 border border-slate-800 relative">
                             <FiLogOut className="mx-auto text-red-400 mb-4" size={40} />
                             <h3 className="text-xl font-black text-white uppercase italic mb-6 leading-tight">Terminate Session?</h3>
                             <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => setLogoutModal(false)} className="py-3 bg-slate-900 border border-slate-800 rounded-xl font-black uppercase text-[10px] text-slate-400 hover:bg-slate-800 transition-colors">Stay</button>
-                                <button onClick={handleLogout} className="py-3 bg-red-600 text-white rounded-xl font-black uppercase text-[10px] shadow-md hover:bg-red-500 transition-all">Logout</button>
+                                <button onClick={() => setLogoutModal(false)} className="py-3 bg-slate-900 border border-slate-800 rounded-xl font-black uppercase text-[10px] text-slate-400 hover:bg-slate-800 transition-colors touch-manipulation">Stay</button>
+                                <button onClick={handleLogout} className="py-3 bg-red-600 text-white rounded-xl font-black uppercase text-[10px] shadow-md hover:bg-red-500 transition-all touch-manipulation">Logout</button>
                             </div>
                         </motion.div>
                     </div>
