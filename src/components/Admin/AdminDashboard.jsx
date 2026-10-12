@@ -8,7 +8,8 @@ import {
     FiGrid, FiClock, FiShield, FiTag, FiChevronDown, FiZap, FiPhoneCall,
     FiAlertCircle, FiCpu, FiUserCheck, FiMessageCircle, FiFacebook, FiGlobe,
     FiEdit3, FiPlusCircle, FiCheck, FiUnlock, FiSend, FiTrendingUp, FiAward,
-    FiFilter, FiDownload, FiPrinter, FiColumns, FiList, FiCheckSquare
+    FiFilter, FiDownload, FiPrinter, FiColumns, FiList, FiCheckSquare,
+    FiRefreshCw, FiPieChart, FiCopy, FiPower
 } from 'react-icons/fi';
 import AdminAIBot from './AdminAIBot';
 import { techCoursesData, universityPrograms } from '../../data/courses';
@@ -19,7 +20,8 @@ import QuizManager from '../Admin/QuizManager';
 import WhatsAppLeads from '../Admin/WhatsAppLeads';
 import AdminCertificates from '../Admin/AdminCertificates';
 import {
-    ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+    ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+    PieChart, Pie, Cell
 } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
@@ -102,7 +104,11 @@ export default function AdminDashboard() {
     const [auditLogs, setAuditLogs] = useState([]);
     const [coupons, setCoupons] = useState([]);
     const [availableBatches, setAvailableBatches] = useState([]);
+    const [instructors, setInstructors] = useState([]); // Dynamic Instructors State
     const [apiLatency, setApiLatency] = useState("Calculating...");
+
+    // Auto-Sync Toggle State
+    const [autoSync, setAutoSync] = useState(false);
 
     // CRM Cross-Reference Memory (For Auto-Converting Leads)
     const studentPhones = useMemo(() => new Set(students.map(s => s.phone).filter(Boolean)), [students]);
@@ -110,7 +116,7 @@ export default function AdminDashboard() {
     // CRM STATES: Bulk Selection & Kanban Views
     const [selectedStudents, setSelectedStudents] = useState([]);
     const [selectedEnquiries, setSelectedEnquiries] = useState([]);
-    const [leadViewMode, setLeadViewMode] = useState('kanban'); // 'table' or 'kanban'
+    const [leadViewMode, setLeadViewMode] = useState('kanban');
 
     const [globalQuery, setGlobalQuery] = useState("");
     const [searchResults, setSearchResults] = useState(null);
@@ -125,13 +131,14 @@ export default function AdminDashboard() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [logoutModal, setLogoutModal] = useState(false);
     
-    // Filters
+    // Advanced Workload Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [filterApproved, setFilterApproved] = useState("all");
     const [studentCourseFilter, setStudentCourseFilter] = useState("all");
+    const [studentDueFilter, setStudentDueFilter] = useState("all"); // WORKLOAD MINIMIZER: Instantly find pending dues
     const [studentSortBy, setStudentSortBy] = useState("newest");
     const [enquirySearchQuery, setEnquirySearchQuery] = useState("");
-    const [enquiryStatusFilter, setEnquiryStatusFilter] = useState("all");
+    const [enquiryStatusFilter, setEnquiryStatusFilter] = useState("pending"); // Default to pending for immediate action
     const [enquirySourceFilter, setEnquirySourceFilter] = useState("all");
 
     const [toast, setToast] = useState({ show: false, message: "" });
@@ -139,6 +146,9 @@ export default function AdminDashboard() {
 
     const [paymentModal, setPaymentModal] = useState({ show: false, student: null, amount: "", mode: "Cash", transactionId: "", courseTitle: "" });
     const [batchModal, setBatchModal] = useState({ show: false, student: null, filteredBatches: [] });
+    const [instructorModal, setInstructorModal] = useState(false);
+    
+    const [instructorForm, setInstructorForm] = useState({ name: "", subject: "", phone: "", totalHours: 0, activeBatches: 0, status: "Active" });
 
     const [couponForm, setCouponForm] = useState({
         code: "", description: "", maxUsage: "", isActive: true,
@@ -180,6 +190,11 @@ export default function AdminDashboard() {
             triggerToast("TRACE FAILED: RECORD NOT FOUND");
             setTraceModal({ show: false, phone: null, data: null, loading: false });
         }
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        triggerToast("COPIED TO CLIPBOARD");
     };
 
     const exportToCSV = (data, filename, columns) => {
@@ -249,7 +264,6 @@ export default function AdminDashboard() {
         return { total, paid, due: due > 0 ? due : 0 };
     }, [getNormalizedEnrollments]);
 
-    // MOBILE OPTIMIZATION: Passed precalculated ledger to prevent blocking main thread
     const analyzeLead = useCallback((student, preCalculatedLedger) => {
         if (student.sentiment && student.conversionProbability) return { sentiment: student.sentiment.toLowerCase(), probability: Number(student.conversionProbability) };
         
@@ -270,7 +284,7 @@ export default function AdminDashboard() {
     }, [calculateAggregateLedger, getNormalizedEnrollments]);
 
     const mlOverviewStats = useMemo(() => {
-        if (students.length === 0) return { avgProb: 0, positive: 0, neutral: 0, negative: 0 };
+        if (students.length === 0) return { avgProb: 0, positive: 0, neutral: 0, negative: 0, totalConvRate: 0 };
         let totalProb = 0; let positive = 0, neutral = 0, negative = 0;
         students.forEach(s => {
             const analysis = analyzeLead(s);
@@ -279,8 +293,13 @@ export default function AdminDashboard() {
             else if (analysis.sentiment === 'negative') negative++;
             else neutral++;
         });
-        return { avgProb: Math.round(totalProb / students.length), positive, neutral, negative };
-    }, [students, analyzeLead]);
+        
+        // Calculate Global Conversion Funnel
+        const totalNetwork = students.length + enquiries.length;
+        const convRate = totalNetwork > 0 ? ((students.length / totalNetwork) * 100).toFixed(1) : 0;
+        
+        return { avgProb: Math.round(totalProb / students.length), positive, neutral, negative, totalConvRate: convRate };
+    }, [students, enquiries, analyzeLead]);
 
     const webPerformanceMetrics = useMemo(() => [
         { label: "First Contentful Paint (FCP)", value: "0.74s", status: "Optimal", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" },
@@ -401,6 +420,10 @@ export default function AdminDashboard() {
 
         try {
             setAvailableBatches(await safeFetch(`${API_URL}/admin/batches/active`));
+            if (hasAccess('instructors')) {
+                const instData = await safeFetch(`${API_URL}/admin/instructors`);
+                setInstructors(Array.isArray(instData) ? instData : []);
+            }
             if (hasAccess('registrations')) {
                 const sData = await safeFetch(`${API_URL}/admin/registrations`);
                 setStudents(sData);
@@ -417,6 +440,17 @@ export default function AdminDashboard() {
     }, [token, analyzeFinances]);
 
     useEffect(() => { fetchEverything(); }, [fetchEverything]);
+
+    // Live Auto-Sync Effect
+    useEffect(() => {
+        let interval;
+        if (autoSync) {
+            interval = setInterval(() => {
+                fetchEverything();
+            }, 30000);
+        }
+        return () => clearInterval(interval);
+    }, [autoSync, fetchEverything]);
 
     const toggleStudentSelection = (id) => {
         setSelectedStudents(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
@@ -446,6 +480,42 @@ export default function AdminDashboard() {
             setSelectedEnquiries([]);
             fetchEverything();
         } catch (err) { triggerToast("BULK ACTION FAILED"); }
+    };
+
+    // --- INSTRUCTOR HANDLERS ---
+    const handleAddInstructor = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post(`${API_URL}/admin/instructors`, instructorForm, { headers: { Authorization: `Bearer ${token}` } });
+            triggerToast("INSTRUCTOR ONBOARDED");
+            setInstructorModal(false);
+            setInstructorForm({ name: "", subject: "", phone: "", totalHours: 0, activeBatches: 0, status: "Active" });
+            fetchEverything();
+        } catch(err) {
+            triggerToast("FAILED TO ADD INSTRUCTOR");
+        }
+    };
+
+    const handleToggleInstructorStatus = async (id, currentStatus) => {
+        try {
+            const newStatus = currentStatus === 'Active' ? 'On Leave' : 'Active';
+            await axios.patch(`${API_URL}/admin/instructors/${id}`, { status: newStatus }, { headers: { Authorization: `Bearer ${token}` } });
+            triggerToast("STATUS UPDATED");
+            fetchEverything();
+        } catch(err) {
+            triggerToast("UPDATE FAILED");
+        }
+    };
+
+    // --- COUPON HANDLERS ---
+    const handleToggleCoupon = async (id, currentStatus) => {
+        try {
+            await axios.patch(`${API_URL}/admin/coupons/${id}`, { isActive: !currentStatus }, { headers: { Authorization: `Bearer ${token}` } });
+            triggerToast(!currentStatus ? "COUPON ACTIVATED" : "COUPON DEACTIVATED");
+            fetchEverything();
+        } catch(err) {
+            triggerToast("TOGGLE FAILED");
+        }
     };
 
     const handleAuthorizeBatch = async (studentId, batchId, studentName) => {
@@ -578,9 +648,13 @@ export default function AdminDashboard() {
         m -= 1; if (m === 0) { m = 12; y -= 1; }
         let prevMonthKey = `${y}-${String(m).padStart(2, '0')}`;
         let prevRevenue = monthlyHistory[prevMonthKey] ? monthlyHistory[prevMonthKey].revenue : 0;
+        
+        // Colors for PieChart
+        const COLORS = ['#F37021', '#1A5F7A', '#10b981', '#f59e0b', '#8b5cf6'];
 
         return (
             <div className="space-y-8 text-left">
+                {/* 1. TOP METRICS ROW */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <div className="bg-gradient-to-br from-[#1A5F7A] to-[#0A192F] text-white p-7 rounded-3xl shadow-xl relative overflow-hidden border border-slate-700/60 border-b-4 border-b-[#F37021] flex flex-col justify-center">
                         <FiDollarSign className="absolute -right-3 -bottom-3 text-8xl opacity-10" />
@@ -626,7 +700,9 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* --- TIME-SERIES & DEEP ML ANALYTICS --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Time-Series Trend */}
                     <div className="lg:col-span-2 bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
                         <div className="flex justify-between items-center mb-2">
                             <div>
@@ -638,6 +714,7 @@ export default function AdminDashboard() {
                             <span className="bg-orange-500/10 text-[#F37021] border border-orange-500/30 px-3 py-1 rounded-full text-[9px] font-black uppercase">Live Stream</span>
                         </div>
 
+                        {/* RECHARTS IMPLEMENTATION - DUAL AXIS */}
                         <div className="h-56 min-h-[224px] w-full mt-4 border-b border-slate-800 pb-2">
                             {Object.keys(monthlyHistory).length > 0 ? (() => {
                                 let previousYear = null;
@@ -680,6 +757,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
+                    {/* Deep ML Analytics */}
                     <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl flex flex-col justify-between">
                         <div>
                             <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
@@ -688,7 +766,7 @@ export default function AdminDashboard() {
                             <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Heuristic classification of lead intent.</p>
                         </div>
 
-                        <div className="space-y-4 my-5">
+                        <div className="space-y-4 my-5 flex-1">
                             <div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 mb-1">
                                     <span>Positive Intent (Hot)</span><span className="text-emerald-400 font-bold">{mlOverviewStats.positive} Leads</span>
@@ -715,9 +793,16 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
-                        <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center justify-between shadow-inner">
-                            <div><span className="text-[8px] font-black text-[#F37021] uppercase block tracking-wider">Avg Conversion Score</span><span className="text-2xl font-black text-white italic">{mlOverviewStats.avgProb}%</span></div>
-                            <FiActivity className="text-[#F37021] text-2xl animate-pulse" />
+                        {/* Global Conversion Widget */}
+                        <div className="grid grid-cols-2 gap-3 mt-auto">
+                            <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 flex flex-col justify-center shadow-inner">
+                                <span className="text-[8px] font-black text-[#F37021] uppercase tracking-wider">Avg Intent</span>
+                                <div className="text-xl font-black text-white italic mt-1">{mlOverviewStats.avgProb}%</div>
+                            </div>
+                            <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 flex flex-col justify-center shadow-inner">
+                                <span className="text-[8px] font-black text-sky-400 uppercase tracking-wider">Conversion</span>
+                                <div className="text-xl font-black text-white italic mt-1">{mlOverviewStats.totalConvRate}%</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -744,13 +829,14 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
+                {/* --- MARKET INTELLIGENCE SELECTION --- */}
                 <div className="bg-[#0A192F]/80 md:backdrop-blur-md rounded-3xl p-7 border border-slate-800 shadow-xl">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-slate-800">
                         <div>
                             <h4 className="font-black text-white text-sm uppercase tracking-wide italic flex items-center gap-2">
                                 <FiTrendingUp className="text-[#F37021]" /> Market Intelligence
                             </h4>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Highest performing programs by enrollment volume.</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Highest performing programs & revenue breakdown.</p>
                         </div>
                         {(userRole === 'founder' || userRole === 'admin') && (
                             <button
@@ -762,21 +848,43 @@ export default function AdminDashboard() {
                         )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                        {topCoursesData.length > 0 ? topCoursesData.map((course, idx) => (
-                            <div key={idx} className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 relative hover:border-[#F37021] transition-all">
-                                <div className="absolute -top-2.5 -left-2.5 w-7 h-7 bg-slate-950 rounded-full border border-slate-700 flex items-center justify-center shadow-md">
-                                    <FiAward className={idx === 0 ? "text-yellow-400" : idx === 1 ? "text-slate-400" : "text-amber-500"} size={14} />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            {topCoursesData.length > 0 ? topCoursesData.map((course, idx) => (
+                                <div key={idx} className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 relative hover:border-[#F37021] transition-all">
+                                    <div className="absolute -top-2.5 -left-2.5 w-7 h-7 bg-slate-950 rounded-full border border-slate-700 flex items-center justify-center shadow-md">
+                                        <FiAward className={idx === 0 ? "text-yellow-400" : idx === 1 ? "text-slate-400" : "text-amber-500"} size={14} />
+                                    </div>
+                                    <h5 className="font-black text-white text-xs uppercase italic mt-1 leading-tight min-h-[32px]">{course.courseName}</h5>
+                                    <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
+                                        <div><p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Enrolls</p><p className="font-black text-[#F37021] text-base">{course.enrollments}</p></div>
+                                        <div className="text-right"><p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Revenue</p><p className="font-black text-white text-base">₹{course.revenue.toLocaleString()}</p></div>
+                                    </div>
                                 </div>
-                                <h5 className="font-black text-white text-xs uppercase italic mt-1 leading-tight min-h-[32px]">{course.courseName}</h5>
-                                <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
-                                    <div><p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Enrolls</p><p className="font-black text-[#F37021] text-base">{course.enrollments}</p></div>
-                                    <div className="text-right"><p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Revenue</p><p className="font-black text-white text-base">₹{course.revenue.toLocaleString()}</p></div>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="col-span-full p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-2xl"><span className="text-[10px] font-black uppercase tracking-widest block">Awaiting Sales Data</span></div>
-                        )}
+                            )) : (
+                                <div className="col-span-full p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-2xl"><span className="text-[10px] font-black uppercase tracking-widest block">Awaiting Sales Data</span></div>
+                            )}
+                        </div>
+                        
+                        {/* Revenue Distribution Pie Chart */}
+                        <div className="bg-slate-900/60 rounded-2xl border border-slate-800 p-5 flex flex-col items-center justify-center min-h-[250px] relative">
+                            {topCoursesData.length > 0 ? (
+                                <>
+                                    <div className="absolute top-4 left-4"><FiPieChart className="text-slate-500" size={18}/></div>
+                                    <ResponsiveContainer width="100%" height={200}>
+                                        <PieChart>
+                                            <Pie data={topCoursesData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="revenue">
+                                                {topCoursesData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                            </Pie>
+                                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold', color: '#fff' }} formatter={(value) => `₹${value.toLocaleString()}`} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <span className="text-[9px] font-black uppercase text-slate-400 mt-2 tracking-widest">Revenue Distribution</span>
+                                </>
+                            ) : (
+                                <div className="text-[10px] text-slate-500 uppercase font-black">No Chart Data</div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -827,7 +935,12 @@ export default function AdminDashboard() {
             const matchSearch = s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.phone?.includes(searchQuery);
             const matchStatus = filterApproved === "all" ? true : filterApproved === "approved" ? s.isApproved : !s.isApproved;
             const matchCourse = studentCourseFilter === "all" ? true : s.enrollments?.some(e => e.course === studentCourseFilter) || s.course === studentCourseFilter;
-            return matchSearch && matchStatus && matchCourse;
+            
+            // WORKLOAD MINIMIZER: Instant "Pending Dues" Filter
+            const ledger = calculateAggregateLedger(s);
+            const matchDue = studentDueFilter === "all" ? true : ledger.due > 0;
+
+            return matchSearch && matchStatus && matchCourse && matchDue;
         }).sort((a, b) => {
             const dateA = new Date(a.createdAt || 0);
             const dateB = new Date(b.createdAt || 0);
@@ -860,7 +973,7 @@ export default function AdminDashboard() {
                         <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage and track enrollments.</p>
                     </div>
                     
-                    {/* NEW: MONTHLY ACQUISITION STAT-BLOCK */}
+                    {/* MONTHLY ACQUISITION STAT-BLOCK */}
                     <div className="bg-[#0A192F] border border-slate-800 rounded-2xl px-5 py-2 shadow-inner flex flex-col justify-center min-w-[200px]">
                         <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-0.5 flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"/> Current Month Volume</span>
                         <div className="text-xl font-black text-emerald-400 leading-none">
@@ -877,17 +990,19 @@ export default function AdminDashboard() {
                                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                        
+                        {/* WORKLOAD MINIMIZER: QUICK DUES FILTER */}
+                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-red-500 transition-all">
+                            <FiDollarSign className="text-slate-500 ml-1" size={14}/>
+                            <select className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={studentDueFilter} onChange={e => setStudentDueFilter(e.target.value)}>
+                                <option value="all">All Finances</option><option value="due">Pending Dues Only</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all hidden md:flex">
                             <FiFilter className="text-slate-500 ml-1" size={14}/>
                             <select className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={filterApproved} onChange={e => setFilterApproved(e.target.value)}>
                                 <option value="all">All Status</option><option value="approved">Approved ERP</option><option value="pending">Pending Access</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
-                            <FiBookOpen className="text-slate-500 ml-1" size={14}/>
-                            <select className="bg-transparent py-2 max-w-[120px] font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={studentCourseFilter} onChange={e => setStudentCourseFilter(e.target.value)}>
-                                <option value="all">All Courses</option>
-                                {allCourses.map(c => <option key={c.id || c.title} value={c.title}>{c.title}</option>)}
                             </select>
                         </div>
                         <button onClick={handleCSVExport} className="p-3 bg-slate-900 border border-slate-800 text-[#F37021] rounded-2xl hover:bg-[#F37021] hover:text-white transition-all shadow-md" title="Export to Excel/CSV">
@@ -910,7 +1025,9 @@ export default function AdminDashboard() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-850 text-xs">
-                            {filteredStudents.map(student => {
+                            {filteredStudents.length === 0 ? (
+                                <tr><td colSpan="5" className="p-8 text-center text-slate-500 font-black uppercase tracking-wider">No students match current filters.</td></tr>
+                            ) : filteredStudents.map(student => {
                                 const ledger = calculateAggregateLedger(student);
                                 const enrollments = getNormalizedEnrollments(student);
                                 const isExpanded = expandedStudent === student._id;
@@ -956,8 +1073,15 @@ export default function AdminDashboard() {
                                             </td>
                                             <td>
                                                 <div className="font-black text-white text-sm">₹{ledger.paid.toLocaleString()} <span className="text-slate-500 text-xs font-normal">/ ₹{ledger.total.toLocaleString()}</span></div>
-                                                <div className={`text-[10px] uppercase font-black italic mt-1 ${ledger.due > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                <div className={`text-[10px] uppercase font-black italic mt-1 flex items-center gap-2 ${ledger.due > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                                                     {ledger.due > 0 ? `DUE: ₹${ledger.due.toLocaleString()}` : 'CLEARED'}
+                                                    
+                                                    {/* WORKLOAD MINIMIZER: 1-CLICK WHATSAPP DUE REMINDER */}
+                                                    {ledger.due > 0 && (
+                                                        <a href={`https://wa.me/91${student.phone}?text=Hi ${encodeURIComponent(student.name)}, this is a gentle reminder from Expert Computer Academy regarding your pending fee balance of ₹${ledger.due.toLocaleString()}. Please clear it at your earliest convenience.`} target="_blank" rel="noreferrer" className="bg-red-500/10 text-red-400 border border-red-500/30 p-1 rounded hover:bg-red-500 hover:text-white transition-all" title="Send WhatsApp Reminder">
+                                                            <FiMessageCircle size={10} />
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td>
@@ -1080,7 +1204,7 @@ export default function AdminDashboard() {
                         <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Manage incoming inquiries and chatbot interactions.</p>
                     </div>
 
-                    {/* NEW: MONTHLY ACQUISITION STAT-BLOCK */}
+                    {/* MONTHLY ACQUISITION STAT-BLOCK */}
                     <div className="bg-[#0A192F] border border-slate-800 rounded-2xl px-5 py-2 shadow-inner flex flex-col justify-center min-w-[200px]">
                         <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest mb-0.5 flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"/> Current Month Volume</span>
                         <div className="text-xl font-black text-red-400 leading-none">
@@ -1102,10 +1226,10 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
                             <FiFilter className="text-slate-500 ml-1" size={14}/>
                             <select className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={enquiryStatusFilter} onChange={e => setEnquiryStatusFilter(e.target.value)}>
-                                <option value="all">All Status</option><option value="pending">Pending</option><option value="contacted">Handled</option><option value="converted">Converted</option>
+                                <option value="all">All Status</option><option value="pending">Pending (Fresh)</option><option value="contacted">Handled</option><option value="converted">Converted</option>
                             </select>
                         </div>
-                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all">
+                        <div className="flex items-center gap-2 bg-[#0A192F] border border-slate-800 rounded-2xl px-3 py-1 shadow-md focus-within:border-[#F37021] transition-all hidden md:flex">
                             <FiGlobe className="text-slate-500 ml-1" size={14}/>
                             <select className="bg-transparent py-2 font-black text-[10px] uppercase outline-none text-slate-200 cursor-pointer" value={enquirySourceFilter} onChange={e => setEnquirySourceFilter(e.target.value)}>
                                 <option value="all">All Sources</option><option value="bot">AI Chatbot</option><option value="facebook">Facebook Ads</option><option value="web">Website Form</option>
@@ -1151,7 +1275,14 @@ export default function AdminDashboard() {
                                                 </td>
                                                 <td className="max-w-xs pr-4">
                                                     <div className="bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl text-slate-200 font-semibold text-xs leading-relaxed truncate whitespace-break-spaces">"{actualMessage}"</div>
-                                                    {item.course && item.course !== "General Inquiry" && item.course !== actualMessage && (<span className="text-[9px] font-black uppercase text-[#F37021] tracking-wider mt-1 block">Track: {item.course}</span>)}
+                                                    
+                                                    {/* WORKLOAD MINIMIZER: CRM QUICK REPLIES IN TABLE VIEW */}
+                                                    {!isConverted && (
+                                                        <div className="mt-2 flex items-center gap-2">
+                                                            <a href={`https://wa.me/91${item.phone}?text=Hi ${encodeURIComponent(item.name)}, here is the detailed syllabus and fee structure for the ${encodeURIComponent(item.course || 'program')} you requested from Expert Computer Academy.`} target="_blank" rel="noreferrer" className="text-[8px] bg-sky-500/10 text-sky-400 border border-sky-500/30 px-2 py-1 rounded uppercase tracking-wider hover:bg-sky-500 hover:text-white transition-all">Send Syllabus</a>
+                                                            <a href={`https://wa.me/91${item.phone}?text=Hi ${encodeURIComponent(item.name)}, let's schedule a quick call to discuss your career goals and how Expert Computer Academy can help.`} target="_blank" rel="noreferrer" className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-1 rounded uppercase tracking-wider hover:bg-amber-500 hover:text-white transition-all">Schedule Call</a>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td>{renderSourceBadge(item.source)}</td>
                                                 <td>
@@ -1189,12 +1320,19 @@ export default function AdminDashboard() {
                             </h4>
                             <div className="space-y-4">
                                 {filteredEnquiries.filter(e => !e.isContacted && !studentPhones.has(e.phone)).map(item => (
-                                    <div key={item._id} className="bg-[#0A192F] p-5 rounded-2xl border border-slate-700 hover:border-[#F37021] transition-all shadow-lg relative group">
+                                    <div key={item._id} className="bg-[#0A192F] p-5 rounded-2xl border border-slate-700 hover:border-[#F37021] transition-all shadow-lg relative group flex flex-col h-full">
                                         <div className="absolute top-4 right-4">{renderSourceBadge(item.source)}</div>
                                         <div className="font-black text-white text-sm uppercase">{item.name}</div>
                                         <a href={`https://wa.me/91${item.phone}?text=Hi ${encodeURIComponent(item.name)}, reaching out from Expert Computer Academy regarding your inquiry.`} target="_blank" rel="noreferrer" className="text-[10px] text-[#F37021] hover:underline font-bold mt-1 inline-flex items-center gap-1"><FiPhoneCall/> {item.phone}</a>
-                                        <div className="text-xs text-slate-300 mt-3 font-medium bg-slate-900 p-3 rounded-xl border border-slate-800 italic line-clamp-3">"{item.message || item.course || 'General'}"</div>
-                                        <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center">
+                                        <div className="text-xs text-slate-300 mt-3 font-medium bg-slate-900 p-3 rounded-xl border border-slate-800 italic line-clamp-3 mb-4 flex-1">"{item.message || item.course || 'General'}"</div>
+                                        
+                                        {/* WORKLOAD MINIMIZER: CRM QUICK REPLIES IN KANBAN */}
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <a href={`https://wa.me/91${item.phone}?text=Hi ${encodeURIComponent(item.name)}, here is the detailed syllabus and fee structure for the ${encodeURIComponent(item.course || 'program')} you requested from Expert Computer Academy.`} target="_blank" rel="noreferrer" className="flex-1 text-center text-[8px] bg-sky-500/10 text-sky-400 border border-sky-500/30 px-2 py-1.5 rounded uppercase tracking-wider hover:bg-sky-500 hover:text-white transition-all">Send Syllabus</a>
+                                            <a href={`https://wa.me/91${item.phone}?text=Hi ${encodeURIComponent(item.name)}, let's schedule a quick call to discuss your career goals and how Expert Computer Academy can help.`} target="_blank" rel="noreferrer" className="flex-1 text-center text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-1.5 rounded uppercase tracking-wider hover:bg-amber-500 hover:text-white transition-all">Call Setup</a>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
                                             <span className="text-[9px] font-bold text-slate-500 uppercase">{new Date(item.createdAt).toLocaleDateString()}</span>
                                             <button onClick={() => handleEnquiryStatusUpdate(item._id, false, item.name)} className="text-[9px] font-black uppercase bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-300 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"><FiCheckSquare/> Mark Contacted</button>
                                         </div>
@@ -1261,20 +1399,14 @@ export default function AdminDashboard() {
     };
 
     const renderInstructors = () => {
-        const mockInstructors = [
-            { id: 1, name: "Arjun Singh", subject: "Full Stack / Java", activeBatches: 3, totalHours: 120, status: "Active" },
-            { id: 2, name: "Priya Sharma", subject: "Tally Prime / Fin", activeBatches: 2, totalHours: 85, status: "Active" },
-            { id: 3, name: "Rahul Verma", subject: "Gen AI / Python", activeBatches: 1, totalHours: 40, status: "On Leave" }
-        ];
-
         return (
-            <div className="space-y-6 max-w-5xl mx-auto">
+            <div className="space-y-6 max-w-5xl mx-auto pb-20 relative">
                 <div className="flex items-center justify-between">
                     <div>
                         <h3 className="text-2xl font-black text-white uppercase italic">Faculty Management</h3>
                         <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Track instructor hours and active batch assignments.</p>
                     </div>
-                    <button className="bg-[#F37021] text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-950/40 hover:bg-orange-600 transition-all">
+                    <button onClick={() => setInstructorModal(true)} className="bg-[#F37021] text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-950/40 hover:bg-orange-600 transition-all">
                         <FiPlusCircle size={14}/> Onboard Instructor
                     </button>
                 </div>
@@ -1285,22 +1417,68 @@ export default function AdminDashboard() {
                             <tr><th className="p-5 pl-8">Instructor Profile</th><th>Primary Subject</th><th>Active Load</th><th className="pr-8 text-right">Status</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-850 font-bold">
-                            {mockInstructors.map(inst => (
-                                <tr key={inst.id} className="hover:bg-slate-900/50 transition-colors">
-                                    <td className="p-5 pl-8"><div className="font-black text-white uppercase text-xs">{inst.name}</div><div className="text-slate-400 text-[9px] mt-0.5">ID: FAC-${inst.id}992</div></td>
+                            {instructors.length === 0 ? (
+                                <tr><td colSpan="4" className="p-8 text-center text-slate-500 font-black uppercase tracking-wider">No faculty onboarded yet.</td></tr>
+                            ) : instructors.map(inst => (
+                                <tr key={inst._id || inst.id} className="hover:bg-slate-900/50 transition-colors">
+                                    <td className="p-5 pl-8">
+                                        <div className="font-black text-white uppercase text-xs">{inst.name}</div>
+                                        <div className="text-slate-400 text-[9px] mt-0.5 flex items-center gap-2">
+                                            <span>ID: FAC-{String(inst._id).slice(-4).toUpperCase()}</span>
+                                            <span>•</span>
+                                            <span>📞 {inst.phone}</span>
+                                        </div>
+                                    </td>
                                     <td className="uppercase text-slate-300 italic">{inst.subject}</td>
                                     <td>
-                                        <div className="text-[#F37021] font-black">{inst.activeBatches} Batches</div>
-                                        <div className="text-[9px] text-slate-500 uppercase">{inst.totalHours} Hrs Logged</div>
+                                        <div className="text-[#F37021] font-black">{inst.activeBatches || 0} Batches</div>
+                                        <div className="text-[9px] text-slate-500 uppercase">{inst.totalHours || 0} Hrs Logged</div>
                                     </td>
                                     <td className="pr-8 text-right">
-                                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${inst.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>{inst.status}</span>
+                                        <button 
+                                            onClick={() => handleToggleInstructorStatus(inst._id, inst.status)}
+                                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border transition-all ${inst.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/30'}`}
+                                            title="Toggle Status"
+                                        >
+                                            {inst.status}
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
+
+                {/* ADD INSTRUCTOR MODAL */}
+                <AnimatePresence>
+                    {instructorModal && (
+                        <div className="fixed inset-0 z-[1000] bg-slate-950/80 md:backdrop-blur-sm flex items-center justify-center p-4">
+                            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0A192F] text-white rounded-3xl p-8 max-w-md w-full border-t-8 border-[#F37021] border border-slate-700 relative shadow-2xl">
+                                <button onClick={() => setInstructorModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-red-400"><FiX size={20} /></button>
+                                <h3 className="text-lg font-black text-white uppercase italic mb-1 mt-2">Onboard Faculty</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-5">Add a new instructor to the system.</p>
+
+                                <form onSubmit={handleAddInstructor} className="space-y-4">
+                                    <div>
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1 block mb-1">Full Name</label>
+                                        <input required type="text" className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl font-bold text-xs text-white outline-none focus:border-[#F37021]" placeholder="e.g. Arjun Singh" value={instructorForm.name} onChange={e => setInstructorForm({ ...instructorForm, name: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1 block mb-1">Primary Subject/Track</label>
+                                        <input required type="text" className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl font-bold text-xs text-white outline-none focus:border-[#F37021]" placeholder="e.g. Full Stack Web Development" value={instructorForm.subject} onChange={e => setInstructorForm({ ...instructorForm, subject: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1 block mb-1">Phone Number</label>
+                                        <input required type="tel" className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl font-bold text-xs text-white outline-none focus:border-[#F37021]" placeholder="9876543210" value={instructorForm.phone} onChange={e => setInstructorForm({ ...instructorForm, phone: e.target.value })} />
+                                    </div>
+                                    <button type="submit" className="w-full py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all flex justify-center items-center gap-2 bg-[#F37021] hover:bg-orange-600 active:scale-95 mt-4">
+                                        <FiCheckCircle size={16} /> Save Instructor
+                                    </button>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     }
@@ -1461,7 +1639,7 @@ export default function AdminDashboard() {
                                 <th>Discount Value</th>
                                 <th>Usage Limit</th>
                                 <th>Validity</th>
-                                <th className="pr-8 text-right">Status</th>
+                                <th className="pr-8 text-right">Status & Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-850 font-bold">
@@ -1470,9 +1648,9 @@ export default function AdminDashboard() {
                             ) : coupons.map(c => (
                                 <tr key={c._id || c.code} className="hover:bg-slate-900/50 transition-colors">
                                     <td className="p-5 pl-8">
-                                        <span className="bg-[#1A5F7A] text-white px-3 py-1 rounded-md tracking-widest text-[10px] uppercase shadow-sm border border-cyan-700/50">
-                                            {c.code}
-                                        </span>
+                                        <button onClick={() => copyToClipboard(c.code)} className="bg-[#1A5F7A] text-white px-3 py-1.5 rounded-md tracking-widest text-[10px] uppercase shadow-sm border border-cyan-700/50 flex items-center gap-2 hover:bg-cyan-700 transition-colors" title="Copy Code">
+                                            {c.code} <FiCopy size={12}/>
+                                        </button>
                                     </td>
                                     <td>
                                         <div className="text-slate-200">{c.description || 'General Campaign Discount'}</div>
@@ -1489,11 +1667,16 @@ export default function AdminDashboard() {
                                         <div className="text-[9px] text-slate-500 uppercase">To: <span className="text-slate-300">{new Date(c.validTo).toLocaleDateString()}</span></div>
                                     </td>
                                     <td className="pr-8 text-right">
-                                        {c.isActive ? (
-                                            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Active</span>
-                                        ) : (
-                                            <span className="bg-red-500/10 text-red-400 border border-red-500/30 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Inactive</span>
-                                        )}
+                                        <div className="flex items-center justify-end gap-2">
+                                            {c.isActive ? (
+                                                <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Active</span>
+                                            ) : (
+                                                <span className="bg-red-500/10 text-red-400 border border-red-500/30 px-2 py-0.5 rounded text-[8px] uppercase tracking-wider">Inactive</span>
+                                            )}
+                                            <button onClick={() => handleToggleCoupon(c._id, c.isActive)} className="bg-slate-800 text-slate-400 p-1.5 rounded hover:text-white hover:bg-slate-700 transition-colors" title="Toggle Status">
+                                                <FiPower size={12} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -1594,9 +1777,18 @@ export default function AdminDashboard() {
                         <h2 className="font-black text-white text-base uppercase italic hidden sm:block tracking-wide">{activeTab.replace('-', ' ')}</h2>
                     </div>
 
-                    {/* Global Search Bar */}
-                    <div className="relative max-w-md w-full mx-2 md:mx-4">
-                        <div className="relative flex items-center">
+                    {/* Auto-Sync Toggle & Search */}
+                    <div className="flex items-center gap-4 relative max-w-lg w-full mx-2 md:mx-4 justify-end md:justify-start">
+                        <button
+                            onClick={() => setAutoSync(!autoSync)}
+                            className={`p-2.5 rounded-xl transition-all border flex items-center gap-2 shadow-inner shrink-0 ${autoSync ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'}`}
+                            title="Auto-Sync (30s)"
+                        >
+                            <FiRefreshCw className={autoSync ? "animate-spin" : ""} size={14} />
+                            <span className="text-[9px] font-black uppercase tracking-widest hidden lg:block">{autoSync ? "Sync On" : "Sync Off"}</span>
+                        </button>
+
+                        <div className="relative flex-1 hidden md:flex items-center">
                             <FiSearch className="absolute left-4 text-slate-500" />
                             <input
                                 type="text"
@@ -1611,7 +1803,7 @@ export default function AdminDashboard() {
                         {/* Search Dropdown */}
                         <AnimatePresence>
                             {searchResults && (
-                                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute left-0 right-0 top-12 bg-[#0A192F] rounded-2xl shadow-2xl border border-slate-700 p-5 max-h-[400px] overflow-y-auto no-scrollbar z-[300]">
+                                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute left-0 right-0 top-14 bg-[#0A192F] rounded-2xl shadow-2xl border border-slate-700 p-5 max-h-[400px] overflow-y-auto no-scrollbar z-[300]">
                                     <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Intelligence Match</span>
                                         <button onClick={() => { setSearchResults(null); setGlobalQuery(""); }} className="text-slate-400 hover:text-red-400 p-1"><FiX size={15} /></button>
