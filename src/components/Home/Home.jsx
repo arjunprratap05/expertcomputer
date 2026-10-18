@@ -5,7 +5,7 @@ import {
     FiArrowRight, FiShield, FiCode, FiCpu, FiLayers, FiZap, 
     FiChevronUp, FiLoader, FiCalendar, FiClock, FiCheckCircle, 
     FiExternalLink, FiGrid, FiSmartphone, FiBookOpen, FiStar,
-    FiBriefcase, FiUsers, FiTrendingUp, FiPlayCircle, FiAward
+    FiBriefcase, FiUsers, FiTrendingUp, FiPlayCircle, FiAward, FiGift
 } from "react-icons/fi";
 
 // --- DATA & MODAL IMPORTS ---
@@ -41,14 +41,20 @@ import AdvanceExcelPoster from '../../assets/posters/AdvanceExcel.webp';
 import tallyBootcampPoster from "../../assets/posters/TallyBootcampWebinar.jpeg";
 import CProgrammingPoster from "../../assets/posters/ProgramminginC.webp";
 
-// --- LIVE ACADEMY STATUS INDICATOR ---
+// --- LIVE ACADEMY STATUS INDICATOR WITH DYNAMIC MULTI-YEAR HOLIDAY ENGINE ---
 const AcademyStatusIndicator = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [statusText, setStatusText] = useState("");
+    const [statusData, setStatusData] = useState({
+        isOpen: false,
+        text: "",
+        isHoliday: false
+    });
 
     useEffect(() => {
         const checkStatus = () => {
             const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-indexed (0 = Jan, 9 = Oct, 10 = Nov)
+            const date = now.getDate();
             const day = now.getDay(); 
             const hours = now.getHours();
             const minutes = now.getMinutes();
@@ -56,22 +62,84 @@ const AcademyStatusIndicator = () => {
             const openingTime = 8 * 60; 
             const closingTime = 20 * 60; 
 
-            if (day === 0) { setIsOpen(false); setStatusText("Closed • Opens tomorrow 8:00 AM"); } 
-            else if (currentTimeInMinutes >= openingTime && currentTimeInMinutes < closingTime) { setIsOpen(true); setStatusText("Open Now • Closes 8:00 PM"); } 
-            else if (currentTimeInMinutes < openingTime) { setIsOpen(false); setStatusText("Closed • Opens today 8:00 AM"); } 
-            else if (currentTimeInMinutes >= closingTime) { setIsOpen(false); setStatusText(day === 6 ? "Closed • Opens Mon 8:00 AM" : "Closed • Opens tomorrow 8:00 AM"); }
+            // DYNAMIC FESTIVAL CLOSURE DATES (2026-2029)
+            const holidayCalendar = {
+                2026: {
+                    navratri: { startMonth: 9, start: 17, endMonth: 9, end: 20 },
+                    diwali: { startMonth: 10, start: 6, endMonth: 10, end: 11 }
+                },
+                2027: {
+                    navratri: { startMonth: 9, start: 6, endMonth: 9, end: 9 }, // Derived from Saptami to Dussehra relative offsets
+                    diwali: { startMonth: 9, start: 29, endMonth: 10, end: 1 } // Oct 29 to Nov 1
+                },
+                2028: {
+                    navratri: { startMonth: 8, start: 25, endMonth: 8, end: 28 }, // Sep 25 to Sep 28
+                    diwali: { startMonth: 9, start: 17, endMonth: 9, end: 20 } // Oct 17 to Oct 20
+                },
+                2029: {
+                    navratri: { startMonth: 9, start: 14, endMonth: 9, end: 17 }, // Oct 14 to Oct 17
+                    diwali: { startMonth: 10, start: 12, endMonth: 10, end: 15 } // Nov 12 to Nov 15
+                }
+            };
+
+            const currentYearHolidays = holidayCalendar[year];
+
+            if (currentYearHolidays) {
+                // Check Navratri
+                const nav = currentYearHolidays.navratri;
+                const isNavratriHoliday = (month === nav.startMonth && date >= nav.start && date <= nav.end) || 
+                                          (nav.startMonth !== nav.endMonth && ((month === nav.startMonth && date >= nav.start) || (month === nav.endMonth && date <= nav.end)));
+                
+                if (isNavratriHoliday) {
+                    setStatusData({ isOpen: false, text: `Closed • Navratri Festival ${year}`, isHoliday: true });
+                    return;
+                }
+
+                // Check Diwali
+                const diwali = currentYearHolidays.diwali;
+                const isDiwaliHoliday = (month === diwali.startMonth && date >= diwali.start && date <= diwali.end) || 
+                                        (diwali.startMonth !== diwali.endMonth && ((month === diwali.startMonth && date >= diwali.start) || (month === diwali.endMonth && date <= diwali.end)));
+
+                if (isDiwaliHoliday) {
+                    setStatusData({ isOpen: false, text: `Closed • Deepavali Festival ${year}`, isHoliday: true });
+                    return;
+                }
+            }
+
+            // Standard Operating Hours
+            if (day === 0) { 
+                setStatusData({ isOpen: false, text: "Closed • Opens tomorrow 8:00 AM", isHoliday: false }); 
+            } else if (currentTimeInMinutes >= openingTime && currentTimeInMinutes < closingTime) { 
+                setStatusData({ isOpen: true, text: "Open Now • Closes 8:00 PM", isHoliday: false }); 
+            } else if (currentTimeInMinutes < openingTime) { 
+                setStatusData({ isOpen: false, text: "Closed • Opens today 8:00 AM", isHoliday: false }); 
+            } else if (currentTimeInMinutes >= closingTime) { 
+                setStatusData({ isOpen: false, text: day === 6 ? "Closed • Opens Mon 8:00 AM" : "Closed • Opens tomorrow 8:00 AM", isHoliday: false }); 
+            }
         };
+        
         checkStatus();
         const interval = setInterval(checkStatus, 60000); 
         return () => clearInterval(interval);
     }, []);
 
+    if (statusData.isHoliday) {
+        return (
+            <div className="inline-flex items-center gap-2.5 bg-indigo-950/60 border border-indigo-700/60 text-indigo-300 px-4 py-2 rounded-full text-xs font-semibold tracking-wide shadow-inner backdrop-blur-md">
+                <FiGift className="text-indigo-400" />
+                <span className="text-indigo-400 font-black">HOLIDAY</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-indigo-300 font-medium">{statusData.text}</span>
+            </div>
+        );
+    }
+
     return (
         <div className="inline-flex items-center gap-2.5 bg-slate-900/60 border border-slate-700/60 text-slate-300 px-4 py-2 rounded-full text-xs font-semibold tracking-wide shadow-inner backdrop-blur-md">
-            <span className={`flex h-2.5 w-2.5 rounded-full ${isOpen ? "bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse" : "bg-red-500 shadow-[0_0_10px_#ef4444]"}`} />
-            <span className={isOpen ? "text-emerald-400 font-black" : "text-red-400 font-black"}>{isOpen ? "OPEN" : "CLOSED"}</span>
+            <span className={`flex h-2.5 w-2.5 rounded-full ${statusData.isOpen ? "bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse" : "bg-red-500 shadow-[0_0_10px_#ef4444]"}`} />
+            <span className={statusData.isOpen ? "text-emerald-400 font-black" : "text-red-400 font-black"}>{statusData.isOpen ? "OPEN" : "CLOSED"}</span>
             <span className="text-slate-600">•</span>
-            <span className="text-slate-400 font-medium">{statusText}</span>
+            <span className="text-slate-400 font-medium">{statusData.text}</span>
         </div>
     );
 };
@@ -99,15 +167,12 @@ const RunningTicker = () => {
 };
 
 // --- CORPORATE PARTNER TICKER ---
-// --- CORPORATE PARTNER TICKER ---
 const PartnerTicker = () => {
-    // Updated to feature Banking & Finance Partners
     const partners = [
         "HDFC BANK", "STATE BANK OF INDIA", "ICICI BANK", "AXIS BANK", 
         "KOTAK MAHINDRA BANK", "BANK OF BARODA", "PUNJAB NATIONAL BANK", "INDUSIND BANK"
     ];
     
-    // Duplicate the array to ensure seamless infinite scrolling
     const dupes = [...partners, ...partners, ...partners];
 
     return (
