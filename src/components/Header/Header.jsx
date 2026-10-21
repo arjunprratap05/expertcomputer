@@ -170,7 +170,7 @@ export default function Header() {
                             animate={{ opacity: 1 }} 
                             exit={{ opacity: 0 }} 
                             onClick={() => setIsMobileMenuOpen(false)} 
-                            className="fixed inset-0 z-[200] lg:hidden bg-[#070D1D]/80 backdrop-blur-sm"
+                            className="fixed inset-0 z-[9998] lg:hidden bg-[#070D1D]/80 backdrop-blur-sm"
                         />
                         
                         <motion.div 
@@ -178,7 +178,7 @@ export default function Header() {
                             animate={{ x: 0 }} 
                             exit={{ x: '100%' }} 
                             transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }} 
-                            className="fixed right-0 top-0 bottom-0 h-screen w-full sm:w-[380px] z-[201] lg:hidden bg-[#0A192F] shadow-2xl flex flex-col border-l border-slate-800"
+                            className="fixed right-0 top-0 bottom-0 h-[100dvh] w-full sm:w-[380px] z-[9999] lg:hidden bg-[#0A192F] shadow-2xl flex flex-col border-l border-slate-800"
                         >
                             <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800 shrink-0 bg-[#070D1D]">
                                 {/* MOBILE DRAWER LOGO */}
@@ -196,8 +196,9 @@ export default function Header() {
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                <div className="px-6 py-6 space-y-6">
+                            {/* UPDATED: Main scrollable container for ALL elements so buttons flow dynamically */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pb-24">
+                                <div className="px-6 pt-6 space-y-6">
                                     <div className="space-y-2">
                                         <div className="text-[10px] font-black text-slate-500 tracking-[0.2em] uppercase px-3 mb-4">Navigation</div>
                                         {['About', 'Founder', 'Hall of Fame', 'Contact'].map((name) => (
@@ -216,6 +217,7 @@ export default function Header() {
                                         ))}
                                     </div>
 
+                                    {/* Our Programs Accordion */}
                                     <div className="space-y-2">
                                         <button 
                                             className="w-full flex justify-between items-center px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent hover:border-slate-700 transition-all" 
@@ -251,25 +253,26 @@ export default function Header() {
                                             )}
                                         </AnimatePresence>
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="px-6 pb-8 pt-4 border-t border-slate-800">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Link 
-                                        to="/admin/login" 
-                                        onClick={() => setIsMobileMenuOpen(false)} 
-                                        className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-bold text-xs shadow-inner hover:bg-slate-800 hover:text-white transition-all"
-                                    >
-                                        <FiLock size={14} className="text-slate-500" /> Admin
-                                    </Link>
-                                    <Link 
-                                        to="/student-login" 
-                                        onClick={() => setIsMobileMenuOpen(false)} 
-                                        className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 font-bold text-xs shadow-inner hover:border-[#F37021] hover:text-white transition-all"
-                                    >
-                                        <FiUser size={14} className="text-[#F37021]" /> ERP Portal
-                                    </Link>
+                                    {/* UPDATED: Dynamic Quick Links that move with the accordion */}
+                                    <div className="pt-6 border-t border-slate-800">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Link 
+                                                to="/admin/login" 
+                                                onClick={() => setIsMobileMenuOpen(false)} 
+                                                className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-bold text-xs shadow-inner hover:bg-slate-800 hover:text-white transition-all"
+                                            >
+                                                <FiLock size={14} className="text-slate-500" /> Admin
+                                            </Link>
+                                            <Link 
+                                                to="/student-login" 
+                                                onClick={() => setIsMobileMenuOpen(false)} 
+                                                className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 font-bold text-xs shadow-inner hover:border-[#F37021] hover:text-white transition-all"
+                                            >
+                                                <FiUser size={14} className="text-[#F37021]" /> ERP Portal
+                                            </Link>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
